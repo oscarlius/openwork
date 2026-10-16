@@ -141,3 +141,4 @@ patchedDependencies:
   '@better-auth/sso@1.7.0-beta.10': patches/@better-auth__sso@1.7.0-beta.10.patch
   '@modelcontextprotocol/client@2.2.0': patches/@modelcontextprotocol__client@2.2.0.patch
   '@modelcontextprotocol/sdk': patches/@modelcontextprotocol__sdk.patch
+  drizzle-kit@0.31.9: patches/drizzle-kit@0.31.9.patch

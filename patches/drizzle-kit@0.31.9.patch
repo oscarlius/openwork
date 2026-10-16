@@ -1,0 +1,25 @@
+diff --git a/bin.cjs b/bin.cjs
+index 327fdfde1aac8ddf7a0db6dc357796757be8986a..074ab035d1517f6b522f41bfa78d5a92b9ee64e1 100644
+--- a/bin.cjs
++++ b/bin.cjs
+@@ -18314,7 +18314,10 @@ ${withStyle.errorWarning(
+         const tableSchema = idxRow["TABLE_SCHEMA"];
+         const tableName = idxRow["TABLE_NAME"];
+         const constraintName = idxRow["INDEX_NAME"];
+-        const columnName = idxRow["COLUMN_NAME"];
++        let columnName = idxRow["COLUMN_NAME"];
++        if (idxRow["SUB_PART"] != null) {
++          columnName = `\`${idxRow["COLUMN_NAME"]}\`(${idxRow["SUB_PART"]})`;
++        }
+         const isUnique = idxRow["NON_UNIQUE"] === 0;
+         const tableInResult = result[tableName];
+         if (typeof tableInResult === "undefined") continue;
+@@ -31128,7 +31131,7 @@ var init_snapshotsDiffer = __esm({
+           {}
+         );
+         jsonCreateIndexesForAllAlteredTables.push(
+-          ...prepareCreateIndexesJson(it.name, it.schema, createdIndexes || {})
++          ...prepareCreateIndexesJson(it.name, it.schema, createdIndexes || {}, curFull.internal)
+         );
+         jsonDropIndexesForAllAlteredTables.push(
+           ...prepareDropIndexesJson(it.name, it.schema, droppedIndexes || {})
