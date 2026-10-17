@@ -147,17 +147,27 @@ function readQuoted(source, start, quote) {
   throw new Error(`unterminated string starting at offset ${start}`);
 }
 
-/** Every `{...}` slot in a message, whether or not the name is legal. */
+/**
+ * Every `{...}` slot in a message, whether or not the name is legal.
+ * An empty `{}` is literal text (docs-style examples such as "such as {}."), not a
+ * malformed slot, so it is not a placeholder and must not fail the name check.
+ */
 function placeholderSlots(text) {
   const slots = [];
   let index = text.indexOf("{");
   while (index !== -1) {
     const close = text.indexOf("}", index + 1);
     if (close === -1) break;
-    slots.push(text.slice(index + 1, close));
+    const name = text.slice(index + 1, close);
+    if (name !== "") slots.push(name);
     index = text.indexOf("{", close + 1);
   }
   return slots;
+}
+
+/** A value whose only content is placeholders and punctuation has nothing to translate. */
+function isLetterless(text) {
+  return !/[A-Za-z぀-ヿ㐀-鿿豈-﫿]/.test(String(text).replace(/\{[A-Za-z0-9]*\}/g, ""));
 }
 
 function sortedNames(text) {
@@ -218,7 +228,7 @@ for (const [key, text] of en) {
   }
 
   const hasHan = HAN_PATTERN.test(zhText);
-  const exempt = allowlist.has(key) || punctuationAllowlist.has(key);
+  const exempt = allowlist.has(key) || punctuationAllowlist.has(key) || isLetterless(zhText);
   if (!hasHan && !exempt) {
     problems.push(`zh.ts: "${key}" holds no Chinese text ("${zhText}") and is not allowlisted`);
   }
