@@ -27,6 +27,7 @@ import { registerUpdaterIpc, resolveAppVersion } from "./updater.mjs";
 import { createUiControlServer } from "./ui-control-server.mjs";
 import { createApplicationMenu } from "./app-menu.mjs";
 import { createNativeContextMenus } from "./context-menu.mjs";
+import { getNativeLocale, normalizeNativeLocale } from "./native-locale.mjs";
 import { applyBrandAppName } from "./brand-app-name.mjs";
 import { createBrowserPanel } from "./browser-panel.mjs";
 import { createWorkspaceStore } from "./workspace-store.mjs";
@@ -2615,6 +2616,21 @@ ipcMain.handle("openwork:shell:relaunch", async () => {
 });
 ipcMain.handle("openwork:system:architecture", async () => resolveArchitectureInfo());
 
+// Native menu localization. The renderer owns the "openwork.language"
+// preference (apps/app/src/i18n/index.ts) and announces the active value on
+// this channel; the application menu is rebuilt from the en/zh dictionaries.
+// Unrecognized values keep English, and only the app window's main frame may
+// change the menu. The reply is the locale actually applied.
+ipcMain.handle("openwork:locale:set", (event, language) => {
+  const isAppMainFrame = Boolean(mainWindow)
+    && !mainWindow.isDestroyed()
+    && event.sender === mainWindow.webContents
+    && event.senderFrame === mainWindow.webContents.mainFrame;
+  if (!isAppMainFrame) return getNativeLocale();
+  return applicationMenu.setLocale(normalizeNativeLocale(language));
+});
+ipcMain.handle("openwork:locale:get", () => getNativeLocale());
+
 // ── Terminal IPC ────────────────────────────────────────────────────────
 ipcMain.handle("openwork:terminal:create", async (event, options = {}) => {
   assertDesktopActivation();
@@ -2769,7 +2785,18 @@ or use: pnpm dev:worktree`);
     if (process.platform !== "linux" && !BLANK_SLATE_LAUNCH.enabled) {
       await applyDesktopBootstrapBrandIcon(bootstrapConfig, applyBrandIconUrl);
     }
-    applicationMenu.install();
+    // Until the renderer reports its "openwork.language" preference over
+    // openwork:locale:set, infer the native menu language conservatively from
+    // the OS locale: only unambiguous Simplified Chinese picks the zh
+    // dictionary, everything else (including a failing locale read) stays
+    // English. setLocale stores it and installs the application menu.
+    let inferredNativeLocale = "en";
+    try {
+      inferredNativeLocale = app.getLocale();
+    } catch {
+      inferredNativeLocale = "en";
+    }
+    applicationMenu.setLocale(inferredNativeLocale);
     if (!desktopActivationRequired(DESKTOP_DISTRIBUTION, bootstrapConfig)) {
       await runtimeManager.prepareFreshRuntime().catch(() => undefined);
     }

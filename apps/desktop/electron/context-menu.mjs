@@ -1,5 +1,11 @@
 // Keep native menu construction in main. The renderer supplies plain action
 // descriptions, never Electron templates, roles, callbacks or executable code.
+// Fixed labels resolve from the native locale dictionaries at popup build
+// time, so a language change is picked up by the very next menu. Spelling
+// suggestions stay verbatim: they are Chromium-provided candidate words, not
+// translatable UI text.
+import { t } from "./native-locale.mjs";
+
 export function contextMenuTemplate(input, select) {
   let count = 0;
   const ids = new Set();
@@ -35,7 +41,7 @@ export function editingMenuTemplate(contents, params) {
       for (const word of params.dictionarySuggestions.slice(0, 8)) {
         items.push({ label: word, click: () => contents.replaceMisspelling(word) });
       }
-      items.push({ label: "Add to Dictionary", click: () => contents.session.addWordToSpellCheckerDictionary(params.misspelledWord) });
+      items.push({ label: t("contextMenu.addToDictionary"), click: () => contents.session.addWordToSpellCheckerDictionary(params.misspelledWord) });
       items.push({ type: "separator" });
     }
     items.push(role("undo", "canUndo"), role("redo", "canRedo"), { type: "separator" }, role("cut", "canCut"));
@@ -80,13 +86,13 @@ export function contentMenuTemplate(contents, params, clipboard) {
   const items = editingMenuTemplate(contents, params);
   if (params.mediaType === "image" && params.hasImageContents) {
     // Copy Chromium's decoded pixels. Never fetch a renderer-supplied URL.
-    items.push({ label: "Copy Image", click: () => contents.copyImageAt(params.x, params.y) });
+    items.push({ label: t("contextMenu.copyImage"), click: () => contents.copyImageAt(params.x, params.y) });
   }
   if (params.mediaType === "image" && params.srcURL) {
-    items.push({ label: "Copy Image Address", click: () => clipboard.writeText(params.srcURL) });
+    items.push({ label: t("contextMenu.copyImageAddress"), click: () => clipboard.writeText(params.srcURL) });
   }
   if (params.linkURL) {
-    items.push({ label: "Copy Link Address", click: () => clipboard.writeText(params.linkURL) });
+    items.push({ label: t("contextMenu.copyLinkAddress"), click: () => clipboard.writeText(params.linkURL) });
   }
   return items;
 }

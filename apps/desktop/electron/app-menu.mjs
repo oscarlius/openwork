@@ -5,6 +5,7 @@
 // consumed by the preload bridge.
 import { BrowserWindow, Menu, shell } from "electron";
 import { runDetachedTask } from "./process-resilience.mjs";
+import { setNativeLocale, t } from "./native-locale.mjs";
 
 const NATIVE_MENU_OPEN_SETTINGS_EVENT = "openwork:native-menu:open-settings";
 const NATIVE_MENU_TOGGLE_SIDEBAR_EVENT = "openwork:native-menu:toggle-sidebar";
@@ -48,7 +49,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
   function install() {
     const isMac = process.platform === "darwin";
     const closeItem = {
-      label: "Close",
+      label: t("appMenu.close"),
       accelerator: "CommandOrControl+W",
       click: (_item, focusedWindow) => {
         const host = focusedWindow ?? BrowserWindow.getFocusedWindow();
@@ -63,14 +64,14 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
               submenu: [
                 { role: "about" },
                 {
-                  label: "Check for Updates...",
+                  label: t("appMenu.checkForUpdates"),
                   click: () => {
                     runDetachedTask("check for updates from menu", checkForUpdatesFromNativeMenu);
                   },
                 },
                 { type: "separator" },
                 {
-                  label: "Settings...",
+                  label: t("appMenu.settingsEllipsis"),
                   accelerator: "Command+,",
                   click: () => {
                     runDetachedTask("open settings from menu", openSettingsFromNativeMenu);
@@ -89,13 +90,13 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
           ]
         : []),
       {
-        label: "File",
+        label: t("appMenu.file"),
         submenu: [
           ...(isMac
             ? []
             : [
                 {
-                  label: "Settings",
+                  label: t("appMenu.settings"),
                   accelerator: "Control+,",
                   click: () => {
                     runDetachedTask("open settings from menu", openSettingsFromNativeMenu);
@@ -107,7 +108,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
         ],
       },
       {
-        label: "Edit",
+        label: t("appMenu.edit"),
         submenu: [
           { role: "undo" },
           { role: "redo" },
@@ -122,7 +123,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
                 { role: "selectAll" },
                 { type: "separator" },
                 {
-                  label: "Speech",
+                  label: t("appMenu.speech"),
                   submenu: [
                     { role: "startSpeaking" },
                     { role: "stopSpeaking" },
@@ -130,7 +131,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
                 },
                 { type: "separator" },
                 {
-                  label: "Settings...",
+                  label: t("appMenu.settingsEllipsis"),
                   click: () => {
                     runDetachedTask("open settings from menu", openSettingsFromNativeMenu);
                   },
@@ -144,10 +145,10 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
         ],
       },
       {
-        label: "View",
+        label: t("appMenu.view"),
         submenu: [
           {
-            label: "Toggle Sidebar",
+            label: t("appMenu.toggleSidebar"),
             accelerator: "CommandOrControl+B",
             click: () => {
               runDetachedTask("toggle sidebar from menu", toggleSidebarFromNativeMenu);
@@ -159,21 +160,21 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
           { role: "toggleDevTools" },
           { type: "separator" },
           {
-            label: "Actual Size",
+            label: t("appMenu.actualSize"),
             accelerator: "CommandOrControl+0",
             click: () => {
               runDetachedTask("reset zoom from menu", () => zoomFromNativeMenu("reset"));
             },
           },
           {
-            label: "Zoom In",
+            label: t("appMenu.zoomIn"),
             accelerator: "CommandOrControl+Plus",
             click: () => {
               runDetachedTask("zoom in from menu", () => zoomFromNativeMenu("in"));
             },
           },
           {
-            label: "Zoom Out",
+            label: t("appMenu.zoomOut"),
             accelerator: "CommandOrControl+-",
             click: () => {
               runDetachedTask("zoom out from menu", () => zoomFromNativeMenu("out"));
@@ -184,7 +185,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
         ],
       },
       {
-        label: "Window",
+        label: t("appMenu.window"),
         submenu: [
           { role: "minimize" },
           { role: "zoom" },
@@ -207,7 +208,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
             ? []
             : [
                 {
-                  label: "Check for Updates...",
+                  label: t("appMenu.checkForUpdates"),
                   click: () => {
                     runDetachedTask("check for updates from menu", checkForUpdatesFromNativeMenu);
                   },
@@ -215,7 +216,7 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
                 { type: "separator" },
               ]),
           {
-            label: "Docs",
+            label: t("appMenu.docs"),
             click: () => {
               runDetachedTask("open documentation from menu", () => shell.openExternal(docsUrl));
             },
@@ -247,5 +248,14 @@ export function createApplicationMenu({ appName, docsUrl, getWindow, closeBrowse
     return currentAppName;
   }
 
-  return { install, applyVisibility, setVisible, setAppName };
+  // Rebuild (never mutate in place) the application menu when the renderer's
+  // language changes, so labels come from the active dictionary instead of
+  // whatever locale was current at first install.
+  function setLocale(nextLocale) {
+    const applied = setNativeLocale(nextLocale);
+    install();
+    return applied;
+  }
+
+  return { install, applyVisibility, setVisible, setAppName, setLocale };
 }

@@ -184,6 +184,15 @@ contextBridge.exposeInMainWorld("__OPENWORK_ELECTRON__", {
       return ipcRenderer.invoke("openwork:system:architecture");
     },
   },
+  locale: {
+    /** Announce the renderer's "openwork.language" value; resolves to the locale the menus applied. */
+    set(language) {
+      return ipcRenderer.invoke("openwork:locale:set", language);
+    },
+    get() {
+      return ipcRenderer.invoke("openwork:locale:get");
+    },
+  },
   migration: {
     readSnapshot() {
       return ipcRenderer.invoke("openwork:migration:read");
