@@ -4,14 +4,14 @@ We are actively looking for contributors to translate OpenWork to your own nativ
 
 ## README translations
 
-Translated README variants live in `translated_readmes/`, so adding a new language only touches the index there plus the supported languages list in the root `README.md`.
+Translated README variants live in `translated_readmes/`, so adding a new language only touches the index there plus the language links near the top of the root `README.md`.
 
 If you want to add a new README language:
 
 1. Copy `README.md` to a new file like `translated_readmes/README_<LANG>.md`.
 2. Translate the content.
 3. Add your new language link to `translated_readmes/README.md`.
-4. Add your language name to the supported languages list at the bottom of `README.md`.
+4. Add your language name to the language links near the top of `README.md`.
 5. Open a PR.
 
 ## App UI translations (i18n)
@@ -20,7 +20,7 @@ You can also help translate the app UI via:
 
 - `apps/app/src/i18n/`
 
-Currently available app UI locales: English (`en`), Japanese (`ja`), Simplified Chinese (`zh`), Vietnamese (`vi`), Brazilian Portuguese (`pt-BR`), Russian (`ru`).
+Currently available app UI locales: English (`en`), Japanese (`ja`), Simplified Chinese (`zh`), Vietnamese (`vi`), Brazilian Portuguese (`pt-BR`), Thai (`th`), French (`fr`), Catalan (`ca`), Spanish (`es`), Russian (`ru`).
 
 Locale files live in `apps/app/src/i18n/locales/`.
 
