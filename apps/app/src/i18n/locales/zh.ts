@@ -1,9 +1,16 @@
 /**
  * 中文（简体）翻译
- * 产品名称保留英文：OpenCode、OpenPackage、OpenWork
- * Skills 统一译为"技能"（依据 den-i18n-zh-Hans 术语表）
- * MCP：协议名称保留英文，不翻译为"应用"
- * 翻译的术语：命令(Commands)、插件(Plugins)、会话(Sessions)、应用(Apps)
+ * 产品名称保留英文：OpenCode、OpenPackage、OpenWork、OpenWork Cloud、OpenWork Connect、Codex、Claude Code
+ * Skills 统一译为「技能」；MCP 是协议名，保留英文，不得译成「应用」
+ * 固定译法：命令(Commands)、插件(Plugins)、会话(Sessions)、应用(Apps)、资源库(Library)、
+ * 模型提供商(model provider)、API 密钥(API key)、审计日志(audit log)、桌面应用(desktop app)
+ * worker 与 workspace 必须区分：worker = 工作进程，workspace = 工作区；
+ * 同句同时出现两者时分别用对应译名，不得整句统一
+ * 排版：中文与英文单词/数字之间加半角空格；中文句读用全角（，。：；？！），
+ * 括注中文用（）、括纯英文或代码用半角()；省略号用「……」
+ * 复数：调用侧只写裸 key，`_one`/`_other`/`_zero` 在中文里值须一致，
+ * 但 en 若在 `_one` 里写死字面 “1”，中文照应保持字面数字，不得改成 {count}
+ * 校验：`node scripts/i18n-audit.mjs`（key 对齐、占位符、复数、悬空 t()）
  */
 
 export default {
