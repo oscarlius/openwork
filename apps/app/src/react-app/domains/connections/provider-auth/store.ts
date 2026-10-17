@@ -1102,7 +1102,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     );
 
     if (!updatedConfig) {
-      throw new Error("Could not update disabled providers for this workspace.");
+      throw new Error(t("providers.disabled_update_failed"));
     }
 
     options.setDisabledProviders(nextDisabled);
@@ -2028,7 +2028,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         : error instanceof CloudProviderNeedsServerError
           ? "needs_server"
           : "error",
-    message: describeProviderError(error, "Cloud provider sync failed."),
+    message: describeProviderError(error, t("providers.cloud_sync_failed")),
   });
 
   const setCloudProviderSyncError = (
@@ -2064,7 +2064,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   ) {
     const isCurrent = optionsArg?.isCurrent ?? (() => true);
     const assertCurrent = () => {
-      if (!isCurrent()) throw new Error("Cloud provider cleanup context changed.");
+      if (!isCurrent()) throw new Error(t("providers.cloud_cleanup_context_changed"));
     };
     assertCurrent();
     if (!optionsArg?.silent) {
@@ -2072,7 +2072,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
     }
     const imported = optionsArg?.importedProvider ?? state.importedCloudProviders[cloudProviderId];
     if (!imported) {
-      throw new Error("This cloud provider has not been imported into the workspace.");
+      throw new Error(t("providers.cloud_not_imported"));
     }
 
     try {
@@ -2119,7 +2119,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
   }
 
   const logCloudProviderSyncError = (reason: CloudProviderSyncReason, error: unknown) => {
-    const message = describeProviderError(error, "Cloud provider sync failed.");
+    const message = describeProviderError(error, t("providers.cloud_sync_failed"));
     console.warn(`[cloud-provider-sync:${reason}] ${message}`);
     return message;
   };
@@ -2457,7 +2457,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
           isCurrent,
         );
         if (!isCurrent()) return;
-        if (!result) throw new Error("Cloud provider sync returned no result.");
+        if (!result) throw new Error(t("providers.cloud_sync_no_result"));
         // Re-derive the imported records (and reloadPending/skips) from the
         // server's status after EVERY server-handled pass. Without this the
         // Cloud Providers rows kept whatever the one-shot start() read found
@@ -2474,7 +2474,7 @@ export function createProviderAuthStore(options: CreateProviderAuthStoreOptions)
         if (result.status === "failed" || result.status === "no_session") {
           const message = logCloudProviderSyncError(
             reason,
-            new Error(result.message ?? "Cloud provider sync failed."),
+            new Error(result.message ?? t("providers.cloud_sync_failed")),
           );
           publishSettingsCloudProviderSyncError(reason, message);
           return;

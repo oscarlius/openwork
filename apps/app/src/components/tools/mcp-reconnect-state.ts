@@ -1,5 +1,6 @@
 import { create } from "zustand"
 
+import { t } from "@/i18n"
 import type { ChatToolReconnectAction } from "./error-attribution"
 import type { ChatConnectionDecisionBinding, ChatConnectionDecisionResponse } from "@/react-app/domains/session/surface/mcp-chat-reconnect"
 
@@ -73,16 +74,16 @@ export function chatMcpReconnectPresentation(
 ): ChatMcpReconnectPresentation {
   switch (phase) {
     case "opening":
-      return { badgeLabel: "Opening sign-in…", buttonLabel: "Opening…", disabled: true }
+      return { badgeLabel: t("mcp.reconnect_badge_opening"), buttonLabel: t("mcp.reconnect_button_opening"), disabled: true }
     case "authorization_opened":
-      return { badgeLabel: "Finish sign-in in your browser", buttonLabel: "Open sign-in again", disabled: false }
+      return { badgeLabel: t("mcp.reconnect_badge_finish_sign_in"), buttonLabel: t("mcp.reconnect_button_open_sign_in_again"), disabled: false }
     case "connected":
-      return { badgeLabel: `${action.connectionName} connected`, buttonLabel: "Connected", disabled: true }
+      return { badgeLabel: t("mcp.reconnect_badge_connected", { name: action.connectionName }), buttonLabel: t("mcp.connected"), disabled: true }
     case "skipped":
-      return { badgeLabel: `Skipped ${action.connectionName}`, buttonLabel: "Skipped", disabled: true }
+      return { badgeLabel: t("mcp.reconnect_badge_skipped", { name: action.connectionName }), buttonLabel: t("connect.diagnostics_status_skipped"), disabled: true }
     case "failed":
-      return { badgeLabel: `${action.connectionName} sign-in could not finish`, buttonLabel: "Authenticate", disabled: false }
+      return { badgeLabel: t("mcp.reconnect_badge_failed", { name: action.connectionName }), buttonLabel: t("mcp.reconnect_button_authenticate"), disabled: false }
     default:
-      return { badgeLabel: `Authenticate ${action.connectionName} to continue`, buttonLabel: "Authenticate", disabled: false }
+      return { badgeLabel: t("mcp.reconnect_badge_authenticate", { name: action.connectionName }), buttonLabel: t("mcp.reconnect_button_authenticate"), disabled: false }
   }
 }

@@ -9,6 +9,7 @@ import { ReasoningBlock } from "@/components/chat/reasoning-block"
 import { useWorkbenchDisclosure } from "@/react-app/domains/session/chat/workbench-ui-state"
 import { useCurrentToolLifecycleResolver } from "@/components/chat/current-tool-lifecycle-context"
 import { Button } from "@/components/ui/button"
+import { t } from "@/i18n"
 import {
   getAggregateNowPart,
   getAggregateCountSummary,
@@ -73,8 +74,8 @@ function CopyCommandButton({ command }: { command: string }) {
       size="icon-xs"
       className="mr-1.5 mt-1.5 shrink-0 text-muted-foreground/70"
       data-tool-aggregate-copy=""
-      title={copied ? "Copied" : "Copy command"}
-      aria-label={copied ? "Command copied" : "Copy command"}
+      title={copied ? t("config.copied") : t("session.copy_command")}
+      aria-label={copied ? t("session.command_copied") : t("session.copy_command")}
       onClick={() => void copy()}
     >
       {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
@@ -89,7 +90,6 @@ function CopyCommandButton({ command }: { command: string }) {
  * a long script never swallows the thread. A full command can be copied.
  */
 export function DetailBox({ kind, text, expanded, onToggle }: DetailBoxProps) {
-  const noun = kind === "command" ? "command" : kind === "pattern" ? "search pattern" : "error"
   const textClassName = cn(
     "min-w-0 flex-1 break-all",
     expanded ? "max-h-60 overflow-y-auto whitespace-pre-wrap" : "line-clamp-1",
@@ -110,7 +110,9 @@ export function DetailBox({ kind, text, expanded, onToggle }: DetailBoxProps) {
         data-tool-aggregate-command={kind === "command" ? "" : undefined}
         data-command-expanded={expanded ? "true" : "false"}
         aria-expanded={expanded}
-        aria-label={expanded ? `Collapse ${noun}` : `Show full ${noun}`}
+        aria-label={expanded
+          ? (kind === "command" ? t("session.collapse_command") : kind === "pattern" ? t("session.collapse_pattern") : t("session.collapse_error"))
+          : (kind === "command" ? t("session.show_full_command") : kind === "pattern" ? t("session.show_full_pattern") : t("session.show_full_error"))}
         onClick={onToggle}
         className={cn(
           "flex min-w-0 flex-1 cursor-pointer gap-2 rounded-xl px-3 py-2 text-start",
@@ -220,9 +222,9 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
   const failedCount = parts.filter((part) => part.state === "output-error").length
   const countSummary = getAggregateCountSummary(parts)
   const summary = aggregateLifecycle === "waiting"
-    ? `Waiting for your action · ${countSummary}`
+    ? `${t("session.waiting_for_your_action")} · ${countSummary}`
     : aggregateLifecycle === "unknown"
-      ? `Status unknown · ${countSummary}`
+      ? `${t("session.status_unknown")} · ${countSummary}`
       : getAggregateSummary(parts, visiblyRunning ? "present" : "past")
   const nowPart = visiblyRunning ? getAggregateNowPart(parts) : null
   const nowLabel = nowPart ? getAggregateRowLabel(nowPart) : null
@@ -236,7 +238,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
   // latest thought is still streaming. Show that instead of dead air.
   const lastThought = thoughts.at(-1)
   const thinkingNow = !nowLabel && Boolean(lastThought?.isStreaming)
-  const liveText = nowCommandShown ? null : nowLabel ?? (thinkingNow ? "Thinking…" : null)
+  const liveText = nowCommandShown ? null : nowLabel ?? (thinkingNow ? t("session.reasoning_thinking") : null)
 
   // Track durations for every part so each is frozen the moment it completes.
   const durations = parts.map((part) => trackToolCallDuration(part))
@@ -268,7 +270,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
       >
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
           <span className={cn("shrink-0", status === "running" && "text-foreground ow-text-shimmer")}>
-            {status === "unknown" ? "Status unknown for" : soloFile.verb}
+            {status === "unknown" ? t("session.status_unknown_for") : soloFile.verb}
           </span>
           <FileChip path={soloFile.path} className="min-w-0" />
           {soloRow.repeat > 1 ? (
@@ -285,7 +287,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
         {status === "waiting" ? (
           <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-11" role="status">
             <CirclePause aria-hidden="true" className="size-3.5 shrink-0" />
-            <span>Choose an option or approve the request to continue.</span>
+            <span>{t("session.choose_or_approve")}</span>
           </div>
         ) : null}
         {failure ? (
@@ -312,14 +314,14 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
             finishing a step never adds or removes a line below it. */}
         {liveText ? (
           <span data-tool-aggregate-now className="ow-text-shimmer min-w-0 truncate motion-reduce:animate-none"
-            title={nowCommand ? "Double-click to show the full command" : undefined}
+            title={nowCommand ? t("session.double_click_full_command") : undefined}
             onDoubleClick={nowPart && nowCommand ? (event) => { event.stopPropagation(); setFullNowCommand(true) } : undefined}>
             {liveText}
           </span>
         ) : null}
         {thoughts.length > 0 ? (
           <span data-tool-aggregate-thought-count className="shrink-0 text-xs text-muted-foreground/70">
-            · {thoughts.length === 1 ? "1 thought" : `${thoughts.length} thoughts`}
+            · {thoughts.length === 1 ? t("session.thought_count_one", { count: thoughts.length }) : t("session.thought_count_other", { count: thoughts.length })}
           </span>
         ) : null}
         {singleCommandDuration ? (
@@ -329,7 +331,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
         ) : null}
         {failedCount > 0 ? (
           <span className="shrink-0 text-xs text-muted-foreground">
-            {failedCount} failed
+            {failedCount === 1 ? t("session.failed_count_one", { count: failedCount }) : t("session.failed_count_other", { count: failedCount })}
           </span>
         ) : null}
       </button>
@@ -337,14 +339,14 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
       {aggregateLifecycle === "waiting" ? (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-11" role="status">
           <CirclePause aria-hidden="true" className="size-3.5 shrink-0" />
-          <span>Choose an option or approve the request to continue.</span>
+          <span>{t("session.choose_or_approve")}</span>
         </div>
       ) : null}
 
       {aggregateLifecycle === "unknown" ? (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
           <CircleHelp aria-hidden="true" className="size-3.5 shrink-0" />
-          <span>No terminal result was observed. This step may still be running; check the session before retrying.</span>
+          <span>{t("session.unknown_status_detail")}</span>
         </div>
       ) : null}
 
@@ -368,7 +370,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
             const bash = isBashToolPart(part)
             const command = bash ? part.input?.command?.trim() ?? "" : ""
             const commandDescription = bash
-              ? part.input?.description?.trim() || "command"
+              ? part.input?.description?.trim() || t("session.command_noun")
               : ""
             const search = bash ? null : getAggregateRowSearch(part)
             return (
@@ -382,21 +384,21 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
                 {!singleCommand ? (
                   <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
                   {status === "waiting" ? (
-                    <CirclePause aria-label="Waiting" className="size-3.5 shrink-0 text-amber-11" />
+                    <CirclePause aria-label={t("session.assistant_waiting")} className="size-3.5 shrink-0 text-amber-11" />
                   ) : null}
                   {status === "unknown" ? (
-                    <CircleHelp aria-label="Status unknown" className="size-3.5 shrink-0" />
+                    <CircleHelp aria-label={t("session.status_unknown")} className="size-3.5 shrink-0" />
                   ) : null}
                   {bash ? (
                     <span className="min-w-0 break-words">
                       <span className={cn("text-foreground", status === "running" && "ow-text-shimmer")}>
                         {status === "running"
-                          ? "Running"
+                          ? t("status.running")
                           : status === "waiting"
-                            ? "Waiting to run"
+                            ? t("session.waiting_to_run")
                             : status === "unknown"
-                              ? "Status unknown for"
-                              : "Ran"}
+                              ? t("session.status_unknown_for")
+                              : t("status.cap_past_execute")}
                       </span>{" "}
                       <span>{commandDescription}</span>
                     </span>
@@ -458,7 +460,7 @@ export function ToolAggregateGroup({ parts, messageId, thoughts = [], className 
               onClick={() => setShowAll(true)}
               className="w-fit text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
             >
-              Show {hiddenCount} more
+              {t("workspace_list.show_more", { count: hiddenCount })}
             </button>
           ) : null}
         </div>

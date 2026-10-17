@@ -1,5 +1,6 @@
 import type { DenOrgLlmProvider } from "@/app/lib/den";
 import type { ModelOption } from "@/app/types";
+import { t } from "@/i18n";
 import {
   getCloudManagedProviderId,
   getCloudProviderEnv,
@@ -49,8 +50,8 @@ export function assignedModelOptions(
         modelID,
         title: model.name.trim() || modelID,
         description: provider.name.trim() || provider.providerId.trim() || providerID,
-        behaviorTitle: "Reasoning",
-        behaviorLabel: "Default",
+        behaviorTitle: t("settings.sc_reasoning"),
+        behaviorLabel: t("settings.default_label"),
         behaviorDescription: "",
         behaviorValue: null,
         isFree: false,

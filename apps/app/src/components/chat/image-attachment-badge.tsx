@@ -2,6 +2,7 @@ import * as React from "react"
 import { X } from "lucide-react"
 
 import { ImageLightbox } from "@/components/chat/image-lightbox"
+import { t } from "@/i18n"
 import { cn } from "@/lib/utils"
 
 type ImageAttachmentBadgeProps = {
@@ -25,7 +26,7 @@ export function ImageAttachmentBadge({
         type="button"
         className="h-10 w-10 overflow-hidden rounded-xl border border-border/70 bg-background/50 transition-opacity hover:opacity-90"
         onClick={() => setOpen(true)}
-        aria-label={`Expand ${alt}`}
+        aria-label={t("composer.expand_image", { name: alt })}
         title={alt}
       >
         <img
@@ -44,8 +45,8 @@ export function ImageAttachmentBadge({
             event.stopPropagation()
             onRemove()
           }}
-          aria-label={`Remove ${alt}`}
-          title="Remove"
+          aria-label={t("extensions.share_remove", { name: alt })}
+          title={t("common.remove")}
         >
           <X className="size-3" />
         </button>

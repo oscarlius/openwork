@@ -1,6 +1,7 @@
 "use client"
 
 import { Tool } from "@/components/ui/tool"
+import { t } from "@/i18n"
 import type { GrepToolPart } from "@/lib/build-in-tools"
 import { parseFilename, toolDisplayTitle, truncateText } from "@/components/tools/path"
 
@@ -13,15 +14,17 @@ function getGrepToolTitle(part: GrepToolPart): string | null {
 
   if (part.state === "output-error") {
     return pattern
-      ? `Search attempted ${truncateText(pattern, 44)}`
-      : "Search attempted"
+      ? t("session.tool_search_attempted_pattern", { pattern: truncateText(pattern, 44) })
+      : t("session.tool_search_attempted")
   }
 
   if (part.state !== "output-available") {
     return null
   }
 
-  return pattern ? `Searched ${truncateText(pattern, 44)}` : "Searched code"
+  return pattern
+    ? t("session.tool_searched_pattern", { pattern: truncateText(pattern, 44) })
+    : t("session.tool_searched_code")
 }
 
 function getGrepToolDetail(part: GrepToolPart): string | undefined {
@@ -30,7 +33,7 @@ function getGrepToolDetail(part: GrepToolPart): string | undefined {
     return undefined
   }
 
-  return `in ${parseFilename(root)}`
+  return t("session.tool_search_in", { path: parseFilename(root) })
 }
 
 export function GrepTool({ part }: GrepToolProps) {

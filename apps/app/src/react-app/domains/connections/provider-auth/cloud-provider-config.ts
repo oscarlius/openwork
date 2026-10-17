@@ -1,4 +1,5 @@
 import { applyEdits, modify } from "jsonc-parser";
+import { t } from "@/i18n";
 import type { ProviderConfig } from "@opencode-ai/sdk/v2/client";
 import type { GatewayUsableModel } from "@openwork/types/den/gateway";
 import type { ModelOption, ModelRef } from "@/app/types";
@@ -177,8 +178,8 @@ export function pendingGatewayModelOptions(providers: readonly GatewayConnectPro
     if (!provider.credentialSetId || model.credentialSetId !== provider.credentialSetId) return [];
     return [{
       providerID: provider.providerId, modelID: model.id, title: model.name,
-      description: provider.name, footer: "Sign-in required", source: "cloud",
-      behaviorTitle: "Reasoning", behaviorLabel: "Default", behaviorDescription: "",
+      description: provider.name, footer: t("connect.agent_stage_signin_required"), source: "cloud",
+      behaviorTitle: t("settings.sc_reasoning"), behaviorLabel: t("settings.default_label"), behaviorDescription: "",
       behaviorValue: null, isFree: false,
       gatewayAuthorization: { cloudProviderId: provider.cloudProviderId, credentialSetId: provider.credentialSetId },
     } satisfies ModelOption];

@@ -5,6 +5,7 @@ import { ArrowUpRight } from "lucide-react"
 import { useOpenArtifactPath } from "@/lib/artifacts"
 import { ActionContextMenu } from "@/components/ui/action-context-menu"
 import { toast } from "@/components/ui/sonner"
+import { t } from "@/i18n"
 import { cn } from "@/lib/utils"
 
 type FileChipProps = {
@@ -33,14 +34,14 @@ export function FileChip({ path, className }: FileChipProps) {
     <ActionContextMenu
       render={<span />}
       actions={[
-        { type: "item", id: "open", label: "Open file", onSelect: () => openArtifactPath(path) },
-        { type: "item", id: "open-external", label: "Open in default app", onSelect: () => openArtifactPath(path, { external: true }) },
+        { type: "item", id: "open", label: t("mcp.open_file"), onSelect: () => openArtifactPath(path) },
+        { type: "item", id: "open-external", label: t("session.open_in_default_app"), onSelect: () => openArtifactPath(path, { external: true }) },
         { type: "separator" },
-        { type: "item", id: "copy-path", label: "Copy path", onSelect: async () => {
+        { type: "item", id: "copy-path", label: t("session.copy_path"), onSelect: async () => {
           try {
             await navigator.clipboard.writeText(path)
           } catch {
-            toast.error("Could not copy this path.")
+            toast.error(t("session.copy_path_failed"))
           }
         } },
       ]}
@@ -62,8 +63,8 @@ export function FileChip({ path, className }: FileChipProps) {
       <button
         type="button"
         onClick={() => openArtifactPath(path, { external: true })}
-        title={`Open ${name} in default app`}
-        aria-label={`Open ${name} in default app`}
+        title={t("session.open_name_in_default_app", { name })}
+        aria-label={t("session.open_name_in_default_app", { name })}
         className="flex cursor-pointer items-center pr-1.5 text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover/chip:opacity-100 hover:text-foreground"
       >
         <ArrowUpRight aria-hidden="true" className="size-2.5" />

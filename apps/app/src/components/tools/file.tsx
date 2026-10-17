@@ -1,5 +1,6 @@
 import type { ReadToolPart, WriteToolPart } from "@/lib/build-in-tools"
 import { parseFilename } from "@/components/tools/path"
+import { t } from "@/i18n"
 
 interface ReadFileToolProps {
   part: ReadToolPart
@@ -11,7 +12,7 @@ export function ReadFileTool({ part }: ReadFileToolProps) {
   if (part.state === "output-error") {
     return (
       <div>
-        <span className="text-muted-foreground">Read attempted {filename}</span> 
+        <span className="text-muted-foreground">{t("session.tool_read_attempted", { file: filename })}</span> 
       </div>
     )
   }
@@ -25,14 +26,14 @@ export function ReadFileTool({ part }: ReadFileToolProps) {
   if (output.type === "directory") {
     return (
       <div>
-        <span className="text-muted-foreground">Listing {filename}</span>
+        <span className="text-muted-foreground">{t("session.tool_listing", { file: filename })}</span>
       </div>
     )
   }
 
   return (
     <div>
-      <span className="text-muted-foreground">Read {filename}</span>
+      <span className="text-muted-foreground">{t("session.tool_read", { file: filename })}</span>
       {output.lineRange && output.truncated ? (
         <>
           {" "}
@@ -53,7 +54,7 @@ export function WriteFileTool({ part }: WriteFileToolProps) {
   if (part.state === "output-error") {
     return (
       <div>
-        <span className="text-muted-foreground">Write attempted {filename}</span> 
+        <span className="text-muted-foreground">{t("session.tool_write_attempted", { file: filename })}</span> 
       </div>
     )
   }
@@ -64,7 +65,7 @@ export function WriteFileTool({ part }: WriteFileToolProps) {
 
   return (
     <div>
-      <span className="text-muted-foreground">Write {filename}</span> 
+      <span className="text-muted-foreground">{t("session.tool_write", { file: filename })}</span> 
     </div>
   )
 }

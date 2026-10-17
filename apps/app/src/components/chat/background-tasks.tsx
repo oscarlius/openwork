@@ -9,6 +9,7 @@ import {
   type BackgroundShellNotice,
 } from "@/app/lib/background-shell-tasks"
 import { formatElapsedSeconds } from "@/lib/tool-call-duration"
+import { t } from "@/i18n"
 import { Message } from "@/components/ui/message"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -92,7 +93,7 @@ export const BackgroundTasksLabel = React.memo(function BackgroundTasksLabel({ s
         <TooltipContent side="top" align="start" className="flex-col items-stretch gap-1">
           {shells.map((shell) => (
             <span key={shell.id} className="flex min-w-0 items-center gap-3">
-              <code className="min-w-0 flex-1 truncate font-mono">{commandPreview(shell.command) || "Command"}</code>
+              <code className="min-w-0 flex-1 truncate font-mono">{commandPreview(shell.command) || t("session.permission_detail_command")}</code>
               {shell.startedAt > 0 ? (
                 <span className="shrink-0 tabular-nums opacity-70">
                   {formatElapsedSeconds(Math.max(0, Math.floor((now - shell.startedAt) / 1_000)))}

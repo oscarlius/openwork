@@ -12,6 +12,7 @@ import { automationProposalSchema, type AutomationProposal } from "@openwork/typ
 import { createDenClient, readDenSettings } from "@/app/lib/den"
 import { Button } from "@/components/ui/button"
 import { Tool } from "@/components/ui/tool"
+import { t } from "@/i18n"
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider"
 import { automationCreationPlacement, useAutomationDeploymentEnabled } from "@/react-app/domains/automations/automation-availability"
 import { formatAutomationSchedule } from "@/react-app/domains/automations/automation-format"
@@ -101,7 +102,7 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
     : null
 
   if (!proposal) {
-    return <Tool toolPart={part} title="Proposed an Automation" />
+    return <Tool toolPart={part} title={t("session.automation_proposed_title")} />
   }
 
   // Pin the workspace of the pane this card renders in — renderer-owned state.
@@ -110,11 +111,11 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
   const pinnedWorkspaceId = workspaceContext?.workspaceId?.trim() || null
 
   const blocker = !automationsEnabled
-    ? "Automations are disabled for this deployment."
+    ? t("session.automation_disabled_blocker")
     : !signedIn
-      ? "Sign in to OpenWork Cloud to create this Automation."
+      ? t("session.automation_sign_in_blocker")
       : modelLookupFailed
-        ? "Model availability could not be checked. Try again before creating this Automation."
+        ? t("session.automation_model_lookup_blocker")
         : null
 
   const create = async () => {
@@ -140,9 +141,9 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
             ...(pinnedWorkspaceId ? { workspaceId: pinnedWorkspaceId } : {}),
           })
       setCreated(detail.automation.id)
-      toast.success("Automation created and active")
+      toast.success(t("automations.created_toast"))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create the Automation")
+      toast.error(error instanceof Error ? error.message : t("session.automation_create_failed"))
     } finally {
       setBusy(false)
     }
@@ -164,14 +165,14 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-dls-primary">
-            {created ? "Automation created and active" : "Suggested Automation"}
+            {created ? t("automations.created_toast") : t("session.automation_suggested_title")}
           </h3>
           <p className="mt-0.5 text-xs text-dls-secondary">
             {created
               ? placement === "cloud"
-                ? "It runs on the schedule below in OpenWork Cloud."
-                : "It runs on the schedule below while this desktop is connected."
-              : "Nothing was created yet. Review it, then create it if it looks right."}
+                ? t("session.automation_runs_cloud_note")
+                : t("session.automation_runs_desktop_note")
+              : t("session.automation_nothing_created_note")}
           </p>
         </div>
       </div>
@@ -180,15 +181,15 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
         <div>
           <p className="truncate text-sm font-medium text-dls-primary" title={proposal.name}>{proposal.name}</p>
           <p className="text-xs text-dls-secondary">{formatAutomationSchedule(proposal.schedule)}</p>
-          {modelLabel ? <p className="text-xs text-dls-secondary">Runs with {modelLabel}</p> : null}
-          {pinnedWorkspaceId && placement === "desktop" ? <p className="text-xs text-dls-secondary" data-automation-pinned-workspace={pinnedWorkspaceId}>Runs in this workspace</p> : null}
+          {modelLabel ? <p className="text-xs text-dls-secondary">{t("session.automation_runs_with_model", { model: modelLabel })}</p> : null}
+          {pinnedWorkspaceId && placement === "desktop" ? <p className="text-xs text-dls-secondary" data-automation-pinned-workspace={pinnedWorkspaceId}>{t("session.automation_runs_in_workspace")}</p> : null}
         </div>
         <p className="whitespace-pre-wrap text-sm text-dls-secondary">{proposal.instructions}</p>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-dls-border px-4 py-3">
         <p className="min-w-0 flex-1 text-xs text-dls-secondary">
-          {blocker ?? (placement === "cloud" ? "Automations run headlessly in OpenWork Cloud." : "Automations run on this desktop while it is connected.")}
+          {blocker ?? (placement === "cloud" ? t("session.automation_headless_cloud_hint") : t("session.automation_desktop_hint"))}
         </p>
         {created ? (
           <Button
@@ -199,7 +200,7 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
             data-open-automation={created}
             onClick={() => navigate(automationsRoute())}
           >
-            Open Automation
+            {t("session.automation_open")}
           </Button>
         ) : (
           <Button
@@ -210,7 +211,7 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
             data-create-automation
             onClick={() => void create()}
           >
-            {busy ? "Creating…" : "Create Automation"}
+            {busy ? t("calendar.creating") : t("automations.create_title")}
           </Button>
         )}
       </div>
@@ -225,7 +226,7 @@ export function OpenWorkAutomationProposalTool({ part }: { part: DynamicToolUIPa
         <div className="flex items-center gap-2 border-t border-dls-border px-4 py-2 text-xs text-amber-11">
           <AlertTriangle className="size-3.5 shrink-0" />
           <span className="min-w-0 flex-1">
-            The proposed model isn't available for Automations. Choose a supported model in a new proposal or in Automations before creating. No replacement model was selected.
+            {t("session.automation_model_unavailable_note")}
           </span>
         </div>
       ) : null}

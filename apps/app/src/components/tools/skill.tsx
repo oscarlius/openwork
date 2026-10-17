@@ -1,6 +1,7 @@
 "use client"
 
 import { Tool } from "@/components/ui/tool"
+import { t } from "@/i18n"
 import type { SkillToolPart } from "@/lib/build-in-tools"
 
 interface SkillToolProps {
@@ -11,14 +12,16 @@ function getSkillToolTitle(part: SkillToolPart): string | null {
   const name = part.input?.name?.trim() ?? ""
 
   if (part.state === "output-error") {
-    return name ? `Couldn't use your ${name} skill` : "Couldn't use a skill"
+    return name
+      ? t("session.tool_skill_use_failed_named", { name })
+      : t("session.tool_skill_use_failed")
   }
 
   if (part.state !== "output-available") {
     return null
   }
 
-  return name ? `Using your ${name} skill` : "Using a skill"
+  return name ? t("session.tool_skill_used_named", { name }) : t("session.tool_skill_used")
 }
 
 export function SkillTool({ part }: SkillToolProps) {

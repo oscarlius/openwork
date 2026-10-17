@@ -3,6 +3,7 @@ import type { ThreadStatus } from "@/lib/messages"
 // Relative so the pure grouping contract stays importable from alias-free
 // test workspaces (evals specs import this module directly).
 import { isAggregatableToolPart, type AggregateThought } from "../../lib/tool-aggregate"
+import { t } from "../../i18n"
 
 const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
@@ -43,10 +44,10 @@ export function getFileTitle(part: Pick<FileUIPart, "filename" | "url">) {
   }
 
   if (part.url.startsWith("data:")) {
-    return "Attached file"
+    return t("composer.attached_file")
   }
 
-  return part.url || "File"
+  return part.url || t("composer.file_kind")
 }
 
 function extensionBadge(filename: string | undefined) {
