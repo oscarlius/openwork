@@ -17,6 +17,7 @@ import { cloudDefaultModelOption } from "@openwork/types/automation-models"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { t } from "@/i18n"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { isDesktopRuntime } from "@/app/lib/runtime-env"
 import { automationCreationPlacement } from "@/react-app/domains/automations/automation-availability"
@@ -41,10 +42,10 @@ import { ModelPickerModal } from "@/react-app/domains/session/modals/model-picke
  */
 
 /** Short names for the editor's "What it can use" choices, to fit the card. */
-const CAN_USE_SHORT: Record<AutomationCanUse, string> = {
-  computer: "This computer",
-  "cloud-computer": "Cloud computer",
-  accounts: "Accounts only",
+const CAN_USE_SHORT_KEYS: Record<AutomationCanUse, string> = {
+  computer: "calendar.can_use_computer",
+  "cloud-computer": "calendar.can_use_cloud",
+  accounts: "calendar.can_use_accounts",
 }
 
 export type CreateAnchor = { slot: CalendarSlot; x: number; y: number }
@@ -142,26 +143,26 @@ export function CreateAutomationCard(props: {
             <form className="flex min-h-0 flex-col" onSubmit={(event) => { event.preventDefault(); void submit() }}>
               <div className="shrink-0 px-4 pb-3 pt-4">
                 <p className="text-xs text-muted-foreground">{slotLabel(props.anchor.slot)}</p>
-                <PopoverPrimitive.Title render={<h2 />} className="text-[15px] font-semibold tracking-[-0.2px]">New automation</PopoverPrimitive.Title>
+                <PopoverPrimitive.Title render={<h2 />} className="text-[15px] font-semibold tracking-[-0.2px]">{t("calendar.new_automation")}</PopoverPrimitive.Title>
               </div>
               <div className="flex min-h-0 flex-col gap-3.5 overflow-y-auto px-4 pb-1" data-calendar-form-body>
                 <label className="flex flex-col gap-1.5 text-xs font-medium">
-                  What should it do?
+                  {t("extensions.add_skill_what_label")}
                   <Textarea
                     ref={field}
                     value={instructions}
                     rows={3}
                     maxLength={100_000}
-                    placeholder="Pull this week's press kit comments from Notion and draft a reply list"
+                    placeholder={t("calendar.instructions_example")}
                     className="min-h-18 resize-none text-sm font-normal"
                     onChange={(event) => setInstructions(event.currentTarget.value)}
                     onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); void submit() } }}
                   />
                 </label>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium">Repeats</span>
+                  <span className="text-xs font-medium">{t("calendar.repeats")}</span>
                   <ToggleGroup
-                    aria-label="Repeats"
+                    aria-label={t("calendar.repeats")}
                     variant="outline"
                     spacing={1}
                     size="sm"
@@ -176,13 +177,13 @@ export function CreateAutomationCard(props: {
                       <ToggleGroupItem key={option.id} value={option.id} className="flex-1 basis-0 whitespace-nowrap px-1 text-xs data-[pressed]:bg-primary data-[pressed]:text-primary-foreground">{option.label}</ToggleGroupItem>
                     ))}
                   </ToggleGroup>
-                  <p className="text-xs text-muted-foreground">At {formatTime(props.anchor.slot.at, props.anchor.slot.timeZone)} {timeZoneLabel(props.anchor.slot.timeZone, props.anchor.slot.at)}.</p>
+                  <p className="text-xs text-muted-foreground">{t("calendar.slot_time_note", { time: formatTime(props.anchor.slot.at, props.anchor.slot.timeZone), zone: timeZoneLabel(props.anchor.slot.timeZone, props.anchor.slot.at) })}</p>
                 </div>
                 {choices.length > 1 ? (
                   <div className="flex flex-col gap-1.5" data-calendar-create-runs-on={placement}>
-                    <span className="text-xs font-medium">What it can use</span>
+                    <span className="text-xs font-medium">{t("calendar.can_use_label")}</span>
                     <ToggleGroup
-                      aria-label="What it can use"
+                      aria-label={t("calendar.can_use_label")}
                       variant="outline"
                       spacing={1}
                       size="sm"
@@ -194,7 +195,7 @@ export function CreateAutomationCard(props: {
                       }}
                     >
                       {choices.map((choice) => (
-                        <ToggleGroupItem key={choice} value={choice} className="flex-1 basis-0 whitespace-nowrap px-1 text-xs data-[pressed]:bg-primary data-[pressed]:text-primary-foreground">{CAN_USE_SHORT[choice]}</ToggleGroupItem>
+                        <ToggleGroupItem key={choice} value={choice} className="flex-1 basis-0 whitespace-nowrap px-1 text-xs data-[pressed]:bg-primary data-[pressed]:text-primary-foreground">{t(CAN_USE_SHORT_KEYS[choice])}</ToggleGroupItem>
                       ))}
                     </ToggleGroup>
                     <p className="text-xs text-muted-foreground">{automationCanUseNote(canUse)}</p>
@@ -203,21 +204,21 @@ export function CreateAutomationCard(props: {
                   <p className="text-xs text-muted-foreground">{automationCanUseNote(canUse)}</p>
                 )}
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium">Model</span>
+                  <span className="text-xs font-medium">{t("session.model")}</span>
                   {usesCloudDefault && model ? (
                     <div className="flex h-8 items-center rounded-md border border-border px-2 text-sm"><CalendarModelSummary model={model} options={[cloudDefaultModelOption]} organizationDefaultName={props.organizationDefaultName} /></div>
                   ) : model ? (
                     <AutomationModelButton model={model} options={modelOptions} size="sm" onClick={() => setPickerOpen(true)} />
                   ) : (
-                    <p className="text-xs text-muted-foreground">Add a model in Settings › AI before creating an automation.</p>
+                    <p className="text-xs text-muted-foreground">{t("calendar.add_model_hint")}</p>
                   )}
                 </div>
                 {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 p-4" data-calendar-form-actions>
-                <Button type="button" variant="link" size="xs" className="mr-auto px-0 max-sm:w-full max-sm:justify-start" onClick={moreOptions}>More options</Button>
-                <PopoverPrimitive.Close render={<Button variant="outline" size="sm" />}>Cancel</PopoverPrimitive.Close>
-                <Button type="submit" size="sm" disabled={!ready}>{busy ? "Creating…" : "Create automation"}</Button>
+                <Button type="button" variant="link" size="xs" className="mr-auto px-0 max-sm:w-full max-sm:justify-start" onClick={moreOptions}>{t("share_skill_destination.more_options")}</Button>
+                <PopoverPrimitive.Close render={<Button variant="outline" size="sm" />}>{t("common.cancel")}</PopoverPrimitive.Close>
+                <Button type="submit" size="sm" disabled={!ready}>{busy ? t("calendar.creating") : t("calendar.create_submit")}</Button>
               </div>
             </form>
             {model && !usesCloudDefault ? (
@@ -226,7 +227,7 @@ export function CreateAutomationCard(props: {
                 options={pickerOptions}
                 query={modelQuery}
                 setQuery={setModelQuery}
-                subtitle={placement === "cloud" ? "Your cloud computer uses this model and reasoning level." : "Your desktop computer uses this model and reasoning level."}
+                subtitle={placement === "cloud" ? t("calendar.model_subtitle_cloud") : t("calendar.model_subtitle_desktop")}
                 target="default"
                 current={{ providerID: model.providerId, modelID: model.modelId }}
                 onSelect={(next) => {

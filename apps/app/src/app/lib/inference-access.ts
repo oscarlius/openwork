@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { t } from "../../i18n";
 import type { ModelRef } from "../types";
 import { AUTO_MODEL_ID, AUTO_PROVIDER_ID, isAutoModel } from "@/react-app/domains/models/model-catalog";
 
@@ -64,10 +65,10 @@ export function autoQuietlyUnavailable(status: { code?: string | null } | null |
 }
 function notOfferedCopy(code?: string | null) {
   switch (code) {
-    case "free_not_enrolled": return { subtitle: "Not on for your organization yet", detail: "Your organization hasn’t turned on Auto yet. An admin can turn it on. Other models still work." };
-    case "free_not_offered": case "admin_disabled": return { subtitle: "Turned off by your organization", detail: "Your organization has turned off Auto. Other models still work." };
-    case "managed_models_disabled_for_dpa": return { subtitle: "Not available for your organization", detail: "Auto isn’t available under your organization’s data agreement. Other models still work." };
-    default: return { subtitle: "Not available for this account", detail: "Auto isn’t available for this account. Other models still work." };
+    case "free_not_enrolled": return { subtitle: t("auto.not_on_org_title"), detail: t("auto.not_on_org_detail") };
+    case "free_not_offered": case "admin_disabled": return { subtitle: t("auto.off_by_org_title"), detail: t("auto.off_by_org_detail") };
+    case "managed_models_disabled_for_dpa": return { subtitle: t("auto.unavailable_org_title"), detail: t("auto.unavailable_org_detail") };
+    default: return { subtitle: t("auto.unavailable_account_title"), detail: t("auto.unavailable_account_detail") };
   }
 }
 
@@ -130,21 +131,21 @@ export type AutoPickerState = "ready" | "exhausted" | "update_required" | "unava
 /** "v0.18.51 or newer" when the gateway told us the lowest version it accepts. */
 export function autoUpdateTarget(minimumVersion?: string | null) {
   const version = minimumVersion?.trim().replace(/^v/, "");
-  return version ? `OpenWork v${version} or newer` : "OpenWork";
+  return version ? t("auto.update_target", { version }) : "OpenWork";
 }
 export function autoPickerCopy(state: AutoPickerState, signedIn: boolean, minimumVersion?: string | null, code?: string | null, resetsAt?: string | null) {
   switch (state) {
     case "not_offered": return { ...notOfferedCopy(code), action: null };
     case "exhausted": {
       const back = autoResetPhrase(resetsAt ?? undefined)?.replace(/^on /, "");
-      return { subtitle: back ? `Limit used up · resets ${back}` : "Limit used up",
-        detail: signedIn ? "This week’s free limit is used up. Pick another model to keep going." : "This week’s free limit is used up. Sign in for a larger free limit.",
-        action: signedIn ? null : "Sign in" };
+      return { subtitle: back ? t("auto.limit_used_up_resets", { reset: back }) : t("auto.limit_used_up"),
+        detail: signedIn ? t("auto.exhausted_signed_in_detail") : t("auto.exhausted_guest_detail"),
+        action: signedIn ? null : t("den.signin_button") };
     }
-    case "update_required": return { subtitle: "Needs an OpenWork update", detail: minimumVersion?.trim() ? `Update to ${autoUpdateTarget(minimumVersion)} to keep using Auto. Your draft is kept.` : "Update OpenWork to keep using Auto. Your draft is kept.", action: "Update" };
-    case "unavailable": return { subtitle: "Temporarily unavailable", detail: "Auto is having trouble right now. Other models still work.", action: "Retry" };
-    case "sync": return { subtitle: "Finishing setup", detail: "Auto is almost ready. Reload the workspace if it doesn’t appear.", action: "Reload" };
-    case "ready": return { subtitle: "OpenWork picks the model", detail: "Free access ready", action: null };
+    case "update_required": return { subtitle: t("auto.needs_update_title"), detail: minimumVersion?.trim() ? t("auto.update_detail_target", { target: autoUpdateTarget(minimumVersion) }) : t("auto.update_detail"), action: t("settings.update") };
+    case "unavailable": return { subtitle: t("auto.temporarily_unavailable"), detail: t("auto.unavailable_detail"), action: t("common.retry") };
+    case "sync": return { subtitle: t("auto.finishing_setup"), detail: t("auto.sync_detail"), action: t("auto.action_reload") };
+    case "ready": return { subtitle: t("auto.ready_title"), detail: t("auto.ready_detail"), action: null };
   }
 }
 
@@ -180,8 +181,8 @@ export function autoWallCopy(wall: AutoAccessWall, signedIn: boolean, now = Date
     .filter(Boolean).join("\n") || null;
   const copy = (() => {
     switch (wall.state) {
-      case "unavailable": return { title: "Auto is busy right now", detail: "Pick another model to keep going, or try Auto again in a bit." };
-      case "sync": return { title: "Auto is still getting ready", detail: "Wait a moment, or pick another model to keep going." };
+      case "unavailable": return { title: t("auto.wall_busy_title"), detail: t("auto.wall_busy_detail") };
+      case "sync": return { title: t("auto.wall_getting_ready_title"), detail: t("auto.wall_getting_ready_detail") };
       case "not_offered":
         if (wall.code === "free_not_enrolled") return { title: "Auto isn’t on for your organization yet", detail: `An admin can turn it on. ${NEXT_STEP}` };
         if (wall.code === "managed_models_disabled_for_dpa") return { title: "Auto isn’t available for your organization", detail: NEXT_STEP };

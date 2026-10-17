@@ -4,6 +4,7 @@ import { desktopPolicyKeys, type BrandAccentColor } from "@openwork/types/den/de
 
 import { useNotificationStore } from "../../kernel/notification-store";
 import { useOrgRestrictions } from "./desktop-config-provider";
+import { t } from "@/i18n";
 
 // ---------------------------------------------------------------------------
 // Radix accent-color mapping

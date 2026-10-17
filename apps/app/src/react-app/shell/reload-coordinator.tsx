@@ -81,27 +81,27 @@ function describeTrigger(
 
 /** Past-tense copy for the "reload happened automatically" receipt. */
 function describeApplied(trigger: ReloadTrigger | null): string {
-  if (!trigger) return "Latest configuration changes are now active.";
+  if (!trigger) return t("notifications.reload_applied_default");
 
   const label =
     trigger.type === "skill"
-      ? "Skill"
+      ? t("extensions.kind_skill")
       : trigger.type === "plugin"
-        ? "Plugin"
+        ? t("extensions.kind_plugin")
         : trigger.type === "mcp"
           ? "MCP"
           : trigger.type === "agent"
-            ? "Agent"
+            ? t("extensions.kind_agent")
             : trigger.type === "command"
-              ? "Command"
-              : "Config";
+              ? t("extensions.kind_command")
+              : t("plugins.config");
 
   if (trigger.name) {
     return trigger.action === "removed"
-      ? `${label} '${trigger.name}' was removed.`
-      : `${label} '${trigger.name}' is now active.`;
+      ? t("notifications.reload_applied_removed", { label, name: trigger.name })
+      : t("notifications.reload_applied_active", { label, name: trigger.name });
   }
-  return `${label} changes are now active.`;
+  return t("notifications.reload_applied_changes", { label });
 }
 
 const LIVE_ACTIVITY_STATUSES: SessionActivityStatus[] = [

@@ -54,7 +54,7 @@ export function subagentRunActivity(input: {
 
 function agentName(slug: string): string {
   const words = slug.split(/[-_.\s]+/).filter(Boolean)
-  if (words.length === 0) return "Agent"
+  if (words.length === 0) return t("composer.agent_label")
   return words
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ")
@@ -121,18 +121,18 @@ export function SubagentRunLine({ part, className, parentActive = true }: Subage
   const status = permissionPending
     ? t("session.subagent_permission_needed")
     : questionPending ? t("session.subagent_question_pending")
-    : activity === "retrying" ? "Retrying"
-    : activity === "failed" ? (stopped ? "Stopped" : "Task reported an error")
-    : activity === "waiting-result" ? "Waiting for task result"
-    : activity === "waiting-start" ? "Waiting for task update"
-    : activity === "no-new-activity" ? "Still working — waiting for updates"
+    : activity === "retrying" ? t("session.subagent_retrying")
+    : activity === "failed" ? (stopped ? t("session.subagent_stopped") : t("session.subagent_reported_error"))
+    : activity === "waiting-result" ? t("session.subagent_waiting_result")
+    : activity === "waiting-start" ? t("session.subagent_waiting_update")
+    : activity === "no-new-activity" ? t("session.subagent_still_working")
     : inFlight
     ? syncDegraded
-      ? "Connection lost — reconnecting…"
-      : `Working ${formatElapsedSeconds(elapsedSeconds)}`
+      ? t("session.subagent_connection_lost")
+      : t("session.subagent_working", { elapsed: formatElapsedSeconds(elapsedSeconds) })
     : isFailed
-      ? "Task failed"
-      : "Completed"
+      ? t("session.task_failed")
+      : t("session.subagent_completed")
 
   const lines = (
     <>
@@ -160,7 +160,7 @@ export function SubagentRunLine({ part, className, parentActive = true }: Subage
         {!inFlight && !isFailed && duration ? ` · ${duration}` : ""}
       </span>
       {inFlight && child?.latestActivity ? (
-        <span className="text-xs text-muted-foreground/70">Last activity: {child.latestActivity}{child.lastProgressAt > 0 ? ` · ${formatElapsedSeconds(Math.max(0, Math.floor((Date.now() - child.lastProgressAt) / 1000)))} ago` : ""}</span>
+        <span className="text-xs text-muted-foreground/70">{t("session.subagent_last_activity", { activity: child.latestActivity })}{child.lastProgressAt > 0 ? t("session.subagent_last_activity_ago", { elapsed: formatElapsedSeconds(Math.max(0, Math.floor((Date.now() - child.lastProgressAt) / 1000))) }) : ""}</span>
       ) : null}
     </>
   )
@@ -222,8 +222,8 @@ export function SubagentRunLine({ part, className, parentActive = true }: Subage
       </CollapsibleTrigger>
       <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-150 ease-out data-starting-style:h-0 data-ending-style:h-0 [&[hidden]:not([hidden='until-found'])]:hidden">
         <div className="mt-2 flex flex-col gap-2 rounded-lg bg-muted p-2 text-xs">
-          <span>{childSessionId ? "Child chat navigation is unavailable." : "The child chat is not available yet."}</span>
-          <span>{part.state === "output-available" ? "Task output received" : isFailed ? "Task reported an error" : "Waiting for task output"}</span>
+          <span>{childSessionId ? t("session.subagent_nav_unavailable") : t("session.subagent_not_available_yet")}</span>
+          <span>{part.state === "output-available" ? t("session.subagent_output_received") : isFailed ? t("session.subagent_reported_error") : t("session.subagent_waiting_output")}</span>
         </div>
       </CollapsibleContent>
     </Collapsible>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Blocks, Check, X } from "lucide-react";
 import { formatToolCallDuration } from "@/lib/tool-call-duration";
+import { t } from "@/i18n";
 import { resolveExtensionIconSrc } from "@/react-app/design-system/extension-icon-src";
 import { useAppBuildProgressEnabled } from "@/react-app/domains/apps/use-app-build-progress-feature";
 import { isToolPartInFlight } from "@/lib/tool-activity";
@@ -53,7 +54,7 @@ function appCreationStages(
   const query = Reflect.get(Object(searches.at(-1)?.input), "query");
   const build = progress.build;
   const lines = appSourceLines(build ?? (run.script && run.script.kind !== "prepare" ? run.script.part : undefined));
-  const size = lines ? ` · ${lines} lines` : "";
+  const size = lines ? t("session.builder_source_lines", { lines }) : "";
   const built = Boolean(progress.app || progress.builtUnrecorded);
   const building = Boolean(build && build.state !== "input-streaming");
   const writing = progress.stage === "writing" || Boolean(build) || (run.script !== undefined && run.script.kind !== "prepare");
@@ -70,9 +71,9 @@ function appCreationStages(
     key: "build",
     state: stateOf(3, buildFailed),
     label: buildFailed
-      ? progress.unavailable ? "Built, but the preview is unavailable" : `Couldn’t build${latestProblem ? `: ${latestProblem}` : " it"}`
-      : current > 3 ? "Built and verified" : current === 3 ? "Building and verifying" : "Build and verify",
-    ...(fixedProblems.length > 0 ? { notes: fixedProblems.map((problem) => `Fixed: ${problem}`) } : {}),
+      ? progress.unavailable ? t("session.builder_built_no_preview") : latestProblem ? t("session.builder_build_failed_reason", { problem: latestProblem }) : t("session.builder_build_failed")
+      : current > 3 ? t("session.builder_build_verified") : current === 3 ? t("session.builder_building") : t("session.builder_build"),
+    ...(fixedProblems.length > 0 ? { notes: fixedProblems.map((problem) => t("session.builder_fixed_problem", { problem })) } : {}),
   };
   const readyStage: Stage = { key: "ready", state: built ? "done" : "pending", label: built ? "Ready" : "Open beside the chat" };
 
@@ -80,7 +81,7 @@ function appCreationStages(
     const read = discoveries.map(appRead).find(Boolean);
     return [
       { key: "read", state: "done", label: read?.title ? `Read “${read.title}”` : "Read the App" },
-      { key: "write", state: stateOf(2), label: current > 2 ? `Wrote the changes${size}` : current === 2 ? `Writing the changes${size}` : "Write the changes" },
+      { key: "write", state: stateOf(2), label: current > 2 ? t("session.builder_wrote_changes", { size }) : current === 2 ? t("session.builder_writing_changes", { size }) : t("session.builder_write_changes") },
       buildStage,
       readyStage,
     ];
@@ -92,21 +93,21 @@ function appCreationStages(
       state: stateOf(0),
       label: current > 0
         ? searches.length === 1 && typeof query === "string" && query
-          ? `Searched your connections for “${query}”`
-          : searches.length > 1 ? `Searched your connections ${searches.length} times`
-            : discoveries.some(isAppGuidePart) ? "Read the build guide" : "Chose its tools"
-        : current === 0 ? "Finding the right tools" : "Find the right tools",
+          ? t("session.builder_searched_for", { query })
+          : searches.length > 1 ? t("session.builder_searched_times", { times: searches.length })
+            : discoveries.some(isAppGuidePart) ? t("session.builder_read_guide") : t("session.builder_chose_tools")
+        : current === 0 ? t("session.builder_finding_tools") : t("session.builder_find_tools"),
     },
     {
       key: "check",
       state: stateOf(1, preparationFailed),
       label: preparationFailed
-        ? "Couldn’t check the tools"
+        ? t("session.builder_check_failed")
         : current > 1
-          ? count === undefined ? "Tools ready" : count === 0 ? "No tools needed" : `Checked ${count} ${count === 1 ? "tool" : "tools"}`
-          : current === 1 ? "Checking the tools" : "Check the tools",
+          ? count === undefined ? t("session.builder_tools_ready") : count === 0 ? t("session.builder_tools_none") : count === 1 ? t("session.builder_tools_checked_one", { count }) : t("session.builder_tools_checked_other", { count })
+          : current === 1 ? t("session.builder_checking_tools") : t("session.builder_check_tools"),
     },
-    { key: "write", state: stateOf(2), label: current > 2 ? `Wrote the App${size}` : current === 2 ? `Writing the App${size}` : "Write the App" },
+    { key: "write", state: stateOf(2), label: current > 2 ? t("session.builder_app_wrote", { size }) : current === 2 ? t("session.builder_app_writing", { size }) : t("session.builder_app_write") },
     buildStage,
     readyStage,
   ];
@@ -203,16 +204,16 @@ export function AppBuilderStep({
   const built = Boolean(progress.app || progress.builtUnrecorded);
   const title = progress.title ? ` “${progress.title}”` : "";
   const sentence = built
-    ? `${editing ? "Updated" : "Created"} MCP App${title}`
+    ? editing ? t("session.builder_app_updated", { title }) : t("session.builder_app_created", { title })
     : progress.failed
-      ? `Couldn’t ${editing ? "update" : "create"} MCP App${title}`
-      : `${editing ? "Updating" : "Creating"} MCP App${title}`;
+      ? editing ? t("session.builder_app_update_failed", { title }) : t("session.builder_app_create_failed", { title })
+      : editing ? t("session.builder_app_updating", { title }) : t("session.builder_app_creating", { title });
   const state = progress.builtUnrecorded
-    ? "Open it from your Library"
+    ? t("session.builder_open_from_library")
     : progress.unavailable
-      ? "Preview unavailable"
+      ? t("session.builder_preview_unavailable")
       : !progress.running && !built && !progress.failed && !progress.unavailable
-      ? context?.syncDegraded ? "Reconnecting" : lifecycle === "waiting" ? "Waiting for approval" : "Paused"
+      ? context?.syncDegraded ? t("session.builder_reconnecting") : lifecycle === "waiting" ? t("session.builder_waiting_approval") : t("mcp.friendly_status_paused")
       : null;
   const shownElapsed = elapsed !== null && (progress.running || terminal) ? formatToolCallDuration(elapsed) : null;
 
@@ -221,14 +222,14 @@ export function AppBuilderStep({
     // app, a short state, Open when there is something to open, and the raw
     // calls behind the details icon.
     const legacySentence = built
-      ? `${editing ? "Updated" : "Created"} artifact${title}`
+      ? editing ? t("session.builder_artifact_updated", { title }) : t("session.builder_artifact_created", { title })
       : progress.failed
-        ? `Couldn’t ${editing ? "update" : "create"} artifact${title}`
+        ? editing ? t("session.builder_artifact_update_failed", { title }) : t("session.builder_artifact_create_failed", { title })
         : progress.stage === "checking"
-          ? `Checking artifact${title}`
+          ? t("session.builder_artifact_checking", { title })
           : progress.stage === "writing"
-            ? `${editing ? "Updating" : "Writing"} artifact${title}`
-            : `Preparing artifact${title}`;
+            ? editing ? t("session.builder_artifact_updating", { title }) : t("session.builder_artifact_writing", { title })
+            : t("session.builder_artifact_preparing", { title });
     const legacyState = progress.failed
       ? latestProblem
       : state ?? (fixedProblems.length > 0 && progress.running
@@ -252,7 +253,7 @@ export function AppBuilderStep({
         {detailsOpen ? (
           <div className="mt-1 flex flex-col gap-2">
             {fixedProblems.map((problem, index) => (
-              <p key={index} className="text-xs text-muted-foreground">Fixed: {problem}</p>
+              <p key={index} className="text-xs text-muted-foreground">{t("session.builder_fixed_problem", { problem })}</p>
             ))}
             {parts.map((part) => (
               <TechnicalDetailsPanel key={part.toolCallId} part={part} />

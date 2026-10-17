@@ -72,8 +72,12 @@ import { describeAutomationModel } from "./automation-model-options"
 const AUTOMATIONS_PAGE_FAST_POLL_MS = AUTOMATIONS_FAST_POLL_MS
 
 function stateLabel(state: AutomationState) {
-  if (state === "needs_attention") return "Needs attention"
-  return state.slice(0, 1).toUpperCase() + state.slice(1)
+  if (state === "needs_attention") return t("automations.state_needs_attention")
+  if (state === "active") return t("automations.state_active")
+  if (state === "inactive") return t("automations.state_inactive")
+  if (state === "archived") return t("automations.state_archived")
+  const untranslated: string = state;
+  return untranslated.slice(0, 1).toUpperCase() + untranslated.slice(1);
 }
 
 function stateVariant(state: AutomationState): "default" | "secondary" | "destructive" | "outline" {
@@ -273,8 +277,8 @@ export function AutomationsPage(props: {
       <div className="mx-auto max-w-xl p-6 pt-16">
         <Alert variant="warning">
           <AlertCircle aria-hidden="true" />
-          <AlertTitle>Select a Den organization</AlertTitle>
-          <AlertDescription>Automations belong to your active Den organization.</AlertDescription>
+          <AlertTitle>{t("automations.select_org_title")}</AlertTitle>
+          <AlertDescription>{t("automations.select_org_body")}</AlertDescription>
         </Alert>
       </div>
     )
@@ -285,10 +289,10 @@ export function AutomationsPage(props: {
       <div className="mx-auto flex max-w-xl flex-col items-center gap-4 p-6 pt-16 text-center" role="alert">
         <AlertCircle className="size-8 text-destructive" aria-hidden="true" />
         <div>
-          <h2 className="font-medium">Automations unavailable</h2>
+          <h2 className="font-medium">{t("automations.unavailable")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{describeError(listQuery.error)}</p>
         </div>
-        <Button variant="outline" onClick={() => void listQuery.refetch()}><RefreshCw />Retry</Button>
+        <Button variant="outline" onClick={() => void listQuery.refetch()}><RefreshCw />{t("common.retry")}</Button>
       </div>
     )
   }
@@ -311,7 +315,7 @@ export function AutomationsPage(props: {
             <ArrowLeft />
           </Button>
           <div>
-            <h2 className="text-xl font-semibold">Create Automation</h2>
+            <h2 className="text-xl font-semibold">{t("automations.create_title")}</h2>
             <p className="text-sm text-muted-foreground">
               {createChoices.length > 1
                 ? "The schedule starts as soon as you create it."
@@ -341,7 +345,7 @@ export function AutomationsPage(props: {
           modelOptions={modelsFor(createPlacement)}
           modelOptionsByPlacement={modelsByPlacement}
           providerCatalog={props.providerCatalog}
-          submitLabel="Create and activate"
+          submitLabel={t("automations.create_activate")}
           onCancel={() => openAutomation(null)}
           onSave={async (input, chosenPlacement) => {
             setBusyAction("create")
@@ -368,7 +372,7 @@ export function AutomationsPage(props: {
                   })
               await refresh()
               openAutomation(detail.automation.id)
-              toast.success("Automation created and active")
+              toast.success(t("automations.created_toast"))
             } catch (error) {
               toast.error(describeError(error))
             } finally {
@@ -414,8 +418,8 @@ export function AutomationsPage(props: {
       return (
         <div className="mx-auto max-w-3xl space-y-5 p-6">
           <div>
-            <h2 className="text-xl font-semibold">Edit Automation</h2>
-            <p className="text-sm text-muted-foreground">Saving creates an immutable revision for future runs.</p>
+            <h2 className="text-xl font-semibold">{t("automations.edit_title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("automations.edit_save_hint")}</p>
           </div>
           <AutomationEditor
             onOpenProviderSettings={openProviderSettings}
@@ -431,7 +435,7 @@ export function AutomationsPage(props: {
             modelOptions={modelsFor(detailPlacement, detail.revision.workspaceId)}
             modelOptionsByPlacement={modelsByPlacementFor(detail.revision.workspaceId)}
             providerCatalog={props.providerCatalog}
-            submitLabel="Save changes"
+            submitLabel={t("automations.save_changes")}
             onCancel={() => {
               setEditing(false)
               setRepairingModel(false)
@@ -449,7 +453,7 @@ export function AutomationsPage(props: {
                 await refresh()
                 setEditing(false)
                 setRepairingModel(false)
-                toast.success("Automation updated")
+                toast.success(t("automations.updated_toast"))
               } catch (error) {
                 toast.error(describeError(error))
               } finally {
@@ -480,14 +484,14 @@ export function AutomationsPage(props: {
             {editable ? <Button variant="outline" onClick={() => {
               setRepairingModel(false)
               setEditing(true)
-            }}><Pencil />Edit</Button> : null}
+            }}><Pencil />{t("common.edit")}</Button> : null}
             {task.state === "active" ? (
               <Button
                 variant="outline"
                 disabled={busyAction !== null}
                 onClick={() => void act("deactivate", async () => {
                   await client.deactivateAutomation(organizationId, task.id)
-                }, "Automation deactivated. A run already in progress will continue.")}
+                }, t("automations.deactivated_toast"))}
               >
                 <Square />Deactivate
               </Button>
@@ -497,7 +501,7 @@ export function AutomationsPage(props: {
                 disabled={busyAction !== null}
                 onClick={() => void act("activate", async () => {
                   await client.activateAutomation(organizationId, task.id)
-                }, "Automation activated")}
+                }, t("automations.activated_toast"))}
               >
                 <Play />Activate
               </Button>
@@ -510,7 +514,7 @@ export function AutomationsPage(props: {
                 onClick={() => void act("run-cloud", async () => {
                   const run = await client.runAutomationNow(organizationId, task.id, { executionTarget: "cloud" })
                   setSearchParams(new URLSearchParams({ automation: task.id, run: run.id }))
-                }, "Automation queued in the cloud")}
+                }, t("automations.queued_cloud_toast"))}
               >
                 <Cloud />Run in cloud
               </Button>
@@ -521,7 +525,7 @@ export function AutomationsPage(props: {
                 const run = await client.runAutomationNow(organizationId, task.id)
                 const next = new URLSearchParams({ automation: task.id, run: run.id })
                 setSearchParams(next)
-              }, "Automation queued")}
+              }, t("automations.queued_toast"))}
             >
               <Play />Run now
             </Button>
@@ -549,12 +553,12 @@ export function AutomationsPage(props: {
         {task.needsAttentionReason ? (
           <Alert variant="warning" data-automation-model-attention={modelNeedsAttention || undefined}>
             {modelNeedsAttention ? <AlertTriangle /> : <AlertCircle />}
-            <AlertTitle>{modelNeedsAttention ? "Model needs attention" : "Action required"}</AlertTitle>
+            <AlertTitle>{modelNeedsAttention ? t("automations.model_attention_title") : t("automations.action_required")}</AlertTitle>
             <AlertDescription className="space-y-3">
               <p>{task.needsAttentionReason.message}</p>
               {modelNeedsAttention && editable ? (
                 <>
-                  <p>This Automation is paused. Its instructions, schedule, and run history are unchanged.</p>
+                  <p>{t("automations.paused_notice")}</p>
                   <Button
                     type="button"
                     size="sm"
@@ -576,8 +580,8 @@ export function AutomationsPage(props: {
           <div className="space-y-5">
             <Card variant="outline">
               <CardHeader>
-                <CardTitle>Instructions</CardTitle>
-                <CardDescription>Revision {detail.revision.version}</CardDescription>
+                <CardTitle>{t("extensions.add_instructions_label")}</CardTitle>
+                <CardDescription>{t("automations.revision_label", { version: detail.revision.version })}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="whitespace-pre-wrap text-sm leading-6">{detail.revision.instructions}</p>
@@ -586,21 +590,21 @@ export function AutomationsPage(props: {
 
             <Card variant="outline">
               <CardHeader>
-                <CardTitle>{detail.revision.executionTarget === "cloud" ? "Cloud computer" : "Desktop computer"}</CardTitle>
+                <CardTitle>{detail.revision.executionTarget === "cloud" ? t("automations.cloud_computer") : t("automations.desktop_computer")}</CardTitle>
                 <CardDescription>{detail.revision.executionTarget === "cloud" ? "Runs on your cloud computer, even when your desktop is offline." : "Runs on your desktop computer. Keep OpenWork open and connected at the scheduled time."}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-                <div className="min-w-0"><span className="text-muted-foreground">Model</span><p className="break-words">{describeAutomationModel(detail.revision.model, modelsFor(detailPlacement, detail.revision.workspaceId))}</p></div>
-                <div className="min-w-0"><span className="text-muted-foreground">Next run</span><p className="break-words">{task.state === "needs_attention" ? "No future run scheduled" : formatAutomationTime(task.nextDueAt)}</p></div>
-                <div className="min-w-0"><span className="text-muted-foreground">Runtime limit</span><p className="break-words">{Math.round(detail.revision.maximumRuntimeMs / 60_000)} minutes</p></div>
-                <div className="min-w-0"><span className="text-muted-foreground">Integrations</span><p className="break-words">Your available OpenWork Connect tools</p></div>
+                <div className="min-w-0"><span className="text-muted-foreground">{t("session.model")}</span><p className="break-words">{describeAutomationModel(detail.revision.model, modelsFor(detailPlacement, detail.revision.workspaceId))}</p></div>
+                <div className="min-w-0"><span className="text-muted-foreground">{t("automations.next_run")}</span><p className="break-words">{task.state === "needs_attention" ? t("automations.no_future_run") : formatAutomationTime(task.nextDueAt)}</p></div>
+                <div className="min-w-0"><span className="text-muted-foreground">{t("automations.runtime_limit")}</span><p className="break-words">{t("automations.runtime_minutes", { minutes: Math.round(detail.revision.maximumRuntimeMs / 60_000) })}</p></div>
+                <div className="min-w-0"><span className="text-muted-foreground">{t("automations.integrations")}</span><p className="break-words">{t("automations.integrations_body")}</p></div>
               </CardContent>
             </Card>
 
             <Card variant="outline">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><History className="size-4" />Run history</CardTitle>
-                <CardDescription>Durable receipts for manual and scheduled runs.</CardDescription>
+                <CardTitle className="flex items-center gap-2"><History className="size-4" />{t("automations.run_history")}</CardTitle>
+                <CardDescription>{t("automations.run_history_body")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
                 {runsQuery.isLoading ? <Skeleton className="h-24 rounded-xl" /> : null}
@@ -632,8 +636,8 @@ export function AutomationsPage(props: {
                           disabled={busyAction !== null}
                           onClick={() => void act(`cancel:${run.id}`, async () => {
                             await client.cancelAutomationRun(organizationId, run.id)
-                          }, "Run cancellation requested")}
-                        >Cancel</Button>
+                          }, t("automations.cancel_requested"))}
+                        >{t("common.cancel")}</Button>
                       ) : null}
                       <Button
                         type="button"
@@ -643,7 +647,7 @@ export function AutomationsPage(props: {
                           if (run.executionThread) navigate(automationExecutionThreadRoute(run.executionThread))
                           else setSearchParams(new URLSearchParams({ automation: task.id, run: run.id }))
                         }}
-                      >Open</Button>
+                      >{t("session.open")}</Button>
                     </span>
                   </div>
                 ))}
@@ -653,8 +657,8 @@ export function AutomationsPage(props: {
 
           <Card variant="outline" className="h-fit">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Monitor className="size-4" />Execution thread</CardTitle>
-              <CardDescription>{selectedRunId ? "Run receipt and event timeline" : "Select a run to inspect its execution thread."}</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Monitor className="size-4" />{t("automations.execution_thread")}</CardTitle>
+              <CardDescription>{selectedRunId ? t("automations.run_receipt_timeline") : t("automations.select_run_hint")}</CardDescription>
             </CardHeader>
             <CardContent>
               {!selectedRunId ? (
@@ -696,7 +700,7 @@ export function AutomationsPage(props: {
                     </Alert>
                   ) : null}
                   {selectedReceipt.run.resultSummary ? (
-                    <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Result</p><p className="mt-1 whitespace-pre-wrap text-sm">{selectedReceipt.run.resultSummary}</p></div>
+                    <div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{t("automations.result_label")}</p><p className="mt-1 whitespace-pre-wrap text-sm">{selectedReceipt.run.resultSummary}</p></div>
                   ) : null}
                   <div className="text-xs text-muted-foreground">{usageLabel(selectedReceipt.run)}</div>
                   <ol className="space-y-3 border-s border-border ps-4">
@@ -722,15 +726,15 @@ export function AutomationsPage(props: {
           variant="danger"
           title="Archive Automation?"
           message="Future runs will stop. Durable run history will remain available in Den."
-          confirmLabel="Archive"
-          cancelLabel="Cancel"
+          confirmLabel={t("automations.archive_action")}
+          cancelLabel={t("common.cancel")}
           onCancel={() => setArchiveOpen(false)}
           onConfirm={() => {
             setArchiveOpen(false)
             void act("archive", async () => {
               await client.archiveAutomation(organizationId, task.id)
               openAutomation(null)
-            }, "Automation archived")
+            }, t("automations.archived_toast"))
           }}
         />
       </div>
@@ -739,7 +743,7 @@ export function AutomationsPage(props: {
 
   // The page title lives in the titlebar; New Automation sits beside it there,
   // as Library and Dashboard place their add controls.
-  const newAutomation = <Button onClick={() => setSearchParams(new URLSearchParams({ create: "1" }))}><Plus />New Automation</Button>
+  const newAutomation = <Button onClick={() => setSearchParams(new URLSearchParams({ create: "1" }))}><Plus />{t("automations.new_automation")}</Button>
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 px-6 py-8 sm:px-8">
       {props.headerActionsTarget
@@ -758,13 +762,13 @@ export function AutomationsPage(props: {
               {query
                 ? "Try a different search."
                 : placementChoices.length > 1
-                  ? "Create a task that runs on your desktops or in the cloud."
+                  ? t("automations.empty_body_multi")
                   : placement === "cloud"
                     ? "Create a task that runs on your cloud computer, even when your desktop is offline."
                     : "Create a task for this desktop computer. For tasks that run while it’s offline, create a cloud automation in OpenWork Web."}
             </EmptyDescription>
           </EmptyHeader>
-          {!query ? <EmptyContent><Button onClick={() => setSearchParams(new URLSearchParams({ create: "1" }))}><Plus />New Automation</Button></EmptyContent> : null}
+          {!query ? <EmptyContent><Button onClick={() => setSearchParams(new URLSearchParams({ create: "1" }))}><Plus />{t("automations.new_automation")}</Button></EmptyContent> : null}
         </Empty>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -781,7 +785,7 @@ export function AutomationsPage(props: {
                 <div className="min-w-0">
                   <h3 className="flex items-center gap-2 truncate font-medium">
                     {item.automation.state === "needs_attention" ? (
-                      <AlertTriangle className="size-4 shrink-0 text-warning" aria-label="Automation needs attention" />
+                      <AlertTriangle className="size-4 shrink-0 text-warning" aria-label={t("automations.needs_attention_aria")} />
                     ) : null}
                     <span className="truncate">{item.automation.name}</span>
                   </h3>
@@ -791,7 +795,7 @@ export function AutomationsPage(props: {
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground" data-automation-computer={item.revision.executionTarget ?? "desktop"}>
                 {item.revision.executionTarget === "cloud" ? <Cloud className="size-3.5" aria-hidden="true" /> : <Monitor className="size-3.5" aria-hidden="true" />}
-                <span>{item.revision.executionTarget === "cloud" ? "Cloud computer" : "Desktop computer"}</span>
+                <span>{item.revision.executionTarget === "cloud" ? t("automations.cloud_computer") : t("automations.desktop_computer")}</span>
               </div>
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                 <span>{formatAutomationSchedule(item.revision.schedule)}</span>

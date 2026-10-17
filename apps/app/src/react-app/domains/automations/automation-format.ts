@@ -1,5 +1,7 @@
 import type { AutomationRun, AutomationSchedule } from "@openwork/types/automations";
 
+import { t } from "@/i18n";
+
 type RunReceiptState = Pick<AutomationRun, "status" | "error" | "attemptCount" | "startedAt">;
 
 type RunNotice = {
@@ -40,7 +42,7 @@ export function runStatusLabel(run: RunReceiptState) {
   if (run.status === "skipped" && (run.error?.code === "model_access_lost" || run.error?.code === "provider_unavailable")) {
     return "Skipped — model unavailable";
   }
-  return run.status === "succeeded" ? "Completed" : run.status.replaceAll("_", " ");
+  return run.status === "succeeded" ? t("automations.run_completed") : run.status.replaceAll("_", " ");
 }
 
 const SUNDAY_UTC = Date.UTC(2024, 0, 7);

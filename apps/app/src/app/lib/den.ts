@@ -10,6 +10,7 @@ import {
 import type { GatewayProviderSummary } from "@openwork/types/den/gateway";
 import { workbotSettingsSchema } from "@openwork/types/den/workbot-settings";
 import { parseDenMcpDiscovery, type DenMcpDiscovery } from "./den-mcp-discovery";
+import { t } from "../../i18n";
 import type {
   AutomationDetail,
   AutomationDesktopRunnerPresence,
@@ -278,9 +279,9 @@ export function formatDenOrgRoleLabel(roleValue: string) {
     .filter(Boolean)
     .map((role) => {
       const canonicalRole = normalizeDenCanonicalOrgRole(role);
-      if (canonicalRole === "owner") return "Owner";
-      if (canonicalRole === "admin") return "Admin";
-      if (canonicalRole === "member") return "Member";
+      if (canonicalRole === "owner") return t("den.org_role_owner");
+      if (canonicalRole === "admin") return t("den.org_role_admin");
+      if (canonicalRole === "member") return t("den.org_role_member");
       return role
         .split(/[-_\s]+/)
         .filter(Boolean)

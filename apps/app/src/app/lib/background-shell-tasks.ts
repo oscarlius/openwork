@@ -10,6 +10,7 @@
  * `backgroundShellTasks` feature switch, so the engine adapter, the sync
  * layer and the chat agree on one meaning without importing each other.
  */
+import { t } from "../../i18n";
 
 /** Translated event types; the sync layer ignores them while the feature is off. */
 export const SHELL_CREATED_EVENT = "shell.created";
@@ -149,10 +150,10 @@ export function readBackgroundShellNotice(value: unknown): BackgroundShellNotice
 
 /** The row's words: what happened, in the person's terms. */
 export function backgroundShellNoticeLabel(notice: Pick<BackgroundShellNotice, "outcome" | "exit">): string {
-  if (notice.outcome === "timed-out") return "Background task timed out";
-  if (notice.outcome === "stopped") return "Background task stopped";
-  if (notice.outcome === "failed") return notice.exit === null ? "Background task failed" : `Background task failed · exit ${notice.exit}`;
-  return "Background task finished";
+  if (notice.outcome === "timed-out") return t("background.notice_timed_out");
+  if (notice.outcome === "stopped") return t("background.notice_stopped");
+  if (notice.outcome === "failed") return notice.exit === null ? t("background.notice_failed") : t("background.notice_failed_exit", { exit: notice.exit });
+  return t("background.notice_finished");
 }
 
 export function runningBackgroundTasksLabel(count: number): string {

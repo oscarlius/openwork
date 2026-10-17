@@ -4,6 +4,7 @@ import type { AutomationRun } from "@openwork/types/automations"
 
 import { createDenClient, DenApiError, readDenSettings, type DenClient } from "@/app/lib/den"
 import { toast } from "@/components/ui/sonner"
+import { t } from "@/i18n"
 import { useDenAuth } from "@/react-app/domains/cloud/den-auth-provider"
 import { useDesktopRestriction } from "@/react-app/domains/cloud/desktop-config-provider"
 import { dispatchAutomationsStateChanged } from "./automation-events"
@@ -21,11 +22,11 @@ export const AUTOMATIONS_SLOW_POLL_MS = 60_000
 
 export function describeAutomationError(error: unknown) {
   if (error instanceof DenApiError) {
-    if (error.status === 401 || error.status === 403) return "Sign in to the selected Den organization to access Automations."
-    if (error.status === 404) return "This Automation is no longer available."
+    if (error.status === 401 || error.status === 403) return t("automations.sign_in_org_error")
+    if (error.status === 404) return t("automations.gone_error")
     return error.message
   }
-  return error instanceof Error ? error.message : "Automations could not be loaded."
+  return error instanceof Error ? error.message : t("automations.load_error")
 }
 
 export type AutomationsDenContext = {

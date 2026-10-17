@@ -1,10 +1,15 @@
 import type { DynamicToolUIPart } from "ai"
+import { t } from "../i18n"
 
 /**
  * Paper rendering rules — "Capability calls → sentences":
  * never render raw JSON. Map connection name → service ("Granola"),
  * tool name → verb ("Asking about…"), body.query → quoted plain text.
  * IDs and schema digests live under "Technical details", collapsed.
+ *
+ * Every display line resolves through `t()` when it renders, never at module
+ * load, so switching language takes effect immediately. The lookup keys stay
+ * English because they come from tool names, not from prose.
  */
 
 export type CapabilityCallSentence = {
@@ -17,46 +22,80 @@ export type CapabilityCallSentence = {
   failure?: string
 }
 
-const PAST_TENSE: Record<string, string> = {
-  ask: "Asked",
-  search: "Searched",
-  find: "Found",
-  get: "Fetched",
-  fetch: "Fetched",
-  list: "Listed",
-  read: "Read",
-  check: "Checked",
-  create: "Created",
-  add: "Added",
-  send: "Sent",
-  update: "Updated",
-  delete: "Deleted",
-  remove: "Removed",
-  execute: "Ran",
-  run: "Ran",
-  open: "Opened",
-  query: "Queried",
+/** Tool-name verb slug → past-tense catalogue key. */
+const PAST_TENSE_KEYS: Record<string, string> = {
+  ask: "status.cap_past_ask",
+  search: "status.cap_past_search",
+  find: "status.cap_past_find",
+  get: "status.cap_past_get",
+  fetch: "status.cap_past_get",
+  list: "status.cap_past_list",
+  read: "status.cap_past_read",
+  check: "status.cap_past_check",
+  create: "status.cap_past_create",
+  add: "plugins.added",
+  send: "status.cap_past_send",
+  update: "status.cap_past_update",
+  delete: "status.cap_past_delete",
+  remove: "status.cap_past_remove",
+  execute: "status.cap_past_execute",
+  run: "status.cap_past_execute",
+  open: "status.cap_past_open",
+  query: "status.cap_past_query",
 }
 
-const PRESENT_TENSE: Record<string, string> = {
-  ask: "Asking",
-  search: "Searching",
-  find: "Finding",
-  get: "Fetching",
-  fetch: "Fetching",
-  list: "Listing",
-  read: "Reading",
-  check: "Checking",
-  create: "Creating",
-  add: "Adding",
-  send: "Sending",
-  update: "Updating",
-  delete: "Deleting",
-  remove: "Removing",
-  execute: "Running",
-  run: "Running",
-  open: "Opening",
-  query: "Querying",
+/** Tool-name verb slug → present-tense catalogue key. */
+const PRESENT_TENSE_KEYS: Record<string, string> = {
+  ask: "status.cap_present_ask",
+  search: "status.cap_present_search",
+  find: "status.cap_present_find",
+  get: "status.cap_present_get",
+  fetch: "status.cap_present_get",
+  list: "status.cap_present_list",
+  read: "status.cap_present_read",
+  check: "status.cap_present_check",
+  create: "status.cap_present_create",
+  add: "status.cap_present_add",
+  send: "status.cap_present_send",
+  update: "status.cap_present_update",
+  delete: "status.cap_present_delete",
+  remove: "status.cap_present_remove",
+  execute: "status.running",
+  run: "status.running",
+  open: "status.cap_present_open",
+  query: "status.cap_present_query",
+}
+
+/** Capability output kinds that have a localized name in the catalogue. */
+const KIND_KEYS: Record<string, string> = {
+  skill: "activity.kind_skill",
+  plugin: "activity.kind_plugin",
+}
+
+function pastTenseWord(word: string): string | undefined {
+  const key = PAST_TENSE_KEYS[word.toLowerCase()]
+  return key === undefined ? undefined : t(key)
+}
+
+function presentTenseWord(word: string): string | undefined {
+  const key = PRESENT_TENSE_KEYS[word.toLowerCase()]
+  return key === undefined ? undefined : t(key)
+}
+
+function isKnownPastVerb(word: string): boolean {
+  return PAST_TENSE_KEYS[word.toLowerCase()] !== undefined
+}
+
+function kindLabel(kind: string): string {
+  const key = KIND_KEYS[kind.toLowerCase()]
+  return key === undefined ? kind : t(key)
+}
+
+/** "Couldn’t {verb} {service}" key for a bare search/find/query tool. */
+function couldntVerbKey(verb: string): string {
+  if (verb === "find") return "status.cap_couldnt_find"
+  if (verb === "query") return "status.cap_couldnt_query"
+  return "status.cap_couldnt_search"
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -105,7 +144,7 @@ function normalizeAction(action: string, serviceSlug: string): string {
   const words = action.split(/[-_.\s]+/).filter(Boolean)
   const withoutService = words.filter((word) => !serviceWords.has(word.toLowerCase()))
   const kept = withoutService.length > 0 ? withoutService : words
-  const verbIndex = kept.findIndex((word) => PAST_TENSE[word.toLowerCase()] !== undefined)
+  const verbIndex = kept.findIndex((word) => isKnownPastVerb(word))
   if (verbIndex > 0) kept.unshift(...kept.splice(verbIndex, 1))
   return kept.join("_")
 }
@@ -160,12 +199,21 @@ function splitCapabilityName(name: string): { service: string; action: string } 
 function verbPhrase(action: string, tense: "present" | "past"): string {
   const words = action.split(/[-_.\s]+/).filter(Boolean)
   const first = words[0]?.toLowerCase()
-  const mapped = first ? (tense === "past" ? PAST_TENSE[first] : PRESENT_TENSE[first]) : undefined
+  const mapped = first ? (tense === "past" ? pastTenseWord(first) : presentTenseWord(first)) : undefined
   if (mapped) {
     return [mapped, ...words.slice(1)].join(" ")
   }
-  const prefix = tense === "past" ? "Used" : "Using"
+  const prefix = tense === "past" ? t("status.cap_used_verb") : t("status.cap_using_verb")
   return `${prefix} ${humanize(action)}`
+}
+
+/**
+ * "{verb} {service}" for a bare search/find/query tool, with the localized
+ * query tail when the call carried one. The verb word comes from the tables.
+ */
+function searchLine(verb: string, tense: "present" | "past", service: string, tail: string): string {
+  const word = (tense === "past" ? pastTenseWord(verb) : presentTenseWord(verb)) ?? humanize(verb)
+  return `${word} ${service}${tail}`
 }
 
 /** Skill slug from a get_skill call: the name asked for, else the one returned. */
@@ -196,27 +244,27 @@ export function getCapabilityCallSentence(
   const toolName = part.toolName
   if (getConnectionStatusProbeId(part)) {
     const service = options?.connectionName?.trim() || null
-    const target = service ? `${service} connection` : "connection"
+    const target = service ? t("status.cap_target_named", { name: service }) : t("status.cap_target_unnamed")
     return {
       service,
-      present: `Checking ${target}…`,
-      past: `Checked ${target}`,
-      failure: `Couldn't check ${target}`,
+      present: t("status.cap_probe_present", { target }),
+      past: t("status.cap_probe_past", { target }),
+      failure: t("status.cap_probe_failure", { target }),
     }
   }
   if (toolName.endsWith("_get_skill")) {
     const name = skillReference(part)
-    const target = name ? `your ${name} skill` : "a skill"
+    const target = name ? t("status.cap_skill_target_named", { name }) : t("status.cap_skill_target_unnamed")
     return {
       service: null,
-      present: `Using ${target}…`,
-      past: `Used ${target}`,
-      failure: `Couldn't use ${target}`,
+      present: t("status.cap_use_present", { target }),
+      past: t("status.cap_use_past", { target }),
+      failure: t("status.cap_use_failure", { target }),
     }
   }
 
   if (toolName.endsWith("_list_skills")) {
-    return { service: null, present: "Looking through your skills…", past: "Looked through your skills" }
+    return { service: null, present: t("status.cap_list_skills_present"), past: t("status.cap_list_skills_past") }
   }
 
   // Code Mode's own catalog lookup is plumbing: say what it did, never echo
@@ -224,32 +272,39 @@ export function getCapabilityCallSentence(
   if (toolName === "search") {
     return {
       service: null,
-      present: "Checking which tools are available",
-      past: "Checked which tools are available",
-      failure: "Couldn't check which tools are available",
+      present: t("status.cap_probe_tools_present"),
+      past: t("status.cap_probe_tools_past"),
+      failure: t("status.cap_probe_tools_failure"),
     }
   }
 
   const query = options?.includeQuery === false ? null : extractQuery(part.input)
-  const quoted = query ? ` “${query}”` : ""
+  const quoted = query ? `“${query}”` : ""
+  const forTail = quoted ? t("status.cap_query_for_tail", { query: quoted }) : ""
+  const colonTail = quoted ? t("status.cap_query_colon_tail", { query: quoted }) : ""
 
   if (toolName.endsWith("search_capabilities")) {
     return {
       service: null,
-      present: `Searching your connections for${quoted || " capabilities"}`,
-      past: `Searched your connections for${quoted || " capabilities"}`,
-      failure: "Couldn't search your connections",
+      present: quoted
+        ? t("status.cap_search_conns_present_query", { query: quoted })
+        : t("status.cap_search_conns_present"),
+      past: quoted
+        ? t("status.cap_search_conns_past_query", { query: quoted })
+        : t("status.cap_search_conns_past"),
+      failure: t("status.cap_search_conns_failure"),
     }
   }
 
   // A Den Code Mode script: the work happens inside the script, so name the
   // place it ran rather than the plumbing tool ("execute capability script").
   if (toolName.endsWith("execute_capability_script")) {
+    const service = "OpenWork Cloud"
     return {
-      service: "OpenWork Cloud",
-      present: "Running a script on OpenWork Cloud",
-      past: "Ran a script on OpenWork Cloud",
-      failure: "Script on OpenWork Cloud failed",
+      service,
+      present: t("status.cap_script_present", { service }),
+      past: t("status.cap_script_past", { service }),
+      failure: t("status.cap_script_failure", { service }),
     }
   }
 
@@ -257,12 +312,14 @@ export function getCapabilityCallSentence(
     const name = isRecord(part.input) && typeof part.input.name === "string" ? part.input.name : null
     const split = name ? splitCapabilityName(name) : null
     if (split) {
-      const suffix = quoted ? `:${quoted}` : ""
       return {
         service: split.service,
-        present: `${verbPhrase(split.action, "present")} · ${split.service}${suffix}`,
-        past: `${verbPhrase(split.action, "past")} · ${split.service}${suffix}`,
-        failure: `Couldn't ${baseVerbPhrase(split.action)} · ${split.service}`,
+        present: `${verbPhrase(split.action, "present")} · ${split.service}${colonTail}`,
+        past: `${verbPhrase(split.action, "past")} · ${split.service}${colonTail}`,
+        failure: t("status.cap_couldnt", {
+          action: baseVerbPhrase(split.action),
+          tail: ` · ${split.service}`,
+        }),
       }
     }
 
@@ -279,19 +336,20 @@ export function getCapabilityCallSentence(
           const verb = action.split("_")[0]!.toLowerCase()
           return {
             service,
-            present: `${PRESENT_TENSE[verb]} ${service}${quoted ? ` for${quoted}` : ""}`,
-            past: `${PAST_TENSE[verb]} ${service}${quoted ? ` for${quoted}` : ""}`,
-            failure: `Couldn't ${verb} ${service}`,
+            present: searchLine(verb, "present", service, forTail),
+            past: searchLine(verb, "past", service, forTail),
+            failure: t(couldntVerbKey(verb), { service }),
           }
         }
-        const suffix = quoted ? `:${quoted}` : ""
         const tail = service ? ` · ${service}` : ""
         return {
           service,
-          present: `${verbPhrase(action, "present")}${tail}${suffix}`,
-          past: `${verbPhrase(action, "past")}${tail}${suffix}`,
+          present: `${verbPhrase(action, "present")}${tail}${colonTail}`,
+          past: `${verbPhrase(action, "past")}${tail}${colonTail}`,
           // Without a known service there is nothing specific to say.
-          ...(service ? { failure: `Couldn't ${baseVerbPhrase(action)}${tail}` } : {}),
+          ...(service
+            ? { failure: t("status.cap_couldnt", { action: baseVerbPhrase(action), tail }) }
+            : {}),
         }
       }
     }
@@ -306,11 +364,13 @@ export function getCapabilityCallSentence(
         : typeof output?.name === "string"
           ? humanize(output.name)
           : null
-      const label = pluginName ? `${kind} “${pluginName}”` : `a ${kind} capability`
+      const label = pluginName
+        ? t("status.cap_kind_named", { kind: kindLabel(kind), name: `“${pluginName}”` })
+        : t("status.cap_kind_generic", { kind: kindLabel(kind) })
       return {
         service: pluginName,
-        present: `Using ${label}`,
-        past: `Used ${label}`,
+        present: t("status.cap_using_target", { target: label }),
+        past: t("status.cap_used_target", { target: label }),
       }
     }
 
@@ -320,30 +380,30 @@ export function getCapabilityCallSentence(
       const nativeName = name.replace(/^native:[^:]+:/, "")
       const words = nativeName.split(/(?=[A-Z])|[-_.\s]+/).filter(Boolean)
       const first = words[0]?.toLowerCase()
-      const verbPast = first ? PAST_TENSE[first] : undefined
-      const verbPresent = first ? PRESENT_TENSE[first] : undefined
+      const verbPast = first ? pastTenseWord(first) : undefined
+      const verbPresent = first ? presentTenseWord(first) : undefined
       let rest = words.slice(1)
       if (/^capabilit(y|ies)$/i.test(rest[0] ?? "")) rest = rest.slice(1)
       // "GoogleWorkspaceCalendarEvents" → service "Google Workspace", "calendar events".
       const nativeService = /^GoogleWorkspace/.test(rest.join("")) ? "Google Workspace"
         : /^Microsoft365/.test(rest.join("")) ? "Microsoft 365" : null
       if (nativeService) rest = rest.slice(nativeService === "Google Workspace" ? 2 : 1)
-      if (verbPast && verbPresent && rest.length > 0) {
+      if (first && verbPast && verbPresent && rest.length > 0) {
         const phrase = rest.join(" ").toLowerCase()
         const suffix = nativeService ? ` · ${nativeService}` : ""
         return {
           service: nativeService,
           present: `${verbPresent} ${phrase}${suffix}`,
           past: `${verbPast} ${phrase}${suffix}`,
-          failure: `Couldn't ${first} ${phrase}${suffix}`,
+          failure: t("status.cap_couldnt", { action: `${first} ${phrase}`, tail: suffix }),
         }
       }
     }
 
     return {
       service: null,
-      present: `Running a capability${quoted ? ` for${quoted}` : ""}`,
-      past: `Ran a capability${quoted ? ` for${quoted}` : ""}`,
+      present: quoted ? t("status.cap_generic_present_query", { query: quoted }) : t("status.cap_generic_present"),
+      past: quoted ? t("status.cap_generic_past_query", { query: quoted }) : t("status.cap_generic_past"),
     }
   }
 
@@ -358,28 +418,24 @@ export function getCapabilityCallSentence(
     // nothing a person needs; the query says what was searched.
     if (/^(?:search|find|query)(?:_|$)/i.test(action)) {
       const verb = action.split("_")[0]!.toLowerCase()
-      const suffix = quoted ? ` for${quoted}` : ""
       return {
         service,
-        present: `${PRESENT_TENSE[verb]} ${service}${suffix}`,
-        past: `${PAST_TENSE[verb]} ${service}${suffix}`,
-        failure: `Couldn't ${verb} ${service}`,
+        present: searchLine(verb, "present", service, forTail),
+        past: searchLine(verb, "past", service, forTail),
+        failure: t(couldntVerbKey(verb), { service }),
       }
     }
-    const suffix = quoted ? `:${quoted}` : ""
     return {
       service,
-      present: `${verbPhrase(action, "present")} · ${service}${suffix}`,
-      past: `${verbPhrase(action, "past")} · ${service}${suffix}`,
-      failure: `Couldn't ${baseVerbPhrase(action)} · ${service}`,
+      present: `${verbPhrase(action, "present")} · ${service}${colonTail}`,
+      past: `${verbPhrase(action, "past")} · ${service}${colonTail}`,
+      failure: t("status.cap_couldnt", { action: baseVerbPhrase(action), tail: ` · ${service}` }),
     }
   }
 
-  const suffix = quoted ? `:${quoted}` : ""
   return {
     service: null,
-    present: `${verbPhrase(toolName, "present")}${suffix}`,
-    past: `${verbPhrase(toolName, "past")}${suffix}`,
+    present: `${verbPhrase(toolName, "present")}${colonTail}`,
+    past: `${verbPhrase(toolName, "past")}${colonTail}`,
   }
 }
-

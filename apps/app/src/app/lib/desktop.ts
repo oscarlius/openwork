@@ -1,5 +1,6 @@
 import type { DesktopAgentPermissionRule } from "@openwork/types/den/desktop-policies";
 import { nativeDeepLinkEvent } from "./deep-link-bridge";
+import { t } from "../../i18n";
 
 export type * from "./desktop-types";
 export type {
@@ -482,7 +483,7 @@ export function assertDesktopWebUrl(url: string): string {
   try {
     parsed = new URL(url);
   } catch {
-    throw new Error("Only valid web links can be opened externally.");
+    throw new Error(t("desktop.link_invalid_url"));
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new Error(`External URL protocol "${parsed.protocol}" is not allowed.`);
@@ -496,7 +497,7 @@ export async function openDesktopUrl(url: string): Promise<void> {
   if (openExternal) {
     const result = await openExternal(safeUrl);
     if (result && result.ok === false) {
-      throw new Error(result.error ?? "Failed to open browser");
+      throw new Error(result.error ?? t("desktop.open_browser_failed"));
     }
     return;
   }
@@ -520,9 +521,9 @@ export async function openDesktopPath(target: string): Promise<void> {
 export async function openDesktopWorkspaceFile(workspaceRoot: string, target: string): Promise<"opened" | "revealed"> {
   const result = await invokeElectronHelper("__openWorkspaceFile", workspaceRoot, target);
   if (!result || typeof result !== "object" || !("ok" in result)) {
-    throw new Error("Could not open this file.");
+    throw new Error(t("desktop.open_file_failed"));
   }
-  if (!result.ok) throw new Error(result.error || "Could not open this file.");
+  if (!result.ok) throw new Error(result.error || t("desktop.open_file_failed"));
   return result.action;
 }
 

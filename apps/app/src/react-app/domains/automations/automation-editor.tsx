@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
 import { IconImage } from "@/react-app/design-system/icon-image"
 import { Cloud, Laptop } from "lucide-react"
+import { t } from "@/i18n"
 
 import { AutomationScheduleFields, AutomationTimezoneField } from "./automation-schedule-fields"
 import { AutomationModelButton } from "./automation-model-button"
@@ -148,7 +149,7 @@ function ConnectedAccountLogos({ accounts, files }: { accounts: readonly Automat
   const accountsLabel = names.length > 3 ? `${names.slice(0, 3).join(", ")} and ${names.length - 3} more` : names.join(", ")
   const filesLabel = files === "computer" ? "Files on your computer" : files === "cloud-computer" ? "Files on your cloud computer" : null
   const label = [filesLabel, accountsLabel].filter(Boolean).join(", plus ")
-  if (!filesLabel && accounts.length === 0) return <span className="text-xs text-muted-foreground">None connected yet</span>
+  if (!filesLabel && accounts.length === 0) return <span className="text-xs text-muted-foreground">{t("automations.no_accounts_connected")}</span>
   return (
     <span className="flex shrink-0 items-center gap-1.5" aria-label={label} title={label} data-automation-connected-accounts={accounts.length}>
       {files ? (
@@ -252,13 +253,13 @@ export function AutomationEditor(props: AutomationEditorProps) {
       }}
     >
       <div className="space-y-2">
-        <Label htmlFor="automation-name">Name</Label>
+        <Label htmlFor="automation-name">{t("extensions.add_name_label")}</Label>
         <Input
           id="automation-name"
           value={input.name}
           maxLength={120}
           required
-          placeholder="Daily project summary"
+          placeholder={t("automations.name_placeholder")}
           onChange={(event) => {
             const name = event.currentTarget.value
             setInput((current) => ({ ...current, name }))
@@ -268,13 +269,13 @@ export function AutomationEditor(props: AutomationEditorProps) {
 
       {pinnedWorkflow ? (
         <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm" data-automation-pinned-workflow={pinnedWorkflow.configObjectVersionId}>
-          <p className="font-medium">Pinned Workflow</p>
+          <p className="font-medium">{t("automations.pinned_workflow")}</p>
           <p className="mt-1 text-muted-foreground">{pinnedWorkflow.title}</p>
-          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">Version {pinnedWorkflow.configObjectVersionId}</p>
+          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{t("automations.pinned_workflow_version", { versionId: pinnedWorkflow.configObjectVersionId })}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          <Label htmlFor="automation-instructions">Instructions</Label>
+          <Label htmlFor="automation-instructions">{t("extensions.add_instructions_label")}</Label>
           <Textarea
             id="automation-instructions"
             className="min-h-36 resize-y"
@@ -287,8 +288,8 @@ export function AutomationEditor(props: AutomationEditorProps) {
             }}
           />
           <p className="text-xs text-muted-foreground">{cloud
-            ? canUse === "accounts" ? "Each run starts fresh in the cloud." : "Each run starts a new task on your cloud computer."
-            : "Each run starts a new task on your desktop computer."}</p>
+            ? canUse === "accounts" ? t("automations.each_run_fresh_cloud") : t("automations.each_run_new_cloud")
+            : t("automations.each_run_new_desktop")}</p>
         </div>
       )}
 
@@ -303,14 +304,14 @@ export function AutomationEditor(props: AutomationEditorProps) {
           onChange={(timezone) => setInput((current) => ({ ...current, schedule: { ...current.schedule, timezone } }))}
         />
         {pinnedWorkflow || usesCloudDefault ? null : <div className="space-y-2">
-          <Label htmlFor="automation-model">Model</Label>
+          <Label htmlFor="automation-model">{t("session.model")}</Label>
           <AutomationModelButton id="automation-model" model={input.model} options={modelOptions} onClick={() => setPickerOpen(true)} />
           <ModelPickerModal
             open={pickerOpen}
             options={pickerOptions}
             query={modelQuery}
             setQuery={setModelQuery}
-            subtitle={cloud ? "Your cloud computer uses this model and reasoning level." : "Your desktop computer uses this model and reasoning level."}
+            subtitle={cloud ? t("automations.cloud_model_subtitle") : t("automations.desktop_model_subtitle")}
             target="default"
             current={{ providerID: input.model.providerId, modelID: input.model.modelId }}
             onSelect={(model) => {
@@ -338,7 +339,7 @@ export function AutomationEditor(props: AutomationEditorProps) {
 
       {canChoose ? (
         <div className="space-y-2">
-          <Label id="automation-can-use">What it can use</Label>
+          <Label id="automation-can-use">{t("automations.can_use_label")}</Label>
           <RadioGroup
             aria-labelledby="automation-can-use"
             data-automation-runs-on={placement}

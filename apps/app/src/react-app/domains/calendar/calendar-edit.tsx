@@ -4,6 +4,7 @@ import type { AutomationList } from "@openwork/types/automations"
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/sonner"
+import { t } from "@/i18n"
 import { isDesktopRuntime } from "@/app/lib/runtime-env"
 import { AutomationEditor } from "@/react-app/domains/automations/automation-editor"
 import type { AutomationProviderCatalog } from "@/react-app/domains/automations/automation-model-options"
@@ -35,8 +36,8 @@ export function CalendarEditDialog(props: {
     <Dialog open onOpenChange={(open) => { if (!open) props.onClose() }}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl" data-calendar-edit={automation.id}>
         <DialogHeader>
-          <DialogTitle>Edit automation</DialogTitle>
-          <DialogDescription>Saving applies to future runs.</DialogDescription>
+          <DialogTitle>{t("calendar.edit_title")}</DialogTitle>
+          <DialogDescription>{t("calendar.edit_hint")}</DialogDescription>
         </DialogHeader>
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
         <AutomationEditor
@@ -52,7 +53,7 @@ export function CalendarEditDialog(props: {
           modelOptions={setup.modelsFor(current, revision.workspaceId)}
           modelOptionsByPlacement={setup.modelsByPlacementFor(revision.workspaceId)}
           providerCatalog={props.providerCatalog}
-          submitLabel="Save changes"
+          submitLabel={t("calendar.save_changes")}
           onCancel={props.onClose}
           onSave={async (input, chosen) => {
             const { client, organizationId } = props.context
@@ -68,7 +69,7 @@ export function CalendarEditDialog(props: {
                 ...(chosen === "desktop" && workspaceId ? { workspaceId } : {}),
               })
               await refresh()
-              toast.success(chosen === current ? "Automation updated" : chosen === "cloud" ? "Automation moved to the cloud" : "Automation moved to your desktop")
+              toast.success(chosen === current ? t("calendar.toast_updated") : chosen === "cloud" ? t("calendar.toast_moved_cloud") : t("calendar.toast_moved_desktop"))
               props.onClose()
             } catch (caught) {
               setError(describeAutomationError(caught))

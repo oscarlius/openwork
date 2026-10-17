@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 
 import * as React from "react";
+import { t } from "@/i18n";
 import { formatCrashDiagnostic } from "@/app/lib/crash-diagnostics";
 import { openworkServerInfo, readDesktopDistributionInfo, revealDesktopItemInDir } from "@/app/lib/desktop";
 import { reportCaughtWebError } from "@/app/lib/error-monitoring";
@@ -90,7 +91,7 @@ function RecoveryScreen({ crash }: { crash: CrashDetails }) {
     try {
       await revealDesktopItemInDir(path);
     } catch {
-      setLogsError("Could not open the logs folder.");
+      setLogsError(t("crash.logs_open_failed"));
     }
   };
 
@@ -98,7 +99,7 @@ function RecoveryScreen({ crash }: { crash: CrashDetails }) {
     <div className="flex h-screen w-screen items-center justify-center bg-background p-6" role="alert">
       <div className="flex w-full max-w-lg flex-col gap-4 text-sm">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold text-foreground">OpenWork hit an unexpected error</h1>
+          <h1 className="text-lg font-semibold text-foreground">{t("crash.title")}</h1>
           <p className="text-muted-foreground">
             The window recovered instead of going blank. Reloading usually clears it.
           </p>
@@ -138,7 +139,7 @@ function RecoveryScreen({ crash }: { crash: CrashDetails }) {
                   className="rounded-md border border-border px-3 py-1.5 font-medium text-foreground"
                   onClick={copy}
                 >
-                  {copied ? "Copied" : "Copy details"}
+                  {copied ? t("config.copied") : t("crash.copy_details")}
                 </button>
                 {logFilePath ? (
                   <button
@@ -150,7 +151,7 @@ function RecoveryScreen({ crash }: { crash: CrashDetails }) {
                   </button>
                 ) : null}
               </div>
-              {copyError ? <p role="status" className="text-muted-foreground">Could not copy details. You can select and copy the text above.</p> : null}
+              {copyError ? <p role="status" className="text-muted-foreground">{t("crash.copy_failed")}</p> : null}
               {logsError ? <p className="text-muted-foreground">{logsError}</p> : null}
             </div>
           ) : null}

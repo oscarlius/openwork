@@ -240,8 +240,8 @@ export function CommandPalette(props: CommandPaletteProps) {
       ? [{
           id: "open-in-split-view",
           title: `${t("session_management.open_in_split_view")}…`,
-          detail: "Choose any session, including one from another workspace",
-          meta: "Workbench",
+          detail: t("palette.open_split_detail"),
+          meta: t("palette.meta_workbench"),
           searchText: "side chat split view side by side session workspace",
           group: ACTIONS_GROUP,
           action: () => {
@@ -253,8 +253,8 @@ export function CommandPalette(props: CommandPaletteProps) {
       ? [{
           id: "new-split",
           title: t("session_management.new_split"),
-          detail: "Start an empty session beside this one",
-          meta: "Workbench",
+          detail: t("palette.new_split_detail"),
+          meta: t("palette.meta_workbench"),
           searchText: "new side chat new split empty session side by side pane",
           action: () => {
             props.onClose();
@@ -262,19 +262,19 @@ export function CommandPalette(props: CommandPaletteProps) {
           },
         }]
       : []),
-    ...(hasNestedModelPicker || props.onNextPinnedModel ? [{ id: "models.next-pinned", title: "Next pinned model", shortcut: formatChord(shortcutOs === "macos" ? "Ctrl+Shift+M" : "Mod+Shift+M", shortcutOs), group: ACTIONS_GROUP,
-      detail: modelControls.nextPinnedOption ? [currentModelTitle, modelTitle(modelControls.nextPinnedOption)].filter(Boolean).join(" → ") : "No alternative pinned model",
+    ...(hasNestedModelPicker || props.onNextPinnedModel ? [{ id: "models.next-pinned", title: t("palette.next_pinned_title"), shortcut: formatChord(shortcutOs === "macos" ? "Ctrl+Shift+M" : "Mod+Shift+M", shortcutOs), group: ACTIONS_GROUP,
+      detail: modelControls.nextPinnedOption ? [currentModelTitle, modelTitle(modelControls.nextPinnedOption)].filter(Boolean).join(" → ") : t("palette.no_pinned_alt"),
       disabled: !modelControls.nextPinnedOption,
       action: () => { (props.onNextPinnedModel ?? modelControls.onNextPinnedModel)(); props.onClose(); } }] : []),
-    ...(hasNestedModelPicker || props.onCycleModelSource ? [{ id: "models.next-source", title: "Cycle model source", shortcut: formatChord(shortcutOs === "macos" ? "Ctrl+Alt+M" : "Mod+Alt+M", shortcutOs), group: ACTIONS_GROUP,
-      detail: modelControls.sourceCycleDetail || "No accessible model sources", disabled: !modelControls.nextSourceOption,
+    ...(hasNestedModelPicker || props.onCycleModelSource ? [{ id: "models.next-source", title: t("palette.cycle_source_title"), shortcut: formatChord(shortcutOs === "macos" ? "Ctrl+Alt+M" : "Mod+Alt+M", shortcutOs), group: ACTIONS_GROUP,
+      detail: modelControls.sourceCycleDetail || t("palette.no_model_sources"), disabled: !modelControls.nextSourceOption,
       action: () => { (props.onCycleModelSource ?? modelControls.onCycleModelSource)(); props.onClose(); } }] : []),
     ...(hasNestedModelPicker || props.onOpenModelPicker
       ? [{
           id: "models",
-          title: "Models",
+          title: t("models.title"),
           meta: currentModelTitle,
-          detail: "Choose the LLM that runs your next prompts",
+          detail: t("palette.models_detail"),
           searchText: "model models llm provider openai anthropic claude gpt gemini switch pick select default",
           group: ACTIONS_GROUP,
           action: () => {
@@ -306,7 +306,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     ...(canMoveCurrentSessionToGroup
       ? [{
           id: "move-to-group",
-          title: "Move to Group",
+          title: t("palette.move_to_group"),
           detail: props.currentSessionForGroupMove
             ? `Add ${props.currentSessionForGroupMove.title} to an existing group`
             : "Add the selected task to an existing group",
@@ -320,11 +320,11 @@ export function CommandPalette(props: CommandPaletteProps) {
       : []),
     {
       id: "accessible-items",
-      title: "Accessible items",
+      title: t("palette.accessible_items"),
       detail: accessibleTargetCount > 0
         ? `Open ${accessibleTargetCount.toLocaleString()} servers and artifacts detected in this session`
         : "No servers or artifacts detected in this session yet",
-      meta: "Session",
+      meta: t("palette.meta_session"),
       keywords: ["servers", "artifacts", "files", "urls", "open"],
       group: ACTIONS_GROUP,
       action: () => {
@@ -384,7 +384,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     ...(props.onToggleSidebar
       ? [{
           id: "sidebar.toggle",
-          title: "Toggle sidebar",
+          title: t("palette.toggle_sidebar"),
           keywords: ["hide", "show", "sidebar", "collapse", "expand"],
           group: ACTIONS_GROUP,
           action: () => {
@@ -396,7 +396,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     ...(props.onOpenAutomations
       ? [{
           id: "automations.open",
-          title: "Automations",
+          title: t("palette.automations"),
           keywords: ["schedule", "scheduled", "recurring", "cron", "daily", "weekly"],
           group: ACTIONS_GROUP,
           action: () => {
@@ -408,7 +408,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     ...(props.onOpenCalendar
       ? [{
           id: "calendar.open",
-          title: "Calendar",
+          title: t("palette.calendar"),
           keywords: ["week", "meetings", "schedule", "automations", "google calendar", "outlook"],
           group: ACTIONS_GROUP,
           action: () => {
@@ -420,7 +420,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     ...(props.onOpenDashboard
       ? [{
           id: "dashboard.open",
-          title: "Dashboard",
+          title: t("palette.dashboard"),
           keywords: ["home", "overview", "apps"],
           group: ACTIONS_GROUP,
           action: () => {
@@ -491,7 +491,7 @@ export function CommandPalette(props: CommandPaletteProps) {
         id: `accessible:${target.id}`,
         title: target.name || target.value,
         detail: target.value,
-        meta: target.kind === "url" ? "Server" : "Artifact",
+        meta: target.kind === "url" ? t("connect.confirm_server_label") : t("extensions.badge_app"),
         searchText: `${target.name} ${target.value} ${target.preview}`.toLowerCase(),
         action: () => {
           props.onClose();
@@ -502,7 +502,7 @@ export function CommandPalette(props: CommandPaletteProps) {
         id: `accessible-hide:${target.id}`,
         title: `Stop tracking ${target.name || target.value}`,
         detail: target.value,
-        meta: "Hide",
+        meta: t("palette.meta_hide"),
         searchText: `stop tracking hide ${target.name} ${target.value} ${target.preview}`.toLowerCase(),
         action: () => {
           props.onClose();
@@ -540,7 +540,7 @@ export function CommandPalette(props: CommandPaletteProps) {
     (props.sessionGroups ?? []).map((group) => ({
       id: `group:${group.id}`,
       title: group.label,
-      meta: props.currentSessionGroupId === group.id ? "Current" : undefined,
+      meta: props.currentSessionGroupId === group.id ? t("share_skill_destination.current_badge") : undefined,
       searchText: `group ${group.label}`.toLowerCase(),
       action: () => {
         props.onClose();
@@ -689,13 +689,13 @@ export function CommandPalette(props: CommandPaletteProps) {
           {mode === "split-sessions"
               ? t("session_management.open_in_split_view")
             : mode === "accessible-items"
-              ? "Accessible items"
+              ? t("palette.accessible_items")
               : mode === "agents"
                 ? t("session.cmd_agents_title")
                 : mode === "groups"
-                  ? "Move to Group"
+                  ? t("palette.move_to_group")
                   : mode === "models"
-                    ? "Models"
+                    ? t("models.title")
                     : mode === "model-behavior"
                       ? behaviorModel?.behaviorTitle ?? "Thinking / Effort"
                   : t("session.palette_title_actions")

@@ -9,6 +9,7 @@ import {
   getWorkspaceSettingsTabs,
 } from "@/react-app/domains/settings/shell/settings-page";
 
+import { t } from "@/i18n";
 import { ADVANCED_SETTINGS_SECTIONS } from "@/react-app/domains/settings/advanced-sections";
 
 import type { PaletteItem } from "./command-palette-search";
@@ -29,14 +30,18 @@ const SETTINGS_KEYWORDS: Partial<Record<SettingsTab, string[]>> = {
   general: ["settings", "preferences", "options", "configure"],
 };
 
-const LIBRARY_SECTIONS = [
-  { slug: "skills", title: "Skills", detail: "Instructions that teach agents specialized workflows", keywords: ["skill", "instructions", "workflows"] },
-  { slug: "mcps", title: "MCP servers", detail: "Tools and services connected through MCP", keywords: ["mcp", "servers", "tools"] },
-  { slug: "connections", title: "Connections", detail: "Connected organization apps and services", keywords: ["apps", "services", "sign in"] },
-  { slug: "plugins", title: "Plugins", detail: "Extensions that add tools and behavior", keywords: ["extensions", "tools", "hooks"] },
-  { slug: "agents", title: "Agents", detail: "Specialized agents available in conversations", keywords: ["agent", "assistants", "modes"] },
-  { slug: "commands", title: "Commands", detail: "Slash commands available in the composer", keywords: ["command", "slash", "prompts"] },
-] satisfies Array<{ slug: string; title: string; detail: string; keywords: string[] }>;
+// Localized on call (never at module load) so the palette re-renders when the
+// language changes. See EXTRACTION-CONTRACT §6.
+function getLibrarySections(): Array<{ slug: string; title: string; detail: string; keywords: string[] }> {
+  return [
+    { slug: "skills", title: t("settings.tab_skills"), detail: t("palette.library_skills_desc"), keywords: ["skill", "instructions", "workflows"] },
+    { slug: "mcps", title: t("palette.library_mcps_title"), detail: t("palette.library_mcps_desc"), keywords: ["mcp", "servers", "tools"] },
+    { slug: "connections", title: t("activity.filter_connections"), detail: t("palette.library_connections_desc"), keywords: ["apps", "services", "sign in"] },
+    { slug: "plugins", title: t("extensions.filter_plugins"), detail: t("palette.library_plugins_desc"), keywords: ["extensions", "tools", "hooks"] },
+    { slug: "agents", title: t("extensions.filter_agents"), detail: t("palette.library_agents_desc"), keywords: ["agent", "assistants", "modes"] },
+    { slug: "commands", title: t("extensions.filter_commands"), detail: t("palette.library_commands_desc"), keywords: ["command", "slash", "prompts"] },
+  ];
+}
 
 export function buildCommandPaletteSettingsItems(input: {
   developerMode: boolean;
@@ -56,10 +61,10 @@ export function buildCommandPaletteSettingsItems(input: {
 
   const tabItems = tabs.map((tab): PaletteItem => ({
     id: `settings:${tab}`,
-    title: tab === "advanced" ? "Advanced settings" : getSettingsTabLabel(tab),
+    title: tab === "advanced" ? t("mcp.advanced_settings") : getSettingsTabLabel(tab),
     detail: getSettingsTabDescription(tab),
     keywords: SETTINGS_KEYWORDS[tab],
-    breadcrumb: "Settings",
+    breadcrumb: t("status.settings"),
     group: "settings",
     action: () => {
       if (tab === "extensions") {
@@ -70,7 +75,7 @@ export function buildCommandPaletteSettingsItems(input: {
     },
   }));
 
-  const libraryItems = LIBRARY_SECTIONS.map((section): PaletteItem => ({
+  const libraryItems = getLibrarySections().map((section): PaletteItem => ({
     id: `settings:extensions/${section.slug}`,
     title: section.title,
     detail: section.detail,

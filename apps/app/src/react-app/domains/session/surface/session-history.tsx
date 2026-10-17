@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { CancelledError, hashKey, QueryObserver, queryOptions, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
 import { TaskRecovery } from "@/components/chat/task-recovery";
+import { t } from "@/i18n";
 import type { UIMessage } from "ai";
 import { applyHistorySourceChanges, mergeHistoryWindow, projectHistoryRead, reconcileHistoryRead, type LatestSessionHistory } from "./session-render-state";
 import { snapshotToUIMessages } from "../sync/usechat-adapter";
@@ -675,8 +676,8 @@ export function SessionHistoryLoading({ saved, failed = false }: { saved: Sessio
   const height = Math.max(200, (saved.geometry?.scrollHeight ?? 232) - 32);
   const top = saved.mode === "manual" ? Math.min(saved.scrollTop + 64, height - 120) : Math.max(64, height - 200);
   if (failed) return <div data-thread-placeholder style={{ minHeight: height }} />;
-  return <div data-thread-loading role="status" aria-live="polite" aria-label="Loading conversation" style={{ minHeight: height }}>
-    <span className="sr-only">Loading conversation</span>
+  return <div data-thread-loading role="status" aria-live="polite" aria-label={t("session.loading_conversation")} style={{ minHeight: height }}>
+    <span className="sr-only">{t("session.loading_conversation")}</span>
     {visible ? <div aria-hidden="true" data-thread-loading-visual className="flex items-center justify-center gap-2 text-sm text-dls-secondary" style={{ paddingTop: Math.max(32, top) }}>
       <LoaderCircle aria-hidden="true" className="size-4 motion-safe:animate-spin" />
       <span>{saved.mode === "manual" ? "Returning to your reading position…" : "Loading latest messages…"}</span>
@@ -705,9 +706,9 @@ export function SessionHistoryStatus({ complete, pending, loading, failed, faile
   return <div data-thread-history-status className="flex shrink-0 justify-center px-3 pt-2 sm:px-5">
     <TaskRecovery compact state={failed && !retrying ? "failed" : "retrying"}
       title={retrying ? pending ? "Loading conversation…" : "Loading earlier messages…" : failed
-        ? failedReason ?? (pending ? "This conversation could not be loaded." : "The rest of this conversation could not be loaded.")
+        ? failedReason ?? (pending ? t("session.conversation_load_failed") : t("session.conversation_rest_load_failed"))
         : "Loading earlier messages…"}
-      retryLabel="Reload conversation" retryDisabled={retrying} onRetry={failed || retrying ? () => {
+      retryLabel={t("session.conversation_reload")} retryDisabled={retrying} onRetry={failed || retrying ? () => {
         if (retryPending.current) return;
         retryPending.current = true;
         setRetrying(true);

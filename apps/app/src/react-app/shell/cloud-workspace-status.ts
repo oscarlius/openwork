@@ -1,4 +1,5 @@
 import type { DenCloudInstance, DenCloudInstanceUpdateDeferral, DenCloudStartupFailure } from "@/app/lib/den";
+import { t } from "@/i18n";
 
 export function cloudWorkspaceFailureLogFields(failure: DenCloudStartupFailure) {
   return {
@@ -59,26 +60,26 @@ export function cloudWorkspaceTakeoverCopy(input: {
 }): { title: string; body: string } {
   if (input.variant === "access-required") {
     return {
-      title: "OpenWork Web needs an active plan",
-      body: "Your organization does not have an active OpenWork Web subscription or complimentary access. Get OpenWork Web in Den to start your cloud workspace.",
+      title: t("cloud_workspace.access_required_title"),
+      body: t("cloud_workspace.access_required_body"),
     };
   }
   if (input.variant === "failed") {
     return {
-      title: "Workspace needs attention",
-      body: "We couldn’t start the sandbox. Retry, or sign out and reconnect.",
+      title: t("cloud_workspace.needs_attention"),
+      body: t("cloud_workspace.failed_body"),
     };
   }
   if (input.variant === "unavailable") {
     return {
-      title: "Couldn’t check your workspace",
-      body: "OpenWork Cloud didn’t answer. Your sandbox may still be running, so try checking again.",
+      title: t("cloud_workspace.unavailable_title"),
+      body: t("cloud_workspace.unavailable_body"),
     };
   }
   if (input.slow) {
     return {
-      title: "Your cloud workspace is taking longer than usual",
-      body: "This is taking longer than usual. You can keep waiting or check again.",
+      title: t("cloud_workspace.slow_title"),
+      body: t("cloud_workspace.slow_body"),
     };
   }
   if (input.checking) return { title: "Checking cloud workspace…", body: "" };
@@ -232,7 +233,7 @@ export function shouldRefetchCloudWorkspaceOnReadyTransition(input: {
 }
 
 function versionDisplay(instance: DenCloudInstance | null) {
-  return formatCloudWorkspaceVersion(instance?.imageVersion ?? null) ?? "Legacy workspace";
+  return formatCloudWorkspaceVersion(instance?.imageVersion ?? null) ?? t("cloud_workspace.legacy_version");
 }
 
 function latestDisplay(instance: DenCloudInstance | null) {
@@ -255,7 +256,7 @@ function baseLines(instance: DenCloudInstance | null, updateAvailable: boolean) 
     computerLine: instanceName ? `Computer: ${instanceName}` : null,
     versionLine: `Version: ${version}`,
     latestLine: `Latest: ${latest}${latestSuffix}`,
-    backupsLine: "Backups on",
+    backupsLine: t("cloud_workspace.backups_on"),
   };
 }
 
@@ -300,9 +301,9 @@ export function mapCloudWorkspaceState(input: {
   if (input.instance?.status === "failed") {
     return {
       variant: "failed",
-      label: "Workspace needs attention",
+      label: t("cloud_workspace.needs_attention"),
       tone: "amber",
-      statusLine: "Workspace needs attention",
+      statusLine: t("cloud_workspace.needs_attention"),
       ...lines,
       updateAvailable,
       showUpdate: false,
@@ -356,7 +357,7 @@ export function mapCloudWorkspaceState(input: {
   if (updateAvailable) {
     return {
       variant: "stale",
-      label: "Update available",
+      label: t("updates.available"),
       tone: "neutral",
       statusLine: input.updateDeferred
         ? cloudWorkspaceUpdateDeferredLine(input.updateDeferred)
@@ -372,7 +373,7 @@ export function mapCloudWorkspaceState(input: {
   const version = formatCloudWorkspaceVersion(input.instance.imageVersion) ?? formatCloudWorkspaceVersion(input.instance.latestVersion);
   return {
     variant: "ready",
-    label: version ? `Cloud · ${version}` : "Cloud",
+    label: version ? t("cloud_workspace.cloud_version", { version }) : t("cloud_workspace.cloud"),
     tone: "neutral",
     statusLine: connectedStatusLine(input.instance, false),
     ...lines,

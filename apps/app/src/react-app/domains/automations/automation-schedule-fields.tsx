@@ -4,6 +4,7 @@ import type { AutomationSchedule } from "@openwork/types/automations"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { t } from "@/i18n"
 
 const WEEKDAYS = [
   { value: 1, label: "Mon" },
@@ -75,7 +76,7 @@ export function AutomationScheduleFields(props: {
     <>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={id("frequency")}>Schedule</Label>
+          <Label htmlFor={id("frequency")}>{t("automations.schedule_label")}</Label>
           <select
             id={id("frequency")}
             className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm"
@@ -85,14 +86,14 @@ export function AutomationScheduleFields(props: {
               if (kind === "once" || kind === "daily" || kind === "weekly") changeScheduleKind(kind)
             }}
           >
-            <option value="once">Once</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
+            <option value="once">{t("automations.frequency_once")}</option>
+            <option value="daily">{t("automations.frequency_daily")}</option>
+            <option value="weekly">{t("automations.frequency_weekly")}</option>
           </select>
         </div>
         {schedule.kind === "once" ? (
           <div className="space-y-2">
-            <Label htmlFor={id("once-at")}>Run at</Label>
+            <Label htmlFor={id("once-at")}>{t("automations.run_at_label")}</Label>
             <Input
               id={id("once-at")}
               type="datetime-local"
@@ -105,7 +106,7 @@ export function AutomationScheduleFields(props: {
           </div>
         ) : (
           <div className="space-y-2">
-            <Label htmlFor={id("time")}>Time</Label>
+            <Label htmlFor={id("time")}>{t("automations.time_label")}</Label>
             <Input
               id={id("time")}
               type="time"
@@ -118,7 +119,7 @@ export function AutomationScheduleFields(props: {
 
       {schedule.kind === "weekly" ? (
         <div className="space-y-2">
-          <Label>Days</Label>
+          <Label>{t("automations.days_label")}</Label>
           <div className="flex flex-wrap gap-2">
             {WEEKDAYS.map((day) => (
               <Button
@@ -147,7 +148,7 @@ export function AutomationTimezoneField(props: {
   const id = `${props.idPrefix ?? "automation"}-timezone`
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Timezone</Label>
+      <Label htmlFor={id}>{t("automations.timezone_label")}</Label>
       <Input id={id} value={props.timezone} onChange={(event) => props.onChange(event.currentTarget.value)} />
     </div>
   )

@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { t } from "@/i18n";
+
 export type BootPhaseId =
   | "idle"
   | "bootstrapping-workspaces"
@@ -45,15 +47,24 @@ const DEFAULT_STATE: BootStateSnapshot = {
   error: null,
 };
 
-const PHASE_MESSAGES: Record<BootPhaseId, string> = {
-  idle: "",
-  "bootstrapping-workspaces": "Loading your workspaces",
-  "starting-openwork-server": "Starting the OpenWork server",
-  "starting-engine": "Preparing workspace",
-  "activating-workspace": "Activating your workspace",
-  ready: "Ready",
-  error: "Something went wrong",
-};
+function phaseMessage(phase: BootPhaseId): string {
+  switch (phase) {
+    case "idle":
+      return "";
+    case "bootstrapping-workspaces":
+      return t("boot.loading_workspaces");
+    case "starting-openwork-server":
+      return t("boot.starting_server");
+    case "starting-engine":
+      return t("session.preparing_workspace");
+    case "activating-workspace":
+      return t("boot.activating_workspace");
+    case "ready":
+      return t("connect.state_ready_label");
+    case "error":
+      return t("common.something_went_wrong");
+  }
+}
 
 const BootStateContext = createContext<BootStateContextValue | null>(null);
 
@@ -78,7 +89,7 @@ export function BootStateProvider({ children }: { children: ReactNode }) {
       return {
         ...current,
         phase,
-        message: PHASE_MESSAGES[phase] ?? current.message,
+        message: phaseMessage(phase),
         detail: detail ?? null,
         startedAt: nextStartedAt,
         completedAt: phase === "ready" ? Date.now() : null,
@@ -92,7 +103,7 @@ export function BootStateProvider({ children }: { children: ReactNode }) {
       ...current,
       error: message,
       phase: message ? "error" : current.phase,
-      message: message ? PHASE_MESSAGES.error : current.message,
+      message: message ? phaseMessage("error") : current.message,
     }));
   }, []);
 
@@ -100,7 +111,7 @@ export function BootStateProvider({ children }: { children: ReactNode }) {
     setSnapshot((current) => ({
       ...current,
       phase: "ready",
-      message: PHASE_MESSAGES.ready,
+      message: phaseMessage("ready"),
       detail: null,
       completedAt: Date.now(),
       error: null,

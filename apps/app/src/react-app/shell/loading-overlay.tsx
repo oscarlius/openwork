@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { useEffect, useState } from "react";
+import { t } from "@/i18n";
 import type { RecoveryActionResult, RecoveryRelease } from "@/app/lib/desktop";
 import type { DenAppVersionMetadata, DenDesktopConfig } from "@/app/lib/den";
 import { readFreshDenAppVersionMetadata } from "@/app/lib/version-gate";
@@ -85,10 +86,10 @@ export function LoadingOverlay() {
     try {
       const result = await action();
       setActionState(result.ok
-        ? result.message ?? "Recovery is ready."
-        : result.reason ?? "Recovery could not be started. Please retry.");
+        ? result.message ?? t("recovery.ready")
+        : result.reason ?? t("recovery.failed"));
     } catch {
-      setActionState("Recovery could not be started. Please retry.");
+      setActionState(t("recovery.failed"));
     }
   };
 
@@ -110,8 +111,8 @@ export function LoadingOverlay() {
       <div className="flex w-full max-w-[320px] flex-col items-center gap-4 px-6 text-center">
         {error ? (
           <div className="flex w-full flex-col gap-3 text-[12px] leading-5">
-            <div className="text-base font-medium text-dls-primary">OpenWork couldn't start</div>
-            <div className="text-dls-secondary">Reload to try again, or return to a version that works on this computer.</div>
+            <div className="text-base font-medium text-dls-primary">{t("boot.couldnt_start")}</div>
+            <div className="text-dls-secondary">{t("boot.couldnt_start_hint")}</div>
             <button
               type="button"
               className="rounded-md border border-dls-border px-3 py-2 font-medium text-dls-primary"
@@ -162,7 +163,7 @@ export function LoadingOverlay() {
             ) : null}
             {actionState ? <div className="text-dls-secondary">{actionState}</div> : null}
             <details className="text-left text-dls-secondary">
-              <summary className="cursor-pointer">Technical details</summary>
+              <summary className="cursor-pointer">{t("mcp.technical_details")}</summary>
               <div className="mt-2 break-words" data-testid="boot-error-detail">{error}</div>
             </details>
           </div>
@@ -170,7 +171,7 @@ export function LoadingOverlay() {
           <>
             <OwDotTicker size="md" />
             <div className="text-[12px] leading-5 text-dls-secondary">
-              {message || "Preparing workspace"}
+              {message || t("session.preparing_workspace")}
             </div>
             <button
               type="button"
