@@ -94,7 +94,7 @@ OpenWork Den 是在团队或组织范围内管理 OpenWork 的控制平面。
 本仓库按目录拆分授权，方式与 GitLab 类似：
 
 - **`ee/` 之外的所有内容都是 MIT**——桌面应用和核心平台都是开源的，任何用途都免费。
-- **`ee/` 之下的所有内容（OpenWork Den——组织控制平面）都适用 [OpenWork EE License](ee/LICENSE)**，这是一种源码可见（source-available）的许可。代码公开，方便你确切核对自己要部署的东西。生产环境使用需要 [OpenWork 订阅](https://openworklabs.com/pricing)，但有几项例外：**最多 5 个用户的组织免费**、**任何规模都可免费评估 30 天**，开发和测试则始终免费。此外，每个 `ee/` 版本在发布两年后都会转为 MIT 许可。
+- **`ee/` 之下的所有内容（OpenWork Den——组织控制平面）都适用 [OpenWork EE License](../ee/LICENSE)**，这是一种源码可见（source-available）的许可。代码公开，方便你确切核对自己要部署的东西。生产环境使用需要 [OpenWork 订阅](https://openworklabs.com/pricing)，但有几项例外：**最多 5 个用户的组织免费**、**任何规模都可免费评估 30 天**，开发和测试则始终免费。此外，每个 `ee/` 版本在发布两年后都会转为 MIT 许可。
 
 在本许可证采用之前发布的版本仍沿用其原始许可证（FSL-1.1-MIT）。参见[定价](https://openworklabs.com/pricing)和[订阅条款](https://openworklabs.com/terms/subscription)。
 
@@ -108,7 +108,7 @@ OpenWork Den 是在团队或组织范围内管理 OpenWork 的控制平面。
 
 ### 前置条件
 
-- **Node 24**——版本已在 [`.nvmrc`](./.nvmrc) 中固定（`nvm use` 会自动读取）。
+- **Node 24**——版本已在 [`.nvmrc`](../.nvmrc) 中固定（`nvm use` 会自动读取）。
 - **pnpm 11**——在 `package.json`（`packageManager`）中固定；运行 `corepack enable` 即可自动使用固定版本。绝不要使用 npm 或 yarn。
 
 ### 首次运行
@@ -130,7 +130,7 @@ pnpm dev   # 启动带热重载的 Electron 桌面应用
 | `apps/` | 桌面应用：React UI（`apps/app`）、Electron 外壳（`apps/desktop`）以及 `openwork-server`（`apps/server`）（MIT） |
 | `packages/` | 共享核心包（MIT） |
 | `ee/` | OpenWork Den——组织控制平面、MCP 网关和推理服务（EE License，参见[许可证](#licensing)） |
-| `evals/` | 基于 `@openwork/testkit` 构建的可执行测试规格——见 [`evals/README.md`](./evals/README.md) |
+| `evals/` | 基于 `@openwork/testkit` 构建的可执行测试规格——见 [`evals/README.md`](../evals/README.md) |
 | `worlds/` | 供 `pnpm world` 使用的声明式开发/测试环境定义 |
 | `docs/` | 运维、功能和发布文档 |
 | `.opencode/skills/` | 仓库智能体技能（测试、发布、Daytona 等） |
@@ -145,13 +145,13 @@ pnpm evals:pr specs/<name>.test.ts           # 不依赖应用的 PR 通道规�
 pnpm evals:e2e <name> --local                # 驱动应用的 E2E 流程，在本地运行
 ```
 
-运行期可观察的变更需要在 PR 上附上测试证据。`AGENTS.md` 和 [`evals/README.md`](./evals/README.md) 说明了验证约定与术语。
+运行期可观察的变更需要在 PR 上附上测试证据。`AGENTS.md` 和 [`evals/README.md`](../evals/README.md) 说明了验证约定与术语。
 
 ### 提交 Pull Request
 
 1. 从 `dev`（默认分支）切出分支，并把 PR 提向 `dev`。
 2. 尽量缩小 diff，并为运行期可观察的变更附上或更新测试证据。
-3. 阅读 [CONTRIBUTING.md](./CONTRIBUTING.md) 了解许可条款。贡献即表示你同意 DCO；`ee/` 下的贡献适用 [CLA](./legal/individual-contributor-license-agreement.md)，无需另外签署任何东西。
+3. 阅读 [CONTRIBUTING.md](../CONTRIBUTING.md) 了解许可条款。贡献即表示你同意 DCO；`ee/` 下的贡献适用 [CLA](../legal/individual-contributor-license-agreement.md)，无需另外签署任何东西。
 
 ## 本地开发
 
