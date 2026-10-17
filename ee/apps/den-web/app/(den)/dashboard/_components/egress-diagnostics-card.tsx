@@ -21,6 +21,8 @@ import { permissionLockReason } from "../../_lib/den-org";
 import { DenButton, buttonVariants } from "../../_components/ui/button";
 import { DenCard } from "../../_components/ui/card";
 import { DenInput } from "../../_components/ui/input";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 
 function statusStyles(status: EgressDiagnosticStep["status"]) {
   if (status === "passed") return "border-emerald-200 bg-emerald-50 text-emerald-800";
@@ -34,13 +36,14 @@ function StatusIcon({ status }: { status: EgressDiagnosticStep["status"] }) {
   return <CircleDashed aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />;
 }
 
-function ownerLabel(owner: EgressDiagnosticStep["owner"]) {
-  if (owner === "network-administrator") return "Network administrator";
-  if (owner === "openwork-support") return "OpenWork support";
-  return "Den operator";
+function ownerLabel(t: DenTranslate, owner: EgressDiagnosticStep["owner"]) {
+  if (owner === "network-administrator") return t("denDashboard.egress.ownerNetworkAdmin");
+  if (owner === "openwork-support") return t("denDashboard.egress.ownerOpenworkSupport");
+  return t("denDashboard.egress.ownerDenOperator");
 }
 
 function StepResult({ step }: { step: EgressDiagnosticStep }) {
+  const t = useDenT();
   return (
     <li className={`grid gap-3 rounded-[22px] border px-4 py-4 ${statusStyles(step.status)}`}>
       <div className="flex min-w-0 items-start gap-3">
@@ -57,12 +60,12 @@ function StepResult({ step }: { step: EgressDiagnosticStep }) {
       </div>
       {step.httpStatuses.length > 0 ? (
         <p className="text-[12px]">
-          HTTP responses: <span className="font-mono">{step.httpStatuses.join(" → ")}</span>
+          {t("denDashboard.egress.httpResponses")} <span className="font-mono">{step.httpStatuses.join(" → ")}</span>
         </p>
       ) : null}
       {step.diagnosticIds.length > 0 ? (
         <div className="grid gap-1 text-[12px]">
-          <span>Remote diagnostic references</span>
+          <span>{t("denDashboard.egress.remoteReferences")}</span>
           {step.diagnosticIds.map((diagnosticId) => (
             <code className="break-all" key={diagnosticId}>{diagnosticId}</code>
           ))}
@@ -70,9 +73,9 @@ function StepResult({ step }: { step: EgressDiagnosticStep }) {
       ) : null}
       {step.status === "failed" ? (
         <div className="rounded-xl border border-current/15 bg-white/60 px-3 py-3 text-[13px]">
-          <p><strong>Suggested owner:</strong> {ownerLabel(step.owner)}</p>
-          <p className="mt-1"><strong>Next action:</strong> {step.action}</p>
-          {step.code ? <p className="mt-1"><strong>Failure code:</strong> <code>{step.code}</code></p> : null}
+          <p><strong>{t("denDashboard.egress.suggestedOwner")}</strong> {ownerLabel(t, step.owner)}</p>
+          <p className="mt-1"><strong>{t("denDashboard.egress.nextAction")}</strong> {step.action}</p>
+          {step.code ? <p className="mt-1"><strong>{t("denDashboard.egress.failureCode")}</strong> <code>{step.code}</code></p> : null}
         </div>
       ) : null}
     </li>
@@ -80,6 +83,7 @@ function StepResult({ step }: { step: EgressDiagnosticStep }) {
 }
 
 export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean; canManage: boolean }) {
+  const t = useDenT();
   const [available, setAvailable] = useState(false);
   const [targetOrigin, setTargetOrigin] = useState<string | null>(null);
   const [missingConfiguration, setMissingConfiguration] = useState<string[]>([]);
@@ -114,14 +118,14 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
           setError(null);
         }
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Could not load egress diagnostics.");
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : t("denDashboard.egress.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     void loadConfiguration();
     return () => { cancelled = true; };
-  }, [canView]);
+  }, [canView, t]);
 
   useEffect(() => {
     if (!copied) return;
@@ -131,7 +135,7 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
 
   async function runDiagnostic() {
     if (!canManage) {
-      setError("You don't have permission to run this diagnostic.");
+      setError(t("denDashboard.egress.runDenied"));
       return;
     }
 
@@ -147,7 +151,7 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
       if (!parsed.success) throw new Error("Den returned an invalid egress diagnostic result.");
       setResult(parsed.data);
     } catch (runError) {
-      setError(runError instanceof Error ? runError.message : "Egress diagnostic could not complete.");
+      setError(runError instanceof Error ? runError.message : t("denDashboard.egress.runFailed"));
     } finally {
       setRunning(false);
     }
@@ -155,13 +159,13 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
 
   async function saveBearerToken() {
     if (!canManage) {
-      setError("You don't have permission to change the diagnostic token.");
+      setError(t("denDashboard.egress.tokenDenied"));
       return;
     }
 
     const bearerToken = bearerTokenDraft.trim();
     if (bearerToken.length < 24) {
-      setError("Enter a diagnostic token with at least 24 characters.");
+      setError(t("denDashboard.egress.tokenTooShort"));
       return;
     }
     setSavingBearerToken(true);
@@ -177,7 +181,7 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
       setMissingConfiguration([]);
       setEditingBearerToken(false);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save the diagnostic token.");
+      setError(saveError instanceof Error ? saveError.message : t("denDashboard.egress.tokenSaveFailed"));
     } finally {
       setSavingBearerToken(false);
     }
@@ -193,10 +197,10 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
     <DenCard size="spacious" className="grid gap-6" data-testid="egress-diagnostics-card">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="grid max-w-[660px] gap-2">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">Private-cloud support</p>
-          <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">Den egress diagnostic</h2>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">{t("denDashboard.egress.eyebrow")}</p>
+          <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">{t("denDashboard.egress.title")}</h2>
           <p className="text-[14px] text-gray-500">
-            Run a controlled connection from this Den process through the same DNS, proxy, TLS, firewall, service-mesh, and Kubernetes egress path used by enterprise MCP connections.
+            {t("denDashboard.egress.description")}
           </p>
         </div>
         <DenButton
@@ -206,48 +210,48 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
           disabled={!canManage || loading || !available}
           onClick={() => void runDiagnostic()}
         >
-          Run egress diagnostic
+          {t("denDashboard.egress.runButton")}
         </DenButton>
       </div>
 
       <div className="rounded-[22px] border border-gray-200 bg-gray-50 px-4 py-4 text-[13px] text-gray-600">
-        <p><strong>Fixed target:</strong> {targetOrigin ? <code className="break-all">{targetOrigin}</code> : "Not configured"}</p>
-        <p className="mt-1">The browser cannot change this target and the test never sends organization data or customer/provider credentials.</p>
+        <p><strong>{t("denDashboard.egress.fixedTarget")}</strong> {targetOrigin ? <code className="break-all">{targetOrigin}</code> : t("denDashboard.egress.notConfigured")}</p>
+        <p className="mt-1">{t("denDashboard.egress.targetHint")}</p>
       </div>
 
-      {canView && !canManage ? <p className="text-[13px] text-gray-500">{`Read only. ${permissionLockReason("egress_diagnostics.manage")}`}</p> : null}
-      {loading ? <p className="text-[13px] text-gray-500" role="status">Loading diagnostic configuration...</p> : null}
+      {canView && !canManage ? <p className="text-[13px] text-gray-500">{t("denDesktopPolicies.notice.readOnly", { reason: permissionLockReason("egress_diagnostics.manage") })}</p> : null}
+      {loading ? <p className="text-[13px] text-gray-500" role="status">{t("denDashboard.egress.configLoading")}</p> : null}
       {!loading && canView && available && !editingBearerToken ? (
         <div className="flex items-center justify-between gap-3 rounded-[22px] border border-gray-200 bg-gray-50 px-4 py-3 text-[13px] text-gray-600">
-          <p>Diagnostic token configured in Den.</p>
+          <p>{t("denDashboard.egress.tokenConfigured")}</p>
           <DenButton type="button" size="sm" variant="secondary" onClick={() => setEditingBearerToken(true)} disabled={!canManage}>
-            Change token
+            {t("denDashboard.egress.changeToken")}
           </DenButton>
         </div>
       ) : null}
       {!loading && canView && (!available || editingBearerToken) ? (
         <div className="rounded-[22px] border border-[var(--dls-border)] bg-[var(--dls-hover)] px-4 py-4 text-[13px] text-[var(--dls-text-primary)]" role="status">
-          <p className="font-medium">{available ? "Replace the diagnostic token." : "Add a diagnostic token to run this test."}</p>
-          <p className="mt-1">Den encrypts the token for this organization and never shows it again.</p>
+          <p className="font-medium">{available ? t("denDashboard.egress.replaceToken") : t("denDashboard.egress.addTokenTitle")}</p>
+          <p className="mt-1">{t("denDashboard.egress.addTokenHint")}</p>
           <div className="mt-3 flex flex-wrap items-end gap-2">
             <label className="grid min-w-[280px] flex-1 gap-1">
-              <span className="text-[12px] font-medium">Diagnostic bearer token</span>
+              <span className="text-[12px] font-medium">{t("denDashboard.egress.tokenLabel")}</span>
               <DenInput
                 autoComplete="new-password"
                 minLength={24}
                 onChange={(event) => setBearerTokenDraft(event.target.value)}
-                placeholder="Paste the synthetic diagnostic token"
+                placeholder={t("denDashboard.egress.tokenPlaceholder")}
                 type="password"
                 value={bearerTokenDraft}
                 disabled={!canManage}
               />
             </label>
             <DenButton type="button" loading={savingBearerToken} onClick={() => void saveBearerToken()} disabled={!canManage}>
-              Save token
+              {t("denDashboard.egress.saveToken")}
             </DenButton>
             {available ? (
               <DenButton type="button" size="sm" variant="secondary" onClick={() => setEditingBearerToken(false)}>
-                Cancel
+                {t("denCommon.action.cancel")}
               </DenButton>
             ) : null}
           </div>
@@ -258,15 +262,15 @@ export function EgressDiagnosticsCard({ canView, canManage }: { canView: boolean
       {result ? (
         <section className="grid gap-4" aria-live="polite">
           <div className={`rounded-[22px] border px-4 py-4 ${result.overallStatus === "passed" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>
-            <p className="font-semibold">Diagnostic {result.overallStatus === "passed" ? "passed" : `stopped at ${result.failedStep ?? "an unknown step"}`}.</p>
+            <p className="font-semibold">{result.overallStatus === "passed" ? t("denDashboard.egress.resultPassed") : t("denDashboard.egress.resultStopped", { step: result.failedStep ?? t("denDashboard.egress.unknownStep") })}</p>
             <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
-              <span className="text-[12px]">Run ID</span>
+              <span className="text-[12px]">{t("denDashboard.egress.runId")}</span>
               <code className="min-w-0 break-all text-[12px]">{result.runId}</code>
               <DenButton type="button" size="sm" variant="secondary" icon={copied ? Check : Copy} onClick={() => void copyRunId()}>
-                {copied ? "Copied" : "Copy"}
+                {copied ? t("denSetup.install.copied") : t("denOrgSettings.copy")}
               </DenButton>
               <a className={buttonVariants({ variant: "secondary", size: "sm" })} href={result.supportUrl} target="_blank" rel="noreferrer">
-                Open support trace <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                {t("denDashboard.egress.openSupportTrace")} <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>

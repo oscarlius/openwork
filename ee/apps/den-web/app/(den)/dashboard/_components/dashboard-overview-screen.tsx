@@ -11,6 +11,8 @@ import { requestJson } from "../../_lib/den-flow";
 import { useDenFlow } from "../../_providers/den-flow-provider";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { DashboardActivity } from "../_features/activity/dashboard-activity";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 
 /* ── Types ── */
 
@@ -43,10 +45,12 @@ async function fetchAdoption(): Promise<AdoptionData | null> {
 
 /* ── Helpers ── */
 
-function getGreeting(name: string | null | undefined) {
+function getGreeting(t: DenTranslate, name: string | null | undefined) {
   const hour = new Date().getHours();
-  const g = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  return `${g}, ${name?.trim().split(/\s+/)[0] ?? "there"}`;
+  const firstName = name?.trim().split(/\s+/)[0] ?? t("denDashboard.overview.unnamedUser");
+  if (hour < 12) return t("denDashboard.overview.greetingMorning", { name: firstName });
+  if (hour < 18) return t("denDashboard.overview.greetingAfternoon", { name: firstName });
+  return t("denDashboard.overview.greetingEvening", { name: firstName });
 }
 
 function toneBg(tone: "violet" | "green" | "blue") {
@@ -79,6 +83,7 @@ function StatCard({ icon, title, value, sub, tone }: {
 /* ── Main screen ── */
 
 export function DashboardOverviewScreen() {
+  const t = useDenT();
   const { activeOrg, orgContext } = useOrgDashboard();
   const { user } = useDenFlow();
 
@@ -97,19 +102,19 @@ export function DashboardOverviewScreen() {
       <div className="flex flex-wrap items-center gap-2.5 border-b border-[#e7e9f0] pb-3">
         <span className="text-[14px] font-semibold tracking-[-0.01em] text-[#07192C]">{activeOrg?.name ?? "OpenWork Cloud"}</span>
         <ChevronRight className="h-3.5 w-3.5 text-[#9AA5BA]" />
-        <span className="text-[14px] font-medium tracking-[-0.01em] text-[#5A6886]">Dashboard</span>
+        <span className="text-[14px] font-medium tracking-[-0.01em] text-[#5A6886]">{t("denDashboard.overview.breadcrumb")}</span>
       </div>
 
       {/* Greeting */}
-      <h1 className="mt-4 text-[22px] font-semibold tracking-[-0.03em] text-[#07192C]">{getGreeting(user?.name)}</h1>
+      <h1 className="mt-4 text-[22px] font-semibold tracking-[-0.03em] text-[#07192C]">{getGreeting(t, user?.name)}</h1>
       <p className="mt-1 text-[14px] leading-6 text-[#5A6886]">
-        Run locally for free. Keep data on your machine and move to shared workflows when ready.
+        {t("denDashboard.overview.introDescription")}
       </p>
 
       {/* Live org data */}
       <div className="mt-5 grid gap-3.5 md:grid-cols-2">
-        <StatCard icon={<Users className="h-5 w-5 text-[#6F3DFF]" />} title="OpenWork users" value={`${members}`} sub="Current workspace members" tone="violet" />
-        <StatCard icon={<Gauge className="h-5 w-5 text-[#1D63FF]" />} title="Pending invites" value={`${pending}`} sub="Awaiting activation" tone="blue" />
+        <StatCard icon={<Users className="h-5 w-5 text-[#6F3DFF]" />} title={t("denDashboard.overview.statUsersTitle")} value={`${members}`} sub={t("denDashboard.overview.statUsersSub")} tone="violet" />
+        <StatCard icon={<Gauge className="h-5 w-5 text-[#1D63FF]" />} title={t("denDashboard.overview.statInvitesTitle")} value={`${pending}`} sub={t("denDashboard.overview.statInvitesSub")} tone="blue" />
       </div>
 
       <DashboardActivity />

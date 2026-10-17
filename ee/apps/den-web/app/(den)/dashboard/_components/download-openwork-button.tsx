@@ -5,12 +5,14 @@ import { Copy, Download, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { createOrganizationInstallLink } from "../../_lib/install-link-data";
+import { useDenT } from "../../../_lib/i18n/client";
 
 export function DownloadOpenWorkButton({
   organization,
 }: {
   organization?: { id: string; name: string };
 }) {
+  const t = useDenT();
   if (organization) {
     return <OrganizationDownloadPopover organizationId={organization.id} organizationName={organization.name} />;
   }
@@ -20,11 +22,11 @@ export function DownloadOpenWorkButton({
       href="/install"
       size="sm"
       icon={Download}
-      aria-label="Download OpenWork"
+      aria-label={t("denSetup.install.cloudTitle")}
       data-testid="den-download-openwork"
       className="shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
     >
-      <span className="hidden sm:inline">Download OpenWork</span>
+      <span className="hidden sm:inline">{t("denSetup.install.cloudTitle")}</span>
     </DenButton>
   );
 }
@@ -39,6 +41,7 @@ function OrganizationDownloadPopover({
   const [busyAction, setBusyAction] = useState<"open" | "copy" | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useDenT();
 
   useEffect(() => {
     if (!copied) return;
@@ -56,7 +59,7 @@ function OrganizationDownloadPopover({
     // recognizing this as the person's action even on a slow connection.
     const installWindow = window.open("about:blank", "_blank");
     if (!installWindow) {
-      setError("Allow popups to open the install page, or copy the install link.");
+      setError(t("denSetup.download.popupsBlocked"));
       return;
     }
     installWindow.opener = null;
@@ -65,7 +68,7 @@ function OrganizationDownloadPopover({
       installWindow.location.replace(await mintInstallLink());
     } catch (downloadError) {
       installWindow.close();
-      setError(downloadError instanceof Error ? downloadError.message : "Could not open the workspace install page.");
+      setError(downloadError instanceof Error ? downloadError.message : t("denSetup.download.openFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -81,10 +84,10 @@ function OrganizationDownloadPopover({
         await navigator.clipboard.writeText(installLink);
         setCopied(true);
       } catch {
-        setError("Your browser didn't give permission to copy. Allow clipboard access and try again, or open the install page.");
+        setError(t("denSetup.download.clipboardBlocked"));
       }
     } catch (downloadError) {
-      setError(downloadError instanceof Error ? downloadError.message : "Could not create the workspace install link. Try again.");
+      setError(downloadError instanceof Error ? downloadError.message : t("denSetup.download.createLinkFailed"));
     } finally {
       setBusyAction(null);
     }
@@ -94,11 +97,11 @@ function OrganizationDownloadPopover({
     <Popover.Root>
       <Popover.Trigger
         render={<DenButton size="sm" icon={Download} />}
-        aria-label="Download OpenWork"
+        aria-label={t("denSetup.install.cloudTitle")}
         data-testid="den-download-openwork"
         className="shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
       >
-        <span className="hidden sm:inline">Download OpenWork</span>
+        <span className="hidden sm:inline">{t("denSetup.install.cloudTitle")}</span>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-50">
@@ -106,9 +109,9 @@ function OrganizationDownloadPopover({
             className="w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-4 text-gray-900"
             data-testid="workspace-install-popover"
           >
-            <Popover.Title className="text-[13px] font-semibold">Download for this workspace</Popover.Title>
+            <Popover.Title className="text-[13px] font-semibold">{t("denSetup.download.popoverTitle")}</Popover.Title>
             <Popover.Description className="mt-1 text-[13px] text-gray-500">
-              Teammates get OpenWork already connected to {organizationName}.
+              {t("denSetup.download.popoverDescription", { organizationName })}
             </Popover.Description>
             {error ? (
               <p className="mt-3 text-[13px] text-red-600" role="alert">
@@ -124,7 +127,7 @@ function OrganizationDownloadPopover({
                 disabled={busyAction !== null}
                 onClick={() => void handleOpenInstallPage()}
               >
-                Open install page
+                {t("denSetup.download.openInstallPage")}
               </DenButton>
               <DenButton
                 className="w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900"
@@ -135,7 +138,7 @@ function OrganizationDownloadPopover({
                 disabled={busyAction !== null}
                 onClick={() => void handleCopyInstallLink()}
               >
-                {copied ? "Copied" : "Copy install link"}
+                {copied ? t("denSetup.install.copied") : t("denSetup.install.copyInstallLink")}
               </DenButton>
             </div>
           </Popover.Popup>

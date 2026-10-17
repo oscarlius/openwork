@@ -17,6 +17,7 @@ import { DenNotice } from "../../_components/ui/notice";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { AdvancedPageTemplate } from "./advanced-page-template";
 import { EnterprisePlanNotice } from "./enterprise-plan-notice";
+import { useDenT } from "../../../_lib/i18n/client";
 
 const BRAND_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -78,6 +79,7 @@ function BrandAssetUploadField({
   onSelect: (file: File | null) => void;
   onClear: () => void;
 }) {
+  const t = useDenT();
   const inputId = `brand-${kind}-upload`;
   const previewUrl = draft?.previewUrl ?? (clearPending ? null : currentUrl);
   const dimensions = draft
@@ -96,20 +98,20 @@ function BrandAssetUploadField({
         {previewUrl ? (
           <img
             src={previewUrl}
-            alt={`${title} preview`}
+            alt={t("denOrgSettings.brand.previewAlt", { title })}
             className={kind === "icon" ? "size-20 rounded-xl object-contain" : "max-h-20 max-w-full object-contain"}
             data-testid={`brand-${kind}-preview`}
           />
         ) : (
-          <span className="text-center text-[12px] text-gray-400">Default OpenWork {kind}</span>
+          <span className="text-center text-[12px] text-gray-400">{kind === "logo" ? t("denOrgSettings.brand.defaultLogo") : t("denOrgSettings.brand.defaultIcon")}</span>
         )}
       </div>
       <div className="min-h-9 min-w-0 break-words text-[11px] leading-5 text-gray-500" data-testid={`brand-${kind}-status`}>
-        {draft ? `Ready to upload: ${draft.file.name} · ${dimensions}` : null}
-        {!draft && clearPending ? "Will restore the default after saving." : null}
-        {!draft && !clearPending && managedAsset ? `Stored in this Den · ${dimensions} · version ${managedAsset.version.slice(0, 10)}` : null}
-        {!draft && !clearPending && !managedAsset && currentUrl ? "Current hosted image (legacy URL). Upload a file to move it into this Den." : null}
-        {!draft && !clearPending && !currentUrl ? "No custom image saved." : null}
+        {draft ? t("denOrgSettings.brand.readyToUpload", { name: draft.file.name, dimensions: dimensions ?? "" }) : null}
+        {!draft && clearPending ? t("denOrgSettings.brand.restoreDefault") : null}
+        {!draft && !clearPending && managedAsset ? t("denOrgSettings.brand.storedInDen", { dimensions: dimensions ?? "", version: managedAsset.version.slice(0, 10) }) : null}
+        {!draft && !clearPending && !managedAsset && currentUrl ? t("denOrgSettings.brand.legacyHosted") : null}
+        {!draft && !clearPending && !currentUrl ? t("denOrgSettings.brand.noImage") : null}
       </div>
       <div className="flex flex-wrap gap-2">
         <label
@@ -120,7 +122,7 @@ function BrandAssetUploadField({
           ].join(" ")}
         >
           <ImageUp size={13} aria-hidden="true" />
-          {previewUrl ? "Replace image" : "Choose image"}
+          {previewUrl ? t("denOrgSettings.brand.replaceImage") : t("denOrgSettings.brand.chooseImage")}
         </label>
         <input
           id={inputId}
@@ -132,7 +134,7 @@ function BrandAssetUploadField({
           onChange={(event) => onSelect(event.target.files?.item(0) ?? null)}
         />
         <DenButton type="button" variant="secondary" size="sm" icon={Trash2} disabled={disabled || !previewUrl} onClick={onClear}>
-          Clear
+          {t("denInference.editor.clear")}
         </DenButton>
       </div>
     </div>
@@ -140,6 +142,7 @@ function BrandAssetUploadField({
 }
 
 export function BrandAppearanceScreen() {
+  const t = useDenT();
   const {
     activeOrg,
     orgContext,
@@ -191,11 +194,11 @@ export function BrandAppearanceScreen() {
   }, [iconDraft]);
 
   if (orgBusy && !orgContext) {
-    return <div className="mx-auto max-w-[860px] p-8 text-[14px] text-gray-500">Loading brand appearance...</div>;
+    return <div className="mx-auto max-w-[860px] p-8 text-[14px] text-gray-500">{t("denOrgSettings.brand.loading")}</div>;
   }
 
   if (!activeOrg || !orgContext) {
-    return <DenNotice message={orgError ?? "Brand appearance is not available right now."} className="m-8" />;
+    return <DenNotice message={orgError ?? t("denOrgSettings.brand.unavailable")} className="m-8" />;
   }
 
   async function handleAssetSelection(kind: BrandAssetKind, file: File | null) {
@@ -212,7 +215,7 @@ export function BrandAppearanceScreen() {
         setIconClearPending(false);
       }
     } catch (error) {
-      setPageError(error instanceof Error ? error.message : "Could not validate that image.");
+      setPageError(error instanceof Error ? error.message : t("denOrgSettings.brand.validateFailed"));
     }
   }
 
@@ -234,7 +237,7 @@ export function BrandAppearanceScreen() {
     setPageSuccess(null);
 
     if (!canManageBrandAppearance) {
-      setPageError("You don't have permission to change brand appearance.");
+      setPageError(t("denOrgSettings.brand.saveDenied"));
       return;
     }
 
@@ -256,9 +259,9 @@ export function BrandAppearanceScreen() {
         ...(logoClearPending ? { brandLogoUrl: null } : {}),
         ...(iconClearPending ? { brandIconUrl: null } : {}),
       });
-      setPageSuccess("Brand appearance updated.");
+      setPageSuccess(t("denOrgSettings.brand.updated"));
     } catch (error) {
-      setPageError(error instanceof Error ? error.message : "Could not update brand appearance.");
+      setPageError(error instanceof Error ? error.message : t("denOrgSettings.brand.updateFailed"));
     } finally {
       setUploadBusy(false);
     }
@@ -270,7 +273,7 @@ export function BrandAppearanceScreen() {
     <div data-testid="brand-appearance-screen">
       <AdvancedPageTemplate tab="brand-appearance">
         {!orgContext.entitlements.desktopPolicies ? (
-          <EnterprisePlanNotice feature="White-label brand appearance" />
+          <EnterprisePlanNotice feature={t("denOrgSettings.brand.featureName")} />
         ) : (
           <form className="grid gap-6" onSubmit={handleSave}>
             {pageError ? <DenNotice message={pageError} /> : null}
@@ -278,22 +281,22 @@ export function BrandAppearanceScreen() {
 
             <DenCard size="spacious" className="grid gap-6">
               <div className="grid gap-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-violet-500">Workspace brand</p>
-                <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-gray-900">Desktop identity</h2>
-                <p className="text-[14px] text-gray-500">Set the desktop application name, wordmark, app icon, and accent color.</p>
+                <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-violet-500">{t("denOrgSettings.brand.eyebrow")}</p>
+                <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-gray-900">{t("denOrgSettings.brand.identityTitle")}</h2>
+                <p className="text-[14px] text-gray-500">{t("denOrgSettings.brand.identityDescription")}</p>
               </div>
 
               <div className="grid gap-5" data-testid="brand-identity-fields">
                 <label className="grid gap-3">
-                  <span className="text-[14px] font-medium text-gray-700">Application name</span>
+                  <span className="text-[14px] font-medium text-gray-700">{t("denOrgSettings.brand.appNameLabel")}</span>
                   <DenInput type="text" value={appNameDraft} onChange={(event) => setAppNameDraft(event.target.value)} placeholder="OpenWork" maxLength={64} disabled={!canManageBrandAppearance} />
-                  <span className="text-[11px] text-gray-400">The signed application identity stays OpenWork.</span>
+                  <span className="text-[11px] text-gray-400">{t("denOrgSettings.brand.appNameHint")}</span>
                 </label>
 
                 <label className="grid gap-3">
-                  <span className="text-[14px] font-medium text-gray-700">Accent color</span>
+                  <span className="text-[14px] font-medium text-gray-700">{t("denOrgSettings.brand.accentLabel")}</span>
                   <select value={accentColorDraft} onChange={(event) => setAccentColorDraft(event.target.value)} disabled={!canManageBrandAppearance} className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-[14px] text-gray-900 outline-hidden">
-                    <option value="">Default (OpenWork)</option>
+                    <option value="">{t("denOrgSettings.brand.accentDefault")}</option>
                     {["blue", "violet", "purple", "indigo", "iris", "crimson", "red", "ruby", "pink", "plum", "orange", "tomato", "gold", "green", "grass", "jade", "teal", "cyan", "sky"].map((color) => (
                       <option key={color} value={color}>{color[0].toUpperCase() + color.slice(1)}</option>
                     ))}
@@ -302,14 +305,14 @@ export function BrandAppearanceScreen() {
               </div>
 
               <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-                <BrandAssetUploadField kind="logo" title="Wordmark" description="Horizontal PNG or JPEG, 128×32 to 4096×4096, under 2 MB." currentUrl={currentLogoUrl} managedAsset={currentLogoAsset} draft={logoDraft} clearPending={logoClearPending} disabled={!canManageBrandAppearance || saveBusy} onSelect={(file) => void handleAssetSelection("logo", file)} onClear={() => handleAssetClear("logo")} />
-                <BrandAssetUploadField kind="icon" title="Square app icon" description="Square PNG or JPEG, 64×64 to 4096×4096, under 2 MB." currentUrl={currentIconUrl} managedAsset={currentIconAsset} draft={iconDraft} clearPending={iconClearPending} disabled={!canManageBrandAppearance || saveBusy} onSelect={(file) => void handleAssetSelection("icon", file)} onClear={() => handleAssetClear("icon")} />
+                <BrandAssetUploadField kind="logo" title={t("denOrgSettings.brand.logoTitle")} description={t("denOrgSettings.brand.logoDescription")} currentUrl={currentLogoUrl} managedAsset={currentLogoAsset} draft={logoDraft} clearPending={logoClearPending} disabled={!canManageBrandAppearance || saveBusy} onSelect={(file) => void handleAssetSelection("logo", file)} onClear={() => handleAssetClear("logo")} />
+                <BrandAssetUploadField kind="icon" title={t("denOrgSettings.brand.iconTitle")} description={t("denOrgSettings.brand.iconDescription")} currentUrl={currentIconUrl} managedAsset={currentIconAsset} draft={iconDraft} clearPending={iconClearPending} disabled={!canManageBrandAppearance || saveBusy} onSelect={(file) => void handleAssetSelection("icon", file)} onClear={() => handleAssetClear("icon")} />
               </div>
             </DenCard>
 
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[13px] text-gray-500">{!canManageBrandAppearance ? `Read only. ${permissionLockReason("branding.update")}` : null}</p>
-              <DenButton type="submit" loading={saveBusy} disabled={!canManageBrandAppearance}>Save brand appearance</DenButton>
+              <p className="text-[13px] text-gray-500">{!canManageBrandAppearance ? t("denOrgSettings.readOnly", { reason: permissionLockReason("branding.update") }) : null}</p>
+              <DenButton type="submit" loading={saveBusy} disabled={!canManageBrandAppearance}>{t("denOrgSettings.brand.saveButton")}</DenButton>
             </div>
           </form>
         )}
