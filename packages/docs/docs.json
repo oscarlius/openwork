@@ -345,7 +345,9 @@
               "zh/start-here/get-started",
               "zh/start-here/downloads",
               "zh/start-here/use-openwork-from-an-ai-agent",
+              "zh/start-here/pricing-and-licensing",
               "zh/start-here/migrate-from-claude-cowork",
+              "zh/start-here/stewardship",
               {
                 "group": "帮忙改进 OpenWork",
                 "pages": [
@@ -376,7 +378,8 @@
               {
                 "group": "技能",
                 "pages": [
-                  "zh/start-here/do-work-with-it/create-a-skill-from-chat"
+                  "zh/start-here/do-work-with-it/create-a-skill-from-chat",
+                  "zh/start-here/do-work-with-it/skills-plugins-and-mcp"
                 ]
               },
               {
@@ -405,6 +408,12 @@
                 "pages": [
                   "zh/cloud/run-in-the-cloud/open-cloud-in-browser",
                   "zh/cloud/run-in-the-cloud/shared-workspace"
+                ]
+              },
+              {
+                "group": "故障排查",
+                "pages": [
+                  "zh/start-here/troubleshooting/diagnostic-prompts"
                 ]
               }
             ]
@@ -443,7 +452,13 @@
               {
                 "group": "概览",
                 "pages": [
-                  "zh/ai-gateway/overview"
+                  "zh/ai-gateway/overview",
+                  "zh/ai-gateway/compare-litellm-bifrost",
+                  "zh/ai-gateway/litellm",
+                  "zh/ai-gateway/how-requests-flow",
+                  "zh/ai-gateway/google-agent-platform",
+                  "zh/ai-gateway/amazon-bedrock",
+                  "zh/ai-gateway/microsoft-foundry"
                 ]
               },
               {
@@ -458,7 +473,8 @@
                 "group": "用量与花费",
                 "pages": [
                   "zh/ai-gateway/counting-usage",
-                  "zh/ai-gateway/token-costs"
+                  "zh/ai-gateway/token-costs",
+                  "zh/start-here/do-work-with-it/what-uses-tokens"
                 ]
               }
             ]
@@ -503,7 +519,8 @@
                 "pages": [
                   "zh/model-context-protocol/agent-plugins",
                   "zh/cloud/share-with-your-team/collections",
-                  "zh/start-here/do-work-with-it/publish-and-copy-a-skill"
+                  "zh/start-here/do-work-with-it/publish-and-copy-a-skill",
+                  "zh/start-here/do-work-with-it/share-your-setup"
                 ]
               }
             ]
@@ -529,8 +546,11 @@
               {
                 "group": "SSO 与 SCIM",
                 "pages": [
+                  "zh/cloud/sso-google-workspace",
                   "zh/cloud/scim-google-workspace",
+                  "zh/cloud/sso-okta",
                   "zh/cloud/scim-okta",
+                  "zh/cloud/sso-microsoft-entra",
                   "zh/cloud/scim-microsoft-entra"
                 ]
               },
@@ -552,6 +572,7 @@
               {
                 "group": "概览",
                 "pages": [
+                  "zh/start-here/self-host",
                   "zh/self-host/evaluate-with-docker-compose"
                 ]
               },
@@ -568,7 +589,9 @@
               {
                 "group": "网络规划",
                 "pages": [
+                  "zh/start-here/private-network-deployment",
                   "zh/start-here/air-gapped-deployment",
+                  "zh/start-here/outbound-network-access",
                   "zh/start-here/certificate-trust-and-proxies"
                 ]
               },
@@ -576,8 +599,11 @@
                 "group": "安装与运维",
                 "pages": [
                   "zh/start-here/enterprise-desktop-deployment",
+                  "zh/self-host/gateway",
                   "zh/self-host/gateway-upgrade",
+                  "zh/self-host/declarative-configuration",
                   "zh/start-here/installer-delivery",
+                  "zh/start-here/on-prem-branding",
                   "zh/start-here/github-connector-helm"
                 ]
               },

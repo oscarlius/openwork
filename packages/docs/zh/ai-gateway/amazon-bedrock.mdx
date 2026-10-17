@@ -1,0 +1,141 @@
+---
+title: "Amazon Bedrock"
+description: "通过 OpenWork AI Gateway 在 Amazon Bedrock 与 Bedrock Mantle 上配置 Claude 及其他模型，可共用 AWS 密钥，也可让每位成员通过 AWS IAM Identity Center 各自登录。"
+keywords: ["Amazon Bedrock", "Bedrock Mantle", "AWS", "IAM Identity Center", "AWS SSO", "permission set", "per-user sign-in", "AI Gateway", "模型网关", "推理", "身份中心", "成员登录", "权限集"]
+---
+
+把 **Amazon Bedrock** 接入 OpenWork AI Gateway。成员在 OpenWork 里挑选 Bedrock 模型；到 AWS 的每个请求都由 Gateway 在服务端签名，因此 AWS 凭据不会到达他们的电脑。
+
+OpenWork 提供两个 Bedrock 提供商。下面两种认证方式它们都支持。
+
+| 你想要的模型 | OpenWork 提供商 |
+| --- | --- |
+| 通过 Bedrock 运行时访问 Claude、Llama、Nova 及其他模型 | **Amazon Bedrock** — `amazon-bedrock` |
+| 由 Bedrock 的兼容 OpenAI 端点提供的模型（Bedrock Mantle，`bedrock-mantle.<region>.api.aws`） | **Amazon Bedrock (OpenAI)** — `amazon-bedrock-mantle` |
+
+## 选择成员的认证方式
+
+| 场景 | 选择 | AWS CloudTrail 中是否有个人身份 | 你需要配置什么 |
+| --- | --- | --- | --- |
+| 概念验证、单个团队 | **Shared API key**（组织的 AWS 密钥或一把 Bedrock API 密钥） | 没有：所有请求都用组织的那把密钥 | 一个 IAM 用户或角色的访问密钥 |
+| 大范围推广 | **Each member signs in**，使用 AWS IAM Identity Center | 有：每个请求都以该成员自己权限集的会话执行 | 一个 IAM Identity Center 权限集 |
+
+选择 **Each member signs in** 时，每个人在浏览器里用你组织的 IAM Identity Center 授权 OpenWork 一次（经由它，也可以是你联合的 Okta、Microsoft Entra ID、Google Workspace 或其他身份提供商）。Gateway 把他们的登录状态保存在服务端、按时续期，并把它换成你所选权限集的短期 AWS 凭据。没人需要 AWS CLI、命名 profile，或 `~/.aws` 目录。
+
+## 配置 AWS
+
+这些步骤在整个 AWS 组织里做一次即可。你需要有管理 Bedrock 模型访问和 IAM Identity Center 的权限。
+
+### 1. 在 Bedrock 中启用模型
+
+在 [Amazon Bedrock 控制台](https://console.aws.amazon.com/bedrock/)打开 **Model access**，申请你需要的模型。访问权限是按地域生效的：请在 OpenWork 中作为该提供商 **AWS region** 填写的那个地域里启用它们。
+
+### 2. 创建权限集（每人各自登录）
+
+使用共用密钥时可以跳过这一步。
+
+在 [IAM Identity Center 控制台](https://console.aws.amazon.com/singlesignon/)打开 **Permission sets → Create permission set**，选择 **Custom permission set**，并添加一条允许推理的内联策略。
+
+对于 **Amazon Bedrock**：
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": [
+      "bedrock:InvokeModel",
+      "bedrock:InvokeModelWithResponseStream"
+    ],
+    "Resource": "*"
+  }]
+}
+```
+
+对于 **Amazon Bedrock (OpenAI)**（Bedrock Mantle），还要附加 AWS 托管策略 [`AmazonBedrockMantleInferenceAccess`](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonBedrockMantleInferenceAccess.html)，或在你的 Mantle 项目上允许 `bedrock-mantle:CreateInference`。
+
+把权限集的 **Session duration** 设为 8–12 小时。它决定每副短期 AWS 凭据在 Gateway 向 IAM Identity Center 申请新的之前能用多久；它不决定人们多久登录一次。
+
+### 3. 把人分配到权限集
+
+在 IAM Identity Center 中打开 **AWS accounts**，选中你启用了 Bedrock 的那个账户，选择 **Assign users or groups**，把需要使用 Bedrock 的人员或用户组分配到该权限集。
+
+如果你的组织使用 Okta、Microsoft Entra ID 或其他 SAML 身份提供商，可以把它设为 IAM Identity Center 的身份源，这样大家就用平时的工作账户登录。参见[连接到外部身份提供商](https://docs.aws.amazon.com/singlesignon/latest/userguide/manage-your-identity-source-idp.html)。
+
+### 4. 记下 OpenWork 需要填的值
+
+从 IAM Identity Center 的 **Settings** 和 **Permission sets** 页面记下：
+
+| 值 | 示例 |
+| --- | --- |
+| **AWS access portal URL** | `https://d-xxxxxxxxxx.awsapps.com/start`（或你的自定义子域名） |
+| **IAM Identity Center region**：Identity Center 启用的地域，可能与你的 Bedrock 地域不同 | `us-east-1` |
+| **AWS account ID**：你启用 Bedrock 的那个 12 位账户 | `123456789012` |
+| **Permission set name** | `BedrockInference` |
+
+### 改用共用密钥
+
+如果用共用密钥，请创建一个带同样策略的 IAM 用户或角色并为它创建访问密钥，或者生成一个 [Amazon Bedrock API key](https://console.aws.amazon.com/bedrock/home#/api-keys)。该密钥所属的 IAM 主体还必须被允许 `bedrock:CallWithBearerToken`。
+
+## 在 OpenWork 中添加提供商
+
+以组织所有者或管理员身份，打开 **AI Gateway → AI Providers → Add provider**，选择 **Amazon Bedrock** 或 **Amazon Bedrock (OpenAI)**。
+
+1. 填写你启用模型所在的 **AWS region**，例如 `us-west-2`。
+2. 在 **Key** 中选择成员的认证方式：
+   - **Shared API key**：填入访问密钥 ID 和私有访问密钥（临时密钥还要填会话令牌）。如果你已经为另一个 Bedrock 提供商保存过 AWS 密钥，请改为打开 **Use AWS keys you already saved**，不要再粘贴一次。
+   - **Each member signs in**：填入你记下的 **AWS access portal URL**、**IAM Identity Center region**、**AWS account ID** 和 **Permission set name**。OpenWork 不会为该组织存储任何 AWS 密钥。
+3. 在 **Models** 中挑选要提供的模型，或者全部保留。
+4. 在 **Who can use it** 中保留 **Everyone in the organization**，或添加人员与团队。如果你要自己测试，请把自己也加进去。
+5. 选择 **Add**。
+
+所有通过这个提供商登录的人都会得到同一个账户和同一个权限集。想让不同团队拥有不同的 Bedrock 权限，就再用另一个权限集添加一个提供商，并把各自的访问权授予各个团队。
+
+<Note>
+  修改访问门户 URL、Identity Center 地域、账户 ID 或权限集，会让所有人从该提供商退出登录：保存前需要你确认，成员需要重新登录。
+</Note>
+
+## 以成员身份登录
+
+成员只需从 Den 或桌面应用连接一次：
+
+- 在 Den 中打开 **My Library → Models**，在 Bedrock 提供商上选择 **Sign in**。
+- 在桌面应用中，于模型选择器里选一个 Bedrock 模型并选择 **Login**，或在 **Settings → AI Providers** 中该提供商上使用 **Login**。
+
+1. 浏览器会打开 OpenWork 的连接页面。如果它要求你 **Sign in to OpenWork**，请用你在应用里使用的同一个 OpenWork 账户登录，然后回到该标签页。
+2. 选择 **Continue to AWS**。OpenWork 会在新标签页打开你的 AWS 访问门户，并显示一个短代码。
+3. 如有提示就登录 AWS，确认 AWS 显示的代码相同，然后批准 **OpenWork AI Gateway**。
+4. 连接页面会检查你的登录能否拿到所配置账户和权限集的凭据，然后显示 **Signed in to AWS as …**。关闭该标签页。
+
+接着选一个 Bedrock 模型并发一条简短提示，例如 *Reply with exactly: Connection works.*。这是一次会计费的 Bedrock 请求。
+
+## 登录状态能维持多久
+
+- Gateway 在服务端加密保存每个人的 IAM Identity Center 登录，在过期前续期，并把它换成该权限集的短期 AWS 凭据。正是这些凭据为发往 Bedrock 的请求签名；它们从不下发到任何电脑。
+- 人们会一直处于登录状态，直到你在 IAM Identity Center 中设置的 **AWS access portal session duration**（**Settings → Authentication**）结束，或最长 90 天，以先到者为准。之后请求会返回 **sign in again**，本人需要重走上面的步骤。想让某人更早退出，请在 IAM Identity Center 控制台删除其会话。
+- **Sign out**（在 **My Library → Models** 的该提供商上）会抹掉该成员在 OpenWork 中的登录，并结束其 AWS 访问门户会话。
+- 把人从你的 OpenWork 组织中移除会抹掉他们的登录。移除其 IAM Identity Center 分配则会立即停止签发新的 AWS 凭据。
+
+## 网络访问
+
+对于自托管部署，Den 和 Gateway 必须能通过 HTTPS 访问下列 AWS 主机，其中 `<sso-region>` 是 IAM Identity Center 的地域，`<region>` 是 Bedrock 的地域：
+
+| 主机 | 用途 |
+| --- | --- |
+| `oidc.<sso-region>.amazonaws.com` | 登录与续期 |
+| `portal.sso.<sso-region>.amazonaws.com` | 短期角色凭据，以及断开时执行退出 |
+| `sts.<sso-region>.amazonaws.com` | 核对登录者是谁 |
+| `bedrock-runtime.<region>.amazonaws.com` 或 `bedrock-mantle.<region>.api.aws` | 推理 |
+
+人们的浏览器还需要访问你的 AWS 访问门户（`*.awsapps.com`），如果有联合身份，还要访问你的身份提供商。不支持 AWS 中国区域。
+
+## 问题排查
+
+| 你看到什么 | 该检查什么 |
+| --- | --- |
+| 刚点 **Continue to AWS** 就出现 `IAM Identity Center rejected the sign-in` | 访问门户 URL 与 Identity Center 地域。这里的地域是 Identity Center 启用的地域，不一定是 Bedrock 的地域。 |
+| `Your AWS user is not assigned this permission set in this account` | 把该成员，或他所属的用户组，分配到你填写的那个 AWS 账户上的权限集。 |
+| 登录成功，但请求返回 `AWS denied access to this Bedrock model` | 权限集的策略、该提供商地域里的模型访问权限，以及 Bedrock (OpenAI) 的 Mantle 权限。 |
+| `AWS rejected your sign-in` 或 **sign in again** | Identity Center 会话已结束或被删除。请重新登录。 |
+| AWS 代码已过期 | 从 OpenWork 重新开始；代码大约有效 10 分钟。 |
+| 成员看不到 **Sign in** 按钮 | 检查该提供商的 **Who can use it**：仅有 IAM Identity Center 分配并不会让任何人在 OpenWork 中获得访问权。 |

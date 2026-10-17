@@ -1,0 +1,154 @@
+---
+title: "开通组织配置"
+description: "用一个可重复执行的脚本，把团队、提供商、MCP 连接、桌面策略和市场元数据一次性应用上去。"
+---
+
+当一个脚本要在多次部署之间长期持有某个资源时，请使用稳定的键。键在它的组织和资源类型内部标识这个资源；显示名可以改，但不会因此多出另一个资源。
+
+API 也支持保留服务端分配 ID 的客户端，按 ID 更新资源。反复发起同一个创建请求不是一套对账策略：允许重名的资源会再多出一个对象。带键的写入省掉了为新开通的资源另建一份 ID 映射。
+
+## 按键应用
+
+```http
+PUT /v1/teams/by-key/platform
+x-api-key: den_...
+Content-Type: application/json
+
+{"name":"Platform engineering","memberIds":[]}
+```
+
+第一次应用返回 `201`。之后再应用返回 `200`，资源 ID 不变，改名之后也是如此。`externalKey` 会随资源一起返回。键要匹配 `^[a-z0-9][a-z0-9._-]{0,127}$`，并且在资源存在期间不可变。选键时不要和显示名联动，把它们放进版本控制。
+
+五种资源类型都接受**裸写入请求体**。`{team: ...}`、`{llmProvider: ...}`、`{desktopPolicy: ...}` 和 `{item: ...}` **只用作响应信封**；绝不要拿它们去包 PUT 的请求体。`apply.mjs` 在完成环境变量展开和团队引用解析之后，逐条提交清单里的每一项，不会加任何信封。下面的写入字段描述的是已发布 API 的形态；示例取值请看完整的清单。
+
+| 资源 | 带键的写入 | 请求体字段（不带信封） | 响应形态 | 应用时的行为 |
+| --- | --- | --- | --- | --- |
+| 团队 | `PUT /v1/teams/by-key/{key}` | `name`、`memberIds` | `{team: ...}` | 覆盖名称和成员；没写 `memberIds` 就变成空列表。 |
+| 自定义 LLM 提供商 | `PUT /v1/llm-providers/by-key/{key}` | `name`、`source:"custom"`、`credentialMode`、`customConfig`（含 `models`）、`apiKey`/`apiKeys`、顶层 `allMembers`、`memberIds`、`teamIds` | `{llmProvider: ...}` | 覆盖配置、模型和分配。在不支持的地方才会保留省略掉的只写凭据；创建者的访问权一直在。 |
+| MCP 连接 | `PUT /v1/mcp-connections/by-key/{key}` | `name`、`url`、`authType`、`credentialMode`、`exposeDirectly`、`access`；按需再加认证字段 | 裸资源对象 | 实时校验可能以 `502` 失败；条件写入可能以 `409` 冲突。省略 `access` 会把直接访问放宽到整个组织：所以一定要带上它。 |
+| 桌面策略 | `PUT /v1/desktop-policies/by-key/{key}` | `policyName`、`policy`（含 `access`/`execution`）、`priority`、`isEnabled`、顶层 `roles`、`memberIds`、`teamIds` | `{desktopPolicy: ...}` | 覆盖设置和分配，除了下文的几条例外。 |
+| 市场 | `PUT /v1/marketplaces/by-key/{key}` | `name`、`description`、`logoUrl` | `{item: ...}` | 覆盖元数据；省略的描述和 logo 变成 null。成员关系和授权走它们各自已有的 API。 |
+
+自定义提供商的模型放在 `customConfig.models` 里，不是顶层的 `models`；它的适用对象用顶层 `allMembers/memberIds/teamIds`，不是一个 `access` 对象。目录型提供商改用 `source:"models_dev"`、`providerId` 和 `modelIds`。
+
+团队、提供商、策略和市场都支持在同一个带键 URL 上 `GET`，也支持 `/v1/{resource}/{id}`。MCP 连接要用返回的 ID 去 `GET /v1/mcp-connections/{id}`。这些读取不会返回提供商凭据。
+
+新建团队、提供商和市场的写入要求组织管理员；策略写入要求所有者或超级管理员，还要有对应的套餐权益。资源已有的权限规则继续适用。由 SCIM 管理的团队要交给身份提供商来管。MCP 路由保留它已有的权限和凭据限制。API 密钥绑定在它的组织和签发成员的权限上，不会额外提权。
+
+## 一个完整示例
+
+仓库里有[一个可执行的示例](https://github.com/different-ai/openwork/tree/dev/examples/declarative-org)，包含团队、一个推理提供商、两个 MCP 连接（免认证 HTTP 和按成员 OAuth）、桌面策略分配和一个市场。请用它。需要 Node.js 24 或更新版本，不用额外装包。
+
+```sh
+export DEN_API_URL=https://your-den.example
+export DEN_API_KEY=den_...
+export INFERENCE_URL=https://your-inference.example/v1
+export COMPANY_INFERENCE_KEY=...
+export MCP_HTTP_URL=https://docs-mcp.example.com/mcp
+export MCP_OAUTH_URL=https://tools.example.com/mcp
+export MCP_CLIENT_ID=openwork-tools
+export MCP_CLIENT_SECRET=...
+export MCP_ISSUER=https://identity.example.com/realms/company
+node examples/declarative-org/apply.mjs examples/declarative-org/organization.json
+```
+
+请按照你的部署调整端点、模型 ID、上下文上限、OAuth 签发方、客户端注册和所请求的 scope。示例里的域名全是占位；Den 要能够访问上游的 MCP 端点。密钥要从你的密钥管理器注入到 Job 环境里，不要写死在 shell 命令或 Git 里。脚本解析之后已经会在 JSON 字符串值里展开 `${VAR}`（包括 OAuth 密钥），并且只要有变量缺失就在写入之前失败。不需要在保险库那一侧做 JSON 模板。
+
+清单里的对象键就是稳定的身份。提供商、策略和 MCP 连接都可以写 `"teams": ["platform"]`，指向清单里某个团队的键。示例先创建团队，再把这些引用解析成 ID。对 MCP 来说，这些 ID 放进 `access.teamIds`；用了 `teams` 就不要再另外提供 `access.teamIds`。提供商和策略则改用顶层 `teamIds`。不用符号引用的话，就从 `GET /v1/org` 解析出真实的、本组织专属的成员/团队 ID，再套用上面那些资源的写入字段。那个接口给出的是成员/团队清单；不要从带键的 PUT 路径反推集合类的 GET 路由。请核对成员归属：示例里的 Platform 团队初始为空。应用之前要把预期的组织成员 ID 填进 `teams.platform.memberIds`，否则普通成员不会通过这个团队拿到任何访问权。市场的访问权和插件挂载用的是各自独立的接口。即使创建者不在 Platform 里，提供商创建者的访问权依然保留。
+
+两个 MCP 示例都显式设置了 `authType`、`credentialMode`、`exposeDirectly` 和 `access`。免认证的文档连接是有意授予全组织访问的，它没有 OAuth 客户端。内部工具那条连接把访问限制在 Platform，并要求每位成员自己登录。它的 `oauthClient` 里有 `clientId`、`clientSecret` 和 `tokenEndpointAuthMethod`；而这条路由把签发方和 scope 当作**顶层**的 `authorizationServerIssuer` 和 `requestedScopes` 来接受，不是放在 `oauthClient` 里面。配置写入成功，并不代表 OAuth 同意已完成，也不能证明工具真的能跑。
+
+### 应用之后的提供商可用性关卡
+
+提供商的 PUT 成功，只证明配置写进去了，不证明凭据可用。应用完自定义提供商之后，部署 Job 必须单独做这项检查；`apply.mjs` 不会自动执行它：
+
+1. 用 `GET /v1/llm-providers/by-key/{key}` 解析出 `llmProvider.id`，然后用这个已授权的调用方读 `GET /v1/llm-providers/{id}/connect`。和普通提供商读取不同，它的 `llmProvider` 响应里可能带着存储的那份凭据。这份数据只留在内存里；绝不打印，也不写进 Job 日志。
+2. 对示例里这种标量密钥、OpenAI 兼容的自定义提供商，把 `llmProvider.providerConfig.api` 映射成 `api`、`llmProvider.apiKey` 映射成 `apiKey`、`llmProvider.models[].id` 映射成 `modelIds`，放进 `POST /v1/llm-providers/test-connection` 的**裸**请求体：`{api, apiKey, modelIds}`。端点缺失或必需的存储凭据缺失就停下。配置的模型要全部验证，每批最多八个。不要拿 `{llmProvider: ...}` 去包这个探测请求，也不要简单复用清单里的输入密钥：这道关卡必须检验 Den 实际存下来、并且提供给该调用方的那份凭据。
+3. 既看 HTTP 是否成功，也看响应 JSON 里的 **`result.ok === true`**。请求做模型验证时，还要检查返回的 `verifications` 覆盖了那些模型 ID 且没有 `status:"failed"`；带 `adjusted` 的结果要逐条看。请求体表明失败时，即使 HTTP 状态是 `200` 也要以非零码退出。
+
+0.18.46 版本的实测确认：缺少凭据的控制项会返回 **HTTP 200 且 `result.ok:false`**（上游是 `401`），而配置了凭据时端点和模型验证都通过。`result.hint`/`result.status` 当成失败诊断来看，别当成成功的证据。这道关卡检验的是自定义端点，不是某个工作进程或 Gateway 的推理会话；真实提供商的可用性仍然是一项单独的运行期检查。
+
+### MCP 的条件写入与校验
+
+带键的路由**不**要求请求体里有 `expectedUpdatedAt`。它接受一个可选的 `If-Match` 请求头，值是当前那个 ISO 格式的 `updatedAt` 时间戳；服务端在内部把 `expectedUpdatedAt` 补上用于替换。示例主动启用了这层保护：它先在 `GET /v1/mcp-connections?scope=manageable` 里找到这个键，再按 ID 读出那条连接，并把它读到的 `updatedAt` 作为 `If-Match` 发到带键的 PUT 上。MCP 没有按键读取的接口。
+遇到 `409` 时，客户端重新读取并重试一次目标配置，**只试一次**；第二次冲突就终止这次应用。请让写入方串行化：这一次有上限的重试不会合并并发编辑。一条连接被绑定到市场插件之后，重新提交 `authorizationServerIssuer` 或 `requestedScopes` 就可能返回 `409`，即使它们的值没有变化。示例里那份 OAuth 清单也包括在内。遇到这种情况请去检查市场侧的身份冲突，而不是反复应用；只改名称或直接访问时，用下面同 ID 的做法，并去掉这两个字段。
+
+`502` 表示这份候选连接没能通过校验。客户端会带着那条消息停止，而不是重试或报成功。重新应用之前，先检查上游可达性和认证。网络/5xx 这类不确定情况同样会中止 MCP 写入；重跑之前先看清当前状态。示例会在写下任何清单内容之前，本地拒绝缺失或格式不对的 MCP `access`（删除只需要键）。这道防护是必需的：服务端本身接受省略 `access`，并把它默认放宽到全组织。
+
+同一条命令跑两遍。第二遍还是会发 PUT，应当更新已有资源而不是创建重复项：这叫稳定身份对账，**不是零写入**，时间戳或分配行的 ID 可能变化。改一个显示名、去掉一条直接分配，然后再跑一遍：资源 ID 保持不变。要改 MCP 的团队访问，保持 `access.orgWide:false`，把 `teams:["platform"]` 改成 `teams:[]`；把改过的清单连续应用两次。团队授权会被移除，身份不变，直接访问也不会放宽。去掉一条直接分配，不会收回来自其他渠道的访问权，比如提供商创建者的访问或市场的授权。文件里没有的资源不受影响。这是资源级别的收敛，不是整份清单的事务。如果后面某个资源失败，先前的写入仍然保留；改正请求后重跑即可。
+
+## 各类资源的省略语义
+
+PUT 不是一套通用的 JSON 合并。请提交完整、经过审阅的目标配置，包括凭据模式和访问权，不要依赖下面这些默认值。
+
+| 资源 | 带键应用时的写入字段与省略行为 |
+| --- | --- |
+| 旧版提供商 | 自定义提供商用 `source:"custom"`、显式的 `credentialMode`、`customConfig.models` 和顶层 `allMembers/memberIds/teamIds`；目录提供商用 `source:"models_dev"`、`providerId` 和 `modelIds`。省略的凭据会保留；`apiKeys` 会逐条合并，空值则清掉对应条目。顶层 `apiKey` 写成空值（例如没解析成功的密钥占位符），在带键路由上会以 `400 invalid_api_keys` 拒绝，而不是存成“没有凭据”。模型和适用对象是覆盖而非合并（创建者的访问权仍然保留）。省略 `credentialMode` 会变成 `shared`；从 `per_member` 改出去会删除已存的成员凭据。省略 `allMembers/memberIds/teamIds` 会变成 `false`/空列表。 |
+| MCP 连接 | 省略 `access` 会变成全组织可用：**在 0.18.46 上实测确认**，包括覆盖原先只给团队的授权。相比之下，`access:{}` 表示没有任何直接授权。省略 `credentialMode` 会变成 `shared`，省略 `exposeDirectly` 会变成 `false`；改动凭据模式会让已有的账户/客户端注册失效。连接身份和客户端 ID 都没变时，省略 `oauthClient.clientSecret` 会保留原值；读取接口不会把它导出。 |
+| 团队 | 裸 `name`/`memberIds` 写入；省略 `memberIds` 会变成空列表。省略 `grantsOrganizationAdmin` 会保留一个已有团队被赋予的组织管理员身份（新建时为 false）；要收回就显式发送 `false`，并使用所有者/超级管理员权限。 |
+| 桌面策略 | 使用 `policyName`、`policy` 和顶层 `roles/memberIds/teamIds`。省略 `policy.access` 和 `policy.execution` 会保留；在带键替换中，省略的引导提示/说明不会保留。`priority`/`isEnabled` 会重置为零/true，分配列表变成空。 |
+| 市场 | 裸 `name`/`description`/`logoUrl` 写入；省略 `description`/`logoUrl` 会变成 null。插件挂载和访问授权不会被覆盖。 |
+
+省略时是否保留 OAuth 客户端密钥，在已发布的 0.18.46 上做过实测确认：重新应用之后，对一个合成的同意服务器完成了一次全新的授权码/PKCE 交换和一次工具调用。这证明的是身份不变时会被保留，不表示你可以在指望旧凭据/旧授权继续可用的同时去改 URL、认证类型、凭据模式、签发方或客户端 ID。把 OAuth 客户端开通好，也不等于首次同意可以无人值守完成。
+
+## 不会收养已有的无键资源：按 ID 管理它们
+
+API 从不靠匹配显示名或 URL 去收养一个已存在的资源。给一条无键连接应用一个新的键，会再多出另一条连接；这个键不会绑到已有的 ID 上。要保住已有的 OAuth 授权和插件绑定，请保留那个 ID，不要删掉重建。
+
+对一条已存在的外部 MCP 连接，GET 和 PUT 要用**同一个 ID**。和带键路由不同，按 ID 的 PUT 要求裸请求体里带 `expectedUpdatedAt`。下面这段 Bash/curl/jq 的重命名序列会保住取到的配置/直接访问，并去掉只写字段的密钥；只在连接与客户端身份都没变时使用：
+
+```bash
+set -euo pipefail
+row=$(curl --proto '=https' --fail-with-body -sS \
+  -H "x-api-key: $DEN_API_KEY" \
+  "$DEN_API_URL/v1/mcp-connections/$CONNECTION_ID")
+body=$(jq -ce --arg name "$MCP_NAME" '
+  if .nativeProviderKey == null and .access != null and (.updatedAt|type)=="string"
+  then {expectedUpdatedAt:.updatedAt,name:$name,url:.url,authType:.authType,
+    credentialMode:.credentialMode,exposeDirectly:.exposeDirectly,access:.access}
+  else error("Expected a manageable external MCP connection") end' <<<"$row")
+curl --proto '=https' --fail-with-body -sS -X PUT \
+  -H "x-api-key: $DEN_API_KEY" -H 'Content-Type: application/json' \
+  --data-binary "$body" "$DEN_API_URL/v1/mcp-connections/$CONNECTION_ID" \
+  | jq '{id,updatedAt,reconnectionRequired}'
+```
+
+请使用经过审阅的已有 `CONNECTION_ID` 和目标的 `MCP_NAME`；API 密钥要安全地传入，不要留 shell 追踪。遇到 `409` 时，先重新 GET 并核对最新状态，再考虑下一次 PUT。不要复制一个过期的时间戳，也不要凭空编造外部键。
+
+### 其他冲突
+
+团队沿用已有的名称唯一规则。如果一个带键团队要用另一个团队的名字，API 返回 `409`，不会覆盖那个团队。提供商、策略和市场沿用它们已有的重名行为。已归档的市场保留它的键，应用元数据之前必须通过它的生命周期接口显式恢复。
+
+并发的首次应用可能失败；数据库会阻止两个资源持有同一个键。写同一资源的部署请串行化，MCP 创建结果不确定时先查状态，不要盲目重试。其余四种资源类型用后写覆盖，并且在 PUT 上会拒绝 `If-Match` 和 `If-None-Match`，而不是静默忽略它们。MCP 那个可选的 `If-Match` 行为仍然可用。本版本没有提供通用的比较并交换约定，也不保证一次空操作的应用会让时间戳和分配行 ID 保持不变。
+
+## 移除由它管理的资源
+
+`DELETE /v1/{resource}/by-key/{key}` 删除成功返回
+`{"ok":true,"deleted":true}`，本来就不存在时返回
+`{"ok":true,"deleted":false}`。删除团队之前要先删掉依赖它的东西。删除市场会移除这个市场和它的关联关系，但不会移除底下的插件。策略删除沿用它常规软删除行为，并释放这个键。之后再用同一个已删除的键应用，会创建一个新 ID。
+
+要精确移除示例清单里列出的那些资源：
+
+```sh
+node examples/declarative-org/apply.mjs examples/declarative-org/organization.json --delete
+```
+
+示例不会从缺失的条目里推断该删什么。它在写入之前校验团队引用和键语法，给重试设了上限，并在失败时停止。它是一个小巧的开通客户端，不是通用的基础设施状态管理器。
+
+## 适用范围与兼容性
+
+这五个带键 API 从 **v0.18.43** 起可用。上文引用的那些行为发布检查用的是 **v0.18.46**，不是每个更早的版本；例如失败的 MCP 创建清理在 v0.18.43 之后就改过。请核对你部署上实际的 API schema，不要假定不断变动的 `dev` 示例和一个较旧的部署一致：
+
+```sh
+curl --fail-with-body -sS "${DEN_API_URL%/}/openapi.json" | jq '.paths | with_entries(select(.key | contains("/by-key/")))'
+```
+
+检查 `teams`、`llm-providers`、`mcp-connections`、`desktop-policies` 和 `marketplaces` 有没有 PUT 条目，并核对它们的请求 schema。schema 里存在只说明路由可用，不说明上游连通，也不说明跨版本有等价的行为。
+
+把 SSO 留在反复应用之外：再次保存组织的 OIDC 配置会把它重置为已禁用/未验证；配置、验证、测试和启用这几步要有意识地做。
+
+**旧版/Gateway 迁移警告：** `PUT /v1/llm-providers/by-key/{key}` 管理的是旧版提供商。显式转换为 Gateway 会删除旧版来源，并丢掉它那条可操作的密钥；Gateway 没有带键的等价接口。转换之前要停下并修改带键的写入方，否则它下一次应用创建的不是对账后的 Gateway 提供商，而是又一个旧版提供商。仅仅装上支持 Gateway 的构建，不会触发那次转换。
+
+已有的创建、按 ID 更新和按 ID 删除路由保持原有请求行为。响应里新增一个可为空的 `externalKey` 字段。已有的行仍然是无键的；本版本不强制新的显示名唯一，也不会重命名已有资源。
+
+这套流程覆盖五种资源的配置，不是组织的每一项设置。引导仍然需要一个已认证的管理员来创建组织并发出 API 密钥。邀请、访问授权、带版本的技能、插件、自动化、成员凭据和组织设置沿用它已有的 API 和生命周期规则。需要时把它们当前的接口和这份清单搭配使用；这个脚本不声称能开通那些资源。

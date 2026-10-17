@@ -1,0 +1,166 @@
+---
+title: "Google Workspace SAML SSO"
+description: "通过 SAML 把 Google Workspace 连接到 OpenWork Cloud"
+---
+
+当组织成员应该通过 Google Workspace 的自定义 SAML 应用登录 OpenWork 时，用这份指南。
+
+在你完成域名验证、跑通一次真实认证测试并显式启用 SSO 之前，OpenWork 会把新的 SSO 配置保持为禁用状态。
+
+## 开始之前
+
+你需要：
+
+- 一个使用 Team 或 Enterprise 计划的 OpenWork 组织。
+- OpenWork 组织的所有者。
+- 一位能创建自定义 SAML 应用的 Google Workspace 超级管理员。
+- 对你要与该连接绑定的邮箱域名拥有 DNS 控制权。
+- 最终确定的 OpenWork auth origin，例如 `https://app.openworklabs.com`。
+
+在 OpenWork 所有者完成 Google SAML 测试并启用 SSO 之前，请保留密码登录或已有的恢复通道。
+
+<Note>
+对于 Web 与 API 分开部署的自托管环境，请使用 OpenWork 在 **Settings → SSO** 中显示的 URL。除非你的部署方式或支持团队明确要求，否则不要把它们换成另一个 API origin。
+</Note>
+
+## 1. 创建 Google 自定义 SAML 应用
+
+在 Google Admin 控制台中：
+
+1. 打开 **Apps → Web and mobile apps**。
+2. 选择 **Add app → Add custom SAML app**。
+3. 把 **App name** 设为 `OpenWork` 或其他一眼能认出的名称。
+4. 选择 **Continue**。
+
+在 **Google Identity Provider details** 页面保持它打开，你会把下面这几个 Google 的值复制到 OpenWork：
+
+- **SSO URL**
+- **Entity ID**
+- **Certificate**
+
+不要把证书、元数据或配置密钥粘贴到工单或共享笔记里。
+
+## 2. 把 Google 的值填入 OpenWork
+
+在 OpenWork 中打开组织控制台，然后进入 **Settings → SSO**，选择 **SAML** 并填入：
+
+| OpenWork 字段 | Google 的值 |
+| --- | --- |
+| IdP Issuer URL | Google 的 **Entity ID**，例如 `https://accounts.google.com/o/saml2?idpid=<idpid>` |
+| Domain | Google Workspace 的邮箱域名，例如 `example.com` |
+| SAML Entry Point | Google 的 **SSO URL** |
+| Audience URL | 留空，让 OpenWork 使用 auth origin；除非支持团队给了你别的 audience |
+| IdP Certificate | Google 的 **Certificate** |
+
+保存 SSO 连接。OpenWork 随后会显示下面这些配置值：
+
+- **Sign-in URL**
+- **Redirect URL**
+- **ACS URL**
+- **Metadata URL**
+
+此时保存下来的配置仍是禁用状态。
+
+## 3. 把 OpenWork 的值填入 Google
+
+回到 Google 自定义 SAML 应用的配置流程。在 **Service Provider Details** 中设置：
+
+| Google 字段 | OpenWork 的值 |
+| --- | --- |
+| ACS URL | OpenWork 的 **ACS URL** |
+| Entity ID | OpenWork **Metadata URL** 中的 `entityID`；OpenWork Cloud 通常就是 `https://app.openworklabs.com` |
+| Start URL | OpenWork 的 **Sign-in URL** |
+| Signed response | 保持不勾选，除非支持团队要求你签名整个 SAML 响应 |
+| Name ID format | 邮箱地址 |
+| Name ID value | 主邮箱(Primary email) |
+
+OpenWork 要求 Google 用一个稳定的工作邮箱来标识用户。请让 Google 的 **Name ID value** 与 OpenWork 应该用于该成员的邮箱保持一致。
+
+<Warning>
+Google 有两个容易混淆的 SAML entity ID。OpenWork 的 **IdP Issuer URL** 字段里要填 Google 的 IdP **Entity ID**；Google 的 **Service Provider Details → Entity ID** 字段里要填 OpenWork 元数据中的 `entityID`。如果把 Google IdP 的 entity ID 填进 Google 的服务提供方 Entity ID，Google 可能以 `app_not_configured_for_user` 拒绝由 SP 发起的登录。
+</Warning>
+
+要确认 OpenWork 的服务提供方 entity ID，请打开 OpenWork 的
+**Metadata URL**，找到这一行：
+
+```xml
+<EntityDescriptor entityID="https://app.openworklabs.com">
+```
+
+对于 OpenWork Cloud，SSO 测试和正式启用后的登录用的是同一个 `entityID`。测试使用的是同一个已保存的 SAML 提供商和 ACS URL，只有认证完成后的跳转地址是测试专用的。
+
+选择 **Continue**。
+
+## 4. 首次 SSO 测试跳过可选映射
+
+在 Google 的映射步骤上，除非组织确实需要，否则第一次 SSO 测试不要添加自定义属性。OpenWork 的 SSO 基线身份来自 NameID / 主邮箱。
+
+如果 Google 显示 **Group membership (optional)**，在 SSO 测试期间留空。这个映射不会创建 OpenWork 团队，也不会授予组织角色。Google 自定义 SAML 应用不提供通用的出站 SCIM 连接器，见 [Google Workspace SCIM 支持](/cloud/scim-google-workspace)。
+
+选择 **Finish**。
+
+## 5. 为一个测试范围开启 Google 应用
+
+应用创建完成后，打开 **Apps → Web and mobile apps → OpenWork → User access** 或 **Service status**。
+
+选择最窄且安全的测试范围：
+
+- 可用时，只对某个测试组或组织单元开启该服务。
+- **ON for everyone** 只用于测试用的 Google Workspace，或你有意做的全量开放。
+
+Google 的服务状态页面可能显示：
+
+- **ON for everyone**
+- **OFF for everyone**
+- **Groups**
+- **Organizational Units**
+
+保存变更。按 Google 的说明，多数服务状态变更几分钟内生效，但有些需要更长时间才能同步到位。
+
+## 6. 验证 OpenWork 的域名
+
+在 OpenWork 的 **Settings → SSO** 中，于域名验证部分选择 **Request token**，并为该邮箱域名创建一条 DNS TXT 记录：
+
+| DNS 字段 | 值 |
+| --- | --- |
+| Type | `TXT` |
+| Host / name | OpenWork 显示的 **Host / name** 值 |
+| Value | OpenWork 显示的 token |
+
+当你的 DNS 服务商会自动补上域名后缀时使用 host 值；当它要求填写完整记录名时使用完整的 DNS 名称。
+
+TXT 记录能被公网解析后，在 OpenWork 中选择 **Verify domain**。Token 是一次性证明，七天后失效。验证成功后，你可以删除这条 TXT 记录。
+
+## 7. 在 OpenWork 中测试并启用 SSO
+
+Google 的用户访问已开启、且 OpenWork 域名验证成功之后：
+
+1. 在 OpenWork 的 **Settings → SSO** 中选择 **Enable Config** 或 **Enable SSO**。
+2. 在 **Test SSO before enabling it** 对话框中选择 **SSO Login**。
+3. 在弹出的独立窗口中完成 Google 认证。
+4. 返回 OpenWork，确认显示 **Authentication test successful**。
+5. 选择 **Enable SSO**。
+
+在测试成功后你没有显式启用之前，组织成员看不到 SSO 入口。如果测试成功后又修改了 SSO 配置，请在启用前重新测试一次。测试链接五分钟后失效。
+
+## 即时开通与密码注册
+
+在为已验证的域名启用 Google SAML SSO 之后，OpenWork 的标准登录流程会把该邮箱域名的用户导向组织的 SSO 流程。用户成功完成 SAML 登录后，OpenWork 可以即时(just in time)为其创建组织成员关系，默认角色是 `Member`。
+
+JIT 开通只发生在 SAML 认证成功之后。用同一邮箱域名创建邮箱/密码账户，不会把用户加入组织，不会创建由 SCIM 管理的身份，也不会同步 Google 的资料或停用状态。如果该用户之后完成了 SSO，OpenWork 可以把匹配的账户关联起来，并通过 SSO 开通组织成员关系。
+
+OpenWork 不会把 `role`、`groups`、`admin` 这类 SAML 属性转换成更高的组织角色。角色由所有者在 OpenWork 中指派；所有者的变更要走所有权转移。你可以用手工维护的 OpenWork 团队来实现[团队 Admin 权限](/cloud/members-and-rbac#team-admin-access)，但其成员名单不会通过 SAML 从 Google 组同步过来。
+
+## 问题排查
+
+| 现象 | 可能原因 | 解决办法 |
+| --- | --- | --- |
+| Google 返回 `403 app_not_configured_for_user` | Google 的 **Service Provider Details → Entity ID** 与 OpenWork 发出的 SAML 请求中的 issuer 不完全一致 | 打开 OpenWork **Metadata URL**，复制 `EntityDescriptor entityID` 的值，并把这个区分大小写的值原样填入 Google 的 **Entity ID** |
+| Google 返回 `403 app_not_enabled_for_user` | 该 Google 自定义 SAML 应用没有为测试用户启用 | 打开 **User access** 或 **Service status**，为该用户所在的组、组织单元或所有人开启这个应用 |
+| Google 提示 ACS URL 不匹配 | Google 的 **ACS URL** 与 OpenWork 生成的 ACS URL 不同 | 把 OpenWork **ACS URL** 一字不差地复制到 Google **Service Provider Details → ACS URL** |
+| OpenWork 显示 `Verify the SSO domain before testing this configuration` | DNS TXT 证明还没有通过 | 创建 OpenWork 提示的 TXT 记录，等待 DNS 生效，然后选择 **Verify domain** |
+| 测试对话框显示 `The SSO authentication window was closed before the test completed` | 在 OpenWork 收到测试结果之前，弹窗被关闭或被重定向走了 | 重新发起一次测试，并保持认证窗口打开，直到它返回或自行关闭 |
+| 修改设置后 OpenWork 不肯启用 SSO | 当前配置还没有成功通过测试 | 再次运行 **SSO Login**，测试成功后再选择 **Enable SSO** |
+| Google 的配置看起来没问题，但同一个用户仍然测不通 | Google 的服务状态变更还没同步到该用户 | 等待同步完成，确认该用户确实在已启用的组或组织单元中，然后重试 |
+
+SSO 登录之后的成员角色与访问行为，见[成员与 RBAC](/cloud/members-and-rbac)。

@@ -1,0 +1,110 @@
+---
+title: "Microsoft Foundry"
+description: "通过 OpenWork AI Gateway 在 Microsoft Foundry 上配置 Claude，可共用一个 Foundry 密钥，也可让每位成员用自己的 Microsoft Entra ID 登录。"
+keywords: ["Microsoft Foundry", "Azure AI Foundry", "Claude", "Entra ID", "Azure AD", "per-user sign-in", "AI Gateway", "模型网关", "推理", "成员登录", "应用注册"]
+---
+
+把 **Claude on Microsoft Foundry** 接入 OpenWork AI Gateway。成员在 OpenWork 里挑选 Claude 模型；Gateway 在服务端调用你的 Foundry 资源，地址是 `https://<resource>.services.ai.azure.com/anthropic`，因此 Azure 密钥和 token 不会到达他们的电脑。
+
+在 OpenWork 中，这就是 **Microsoft Foundry (Claude)** 提供商，标识为 `microsoft-foundry`。如果要用于 GPT 和其他 Azure OpenAI 部署，请改用 **Azure** 提供商。
+
+## 选择成员的认证方式
+
+| 场景 | 选择 | Azure 中是否有个人身份 | 你需要配置什么 |
+| --- | --- | --- | --- |
+| 概念验证、单个团队 | **Shared API key** | 没有：所有请求都用资源密钥 | Foundry 资源的密钥 |
+| 大范围推广 | **Each member signs in**，使用 Microsoft Entra ID | 有：每个请求都带上该成员自己的 Entra ID token，由 Azure RBAC 校验 | 一个 Entra ID 应用注册 |
+
+选择 **Each member signs in** 时，每个人在浏览器里用自己的 Microsoft 工作账户登录一次。Gateway 把他们的登录状态保存在服务端、按时续期，并把他们的 token 发给 Foundry。你的 Conditional Access 策略会在登录时生效。
+
+## 配置 Azure
+
+### 1. 创建 Foundry 资源并部署 Claude
+
+1. 在 [Foundry 门户](https://ai.azure.com/)中创建一个 Foundry 资源，或选用已有的。记下**资源名称**：即 `https://<resource-name>.services.ai.azure.com` 的第一部分。
+2. 部署你需要的 Claude 模型。让每个**部署名称**与模型 ID 保持一致，例如 `claude-sonnet-4-5`，这也是门户的默认做法。OpenWork 会把模型 ID 作为部署名称发送。
+
+关于托管方式和各自提供的模型，参见 [Claude in Microsoft Foundry](https://platform.claude.com/docs/en/build-with-claude/claude-in-microsoft-foundry)。
+
+### 2a. 共用密钥：复制资源密钥
+
+打开部署的 **Details** 标签页并复制 **Key**。可直接跳到下面“在 OpenWork 中添加提供商”一节。
+
+### 2b. 每人各自登录：在 Entra ID 注册应用
+
+在 [Microsoft Entra 管理中心](https://entra.microsoft.com)打开 **Identity → Applications → App registrations → New registration**：
+
+1. **Name**：填一个大家认得的名字，例如 **OpenWork model access**。
+2. **Supported account types**：选择 **Accounts in this organizational directory only**。
+3. **Redirect URI**：选择 **Web**，值暂时留空。保存提供商之后你再加进 OpenWork 的确切 URI。
+4. 选择 **Register**，然后从 **Overview** 记下 **Directory (tenant) ID** 和 **Application (client) ID**。
+
+接着在这个应用注册上：
+
+1. **API permissions → Add a permission**：在 **APIs my organization uses** 下找到 **Azure Cognitive Services**，选择 **Delegated permissions → user_impersonation** 并添加。为你的组织选择 **Grant admin consent**。如果不授权，在不允许用户自行同意的租户里，登录会以 `AADSTS65001` 失败。
+2. **Certificates & secrets → New client secret**：创建一个密钥并立刻复制它的 **Value**。记下它的过期时间：一旦过期，在你于 OpenWork 中填入新的之前，没人能登录或保持登录。
+
+### 3. 授予成员访问 Foundry 资源的权限
+
+在 Azure 门户中打开该 Foundry 资源的 **Access control (IAM) → Add role assignment**，给应当使用 Claude 的人员或用户组授予一个允许推理的角色，例如 **Cognitive Services User**（或 **Foundry User**）。应用注册本身不需要角色：请求是以每个人自己的身份运行的。
+
+## 在 OpenWork 中添加提供商
+
+以组织所有者或管理员身份，打开 **AI Gateway → AI Providers → Add provider**，选择 **Microsoft Foundry (Claude)**。
+
+1. 填写 **Foundry resource name**。
+2. 在 **Key** 中选择成员的认证方式：
+   - **Shared API key**：粘贴资源密钥。
+   - **Each member signs in**：填入 **Directory (tenant) ID**、**Application (client) ID** 和 **Client secret**。
+3. 在 **Models** 中选择你部署的 Claude 模型。
+4. 在 **Who can use it** 中保留 **Everyone in the organization**，或添加人员与团队。如果你要自己测试，请把自己也加进去。
+5. 选择 **Add**。
+
+如果选择 **Each member signs in**，请完成应用注册的收尾：
+
+1. 从 **AI Providers** 打开已保存的提供商。它的 **Key** 区块会显示 **Redirect URI**，以 `/v1/inference-providers/oauth/callback` 结尾。选择 **Copy callback URL**。
+2. 在应用注册中打开 **Authentication**，并在 **Web** 平台下添加那个一模一样的 URI。请使用 **Web** 平台，不要用 **Mobile and desktop applications**：完成登录的是 OpenWork 的服务端，它持有 client secret。
+
+资源名称在提供商上是固定的。要用另一个资源，请再添加一个提供商。
+
+<Note>
+  client secret 只写不读。留空表示保留已保存的那个。修改租户、client ID 或 client secret 会让所有人从该提供商退出登录：保存前需要你确认，成员需要重新登录。请在旧密钥过期之前安排轮换，并提醒成员会有这一步。
+</Note>
+
+## 以成员身份登录
+
+成员只需从 Den 或桌面应用连接一次：
+
+- 在 Den 中打开 **My Library → Models**，在 Foundry 提供商上选择 **Sign in**。
+- 在桌面应用中，于模型选择器里选一个 Foundry 模型并选择 **Login**，或在 **Settings → AI Providers** 中该提供商上使用 **Login**。
+
+1. 浏览器会打开 OpenWork 的连接页面。如果它要求你 **Sign in to OpenWork**，请用你在应用里使用的同一个 OpenWork 账户登录，然后回到该标签页。
+2. 选择 **Continue to Microsoft**，挑选你的工作账户并批准。
+3. OpenWork 会显示你已连接。关闭该标签页。
+
+接着选一个 Claude 模型并发一条简短提示，例如 *Reply with exactly: Connection works.*。这是一次会计费的 Foundry 请求。
+
+## 登录状态能维持多久
+
+- Gateway 在服务端加密保存每个人的 Microsoft 刷新 token，并在约一小时有效的访问 token 过期前为其续期。token 从不下发到任何电脑。
+- 只要 Entra ID 持续续签，人们就保持登录状态：刷新 token 在不活动状态下最长有效 90 天，并遵循你的 Conditional Access 登录频率设置。当 Entra ID 要求重新登录（例如密码重置之后、会话被撤销、或新增了 MFA 要求），请求会返回 **sign in again**。
+- **Sign out**（在 **My Library → Models** 的该提供商上）会抹掉该成员在 OpenWork 中的登录。想同时结束他们的 Microsoft 会话，请在 Entra ID 中对该用户使用 **Revoke sessions**。
+- 把人从你的 OpenWork 组织中移除会抹掉他们的登录。移除其在 Foundry 资源上的角色会立即停止访问。
+
+## 网络访问
+
+对于自托管部署，Den 和 Gateway 必须能通过 HTTPS 访问 `login.microsoftonline.com`（登录与续期）和 `<resource>.services.ai.azure.com`（推理）。人们的浏览器还需要访问 `login.microsoftonline.com`。
+
+## 问题排查
+
+| 你看到什么 | 该检查什么 |
+| --- | --- |
+| **Add a provider** 里没有 Microsoft Foundry | 只有组织所有者和管理员能添加提供商。自托管安装上，请确认 Den API 与 Den Web 跑的是同一个版本。 |
+| 浏览器中出现 `AADSTS50011` | 重定向 URI 缺失或不一致：请从提供商的 **Key** 区块重新复制，填到应用注册的 **Web** 平台下。 |
+| `AADSTS65001` | 在应用注册的 **API permissions** 页面选择 **Grant admin consent**。 |
+| `AADSTS650057` | 添加 **Azure Cognitive Services → user_impersonation** 权限。 |
+| `The Microsoft Entra ID app registration requires administrator repair` | client secret 错误或已过期。请在提供商的 **Key** 区块填入新的。 |
+| 请求返回 `Microsoft Foundry denied access` | 在该 Foundry 资源上为该成员授予 **Cognitive Services User** 之类的角色。 |
+| `Microsoft Foundry rejected your sign-in` 或 **sign in again** | Entra ID 结束了该登录。请重新登录。 |
+| `DeploymentNotFound` | 请以模型 ID 作为部署名称来部署该模型。 |
+| 成员看不到 **Sign in** 按钮 | 检查该提供商的 **Who can use it**：仅有 Azure 角色并不会让任何人在 OpenWork 中获得访问权。 |

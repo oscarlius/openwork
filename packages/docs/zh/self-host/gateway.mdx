@@ -1,0 +1,318 @@
+---
+title: "启用 OpenWork Gateway"
+description: "为所有组织的管理员配置 Gateway：配套的镜像、显式的目标地址、共享的密钥。"
+---
+
+OpenWork Gateway 把模型请求路由到已配置的提供商，凭据由服务端持有，还带模型分组、凭据集合和访问授权。它跑在 `ee/apps/gateway`，默认监听 `8791` 端口。
+
+它**不是** `den-gateway`（那是另一个独立的 OpenWork Web 代理），也不是 [OpenWork MCP 网关](/cloud/run-in-the-cloud/cloud-mcp)。**OpenWork Models** 仍然是托管的模型目录和订阅产品，它的计费、密钥和旧 API 约定都是另一套。
+
+<Warning>
+  这篇指南要求 `0.2.0` chart 引入的、支持 Gateway 的 chart 实现，以及本版本配套的 Den API、Den Web 和 Gateway 镜像。chart 版本号本身不能证明镜像支持部署能力版本 `1`。仓库里的 `Chart.appVersion: "0.1.0"` 只是打包占位值，不是兼容镜像的建议。旧的稳定镜像不会因为换用新的 values 就获得支持。已有数据库请先完成[安全升级 Gateway](/zh/self-host/gateway-upgrade)，再启动新镜像。
+</Warning>
+
+## 部署配置与管理权限
+
+部署配置好之后，Gateway 对每个组织中管理员及以上角色都是正式可用的。新组织不需要额外接入，也不需要平台管理员授权；既没有组织标记，也没有 API 开关。
+
+| 控制项 | 谁能改 | 含义 |
+| --- | --- | --- |
+| `GATEWAY_ENABLED=true` | 部署运维人员 | 经过验证的部署意图；对外声明 `deploymentCapabilities: { version: 1, aiGateway: true }`，并接纳 Gateway 管理请求。Helm 通过 `gateway.enabled: true` 来设置它。 |
+
+组织模式、一个在跑的旧推理服务、或者存在计费/提供商凭据，这些都不会让部署接入 Gateway。`GATEWAY_ENABLED` 缺失时，部署能力为 false，现有的 OpenWork Models 行为保持不变。托管运维人员要在 Den API 和 Gateway 上，用他们已有的托管环境机制显式设置 `GATEWAY_ENABLED=true`；不要假设托管部署就是用 Helm。这些都仍然属于安装配置检查，不是组织级的放量控制。
+
+不要另造一个替代开关，不要把部署能力写进组织元数据，也不要用普通的组织元数据更新去授予管理页访问权限。管理 API 仍然会强制组织管理员权限，敏感写入还要求全新会话。普通成员不会因此获得共享凭据的管理能力。
+
+## 部署前的准备
+
+1. 为 Den API、Den Web 和 Gateway 选出互相配套、不可变的版本镜像 tag。移除或核对那些会覆盖共享 `image.tag` 的组件级镜像 tag。
+2. 用经过审阅的流程初始化或迁移数据库，并在放进应用流量之前校验该版本的 schema。全新的空数据库可以用本版本当前的 schema 引导；已有数据库需要那套[升级流程](/zh/self-host/gateway-upgrade)。
+3. 用你的密钥管理工具，在 release 的命名空间里预先创建数据库/认证 Secret。Den API 和 Gateway 必须使用同一个数据库，并使用同一个已存在的 `DEN_DB_ENCRYPTION_KEY`；升级期间不要新生成加密密钥。
+4. 配置内网的 Gateway 源地址和一个单独的、桌面端可达的 Gateway 源地址，还有 DNS、可信证书和网络访问。
+5. 渲染并检查 values，发布配套的镜像，校验经过认证的部署约定，然后以组织管理员身份验证 Gateway 访问，全程不需要组织接入。
+
+### Helm 的 values
+
+下面这段片段适用于支持 Gateway 的 chart `0.2.0` 或更新版本，**并且要和配套的版本镜像一起用**。把它合并进常规的 Den 部署 values。把镜像 tag 和预创建 Secret 的名字换成你批准使用的引用，不要写密钥值。
+
+```yaml
+image:
+  tag: REPLACE_MATCHING_RELEASE_IMAGE_TAG
+gateway:
+  enabled: true
+config:
+  databaseMode: mysql
+  internal:
+    gatewayProxyBaseUrl: http://openwork-ee-inference:8791
+    inferenceProxyBaseUrl: https://existing-models.example.com # Keep your existing Models endpoint.
+  public:
+    gatewayPublicBaseUrl: https://gateway.example.com
+secret:
+  create: false
+  existingSecret: REPLACE_PRECREATED_DEN_SECRET
+  keys:
+    databaseUrl: DATABASE_URL
+    betterAuthSecret: BETTER_AUTH_SECRET
+    denDbEncryptionKey: DEN_DB_ENCRYPTION_KEY
+```
+
+请用你这套发布实际保留下来的 Service 名称，不要想当然地认为是 `openwork-ee-inference`。Gateway 继续使用那个 `*-inference` 的 Deployment、Service、容器名、选择器，以及默认的 `ghcr.io/different-ai/openwork-inference` 镜像仓库。不需要重命名任何资源。
+
+chart 不会自动创建 Gateway 的 ingress。请通过你自己的 ingress、服务网格或 `gateway.service` 负载均衡配置，为它准备一个桌面端可达的 HTTPS 端点。已有的 web/API ingress 设置不会替你发布 Gateway。
+
+### 数据库与加密密钥的引用
+
+| `config.databaseMode` | 共享 Secret 里必须设置的键 | Den API / Gateway 的运行时变量 |
+| --- | --- | --- |
+| `mysql` | `secret.keys.databaseUrl` | `DATABASE_URL` |
+| `planetscale` | `secret.keys.databaseHost`、`databaseUsername`、`databasePassword` | `DATABASE_HOST`、`DATABASE_USERNAME`、`DATABASE_PASSWORD` |
+| 两种模式 | `secret.keys.denDbEncryptionKey` | `DEN_DB_ENCRYPTION_KEY` |
+
+默认键名和运行时变量同名。支持重映射键名：把每个 `secret.keys` 条目设成你那个预创建 Secret 里对应的数据键。显式启用后，Den API 和 Gateway 会拿到必需的 `secretKeyRef` 条目；Helm 读不到也校验不了已有 Secret 的内容。常规 Den 认证密钥也要保留，包括 `secret.keys.betterAuthSecret` 选中的那个键。
+
+加密密钥去掉首尾空白后至少要 32 个字符。MySQL 模式要求一个有效的 `mysql://` URL，含用户名、主机、数据库名和合法端口。PlanetScale 模式要求一个有效的数据库主机名，以及非空的用户名/密码。生产环境不得使用回环地址的数据库主机。要求经过验证的数据库 TLS，必要时用[自定义 CA 支持](/start-here/certificate-trust-and-proxies)。
+
+迁移用的连通性和运行时模式是两回事。只要 `migrations.enabled: true`，chart 总是通过已有的 `secret.keys.databaseUrl` 映射为 Job 提供 `DATABASE_URL`，并通过 `secret.keys.denDbEncryptionKey` 提供 `DEN_DB_ENCRYPTION_KEY`。`config.databaseMode: planetscale` 时同样如此：运行时的 host/user/password 凭据替代不了引导所需的那条 TCP MySQL 连接。预创建 Secret 里映射的那个键，必须是一个指向**同一个数据库**的 TCP `mysql://` URL，含数据库名、端口和经批准的 TLS 选项。不需要新的迁移配置项；chart 也不暴露引导的另一种 `DATABASE_NAME`/`DATABASE_PORT` 配置。TCP 可达性、TLS 信任和迁移权限要各自单独验证。`migrations.enabled: false` 时，chart 会跳过这段迁移专属校验，但外部的[升级流程](/zh/self-host/gateway-upgrade)仍然需要它那一条经过审阅的迁移连接。
+
+这些示例都用 `secret.create: false`。由 chart 创建的 Secret 使用 `secret.values`，而当前的 pre-install 钩子会把它们的凭据内联进 Job。不要在 values、命令、文档或诊断输出里写字面凭据。
+
+### 内网与公网源地址
+
+- `GATEWAY_PROXY_BASE_URL` 是内网/服务到服务的目标地址。要在 Den API 和 Gateway 上都设置。在可信的私有边界上允许走内网 HTTP。
+- `GATEWAY_PUBLIC_BASE_URL` 是桌面端可达的目标地址，不是内网 Service 地址。Den API 会在成员的 Gateway 提供商配置里使用它。两个服务都要配置它，供启动时的共享校验使用。
+- Models 客户端会从 `INFERENCE_PROXY_BASE_URL` 保留一个显式、有效的桌面来源地址；没有的话就用有效的 `GATEWAY_PUBLIC_BASE_URL`。这个选择不取决于 `GATEWAY_ENABLED`：只改动管理功能的启用状态，不会用一个已知的公网目标去替换内网代理。即使整个部署关闭了 Gateway 管理功能，也要保留你原有的 Models HTTPS 主机名。不需要改动订阅、密钥或上游路由。
+- 两者都必须是显式的源地址，不含凭据、非根路径、查询串或片段。允许结尾的 `/`。两个值都不要追加 `/api/v1`。
+- 生产环境的公网地址要求 HTTPS，以及非本地的合格主机名或合法的非回环 IP 地址。可以用私有 DNS，但成员设备要能解析它、路由到它，并信任它的证书。内网的 `.svc` 或 `.internal` 名称不能算合法的生产公网地址。
+- Helm 会静态校验生产风格的源地址；启动校验不会检查 DNS、TLS、网络可达性或 schema 就绪状态。本地开发的例外要求 `OPENWORK_DEV_MODE=1` 加非生产的 `NODE_ENV`，不是拿来当生产环境的变通手段。
+
+`config.internal.gatewayProxyBaseUrl` **按是否存在**优先于 `config.internal.inferenceProxyBaseUrl`。显式写成空的规范 URL 会清掉旧值，并让已启用的 Gateway 校验失败。规范键缺失时，一个显式配置过的旧 URL 可以满足内网要求。仅靠自动生成的旧 Service URL 无法满足新的接入。对已启用的部署没有推断出来的公网兜底。
+
+配了规范代理或公网目标时，Helm 会把非空的 `config.internal.inferenceProxyBaseUrl` 保留到 `INFERENCE_PROXY_BASE_URL` 里；旧值未设置或为空时，用配置好的公网 Gateway 源地址。尽管它在 `internal` 这个旧名字下，现有 Models 客户端的地址仍然留在这个配置里。管理功能关闭时，共享的公网配置会保留下来。内网代理的解析仍然遵循规范键是否存在，包括显式置空这种清除。没有任何可用公网目标时，关闭状态的部署会沿用历史的 Models 兜底行为；格式无效但可选的 Gateway 配置不会新增启动前置条件。那种兼容兜底可以是私网或回环地址，所以请为桌面客户端配置一个有效的公网目标。改动 URL 不会自动修好此前存下来的客户端配置。
+
+## 规范环境变量参考
+
+这些是原生的运行时变量，不是让你在 Helm 里按应用 `env` 不加区分塞进去的值。共享的启用状态、URL、数据库引用、端口和可选 token 由 Helm 负责；彼此冲突的按应用覆盖一律拒绝。Den Web 消费的是经过认证的 API 能力，而不是一个独立的 Web 环境变量开关。
+
+| 变量 | 必填或默认 | 别名 / 作用范围 |
+| --- | --- | --- |
+| `GATEWAY_ENABLED` | 必须显式写 `true` 才接入；缺失或写成精确的 `false` 则关闭该能力。空值、`1` 或其他写法会让启动失败。 | 没有旧的启用别名。Den API 和 Gateway。 |
+| `GATEWAY_PROXY_BASE_URL` | 启用时必须显式提供内网源地址。 | 只有规范值缺失时 `INFERENCE_PROXY_BASE_URL` 才生效。Den API 和 Gateway。 |
+| `GATEWAY_PUBLIC_BASE_URL` | 启用时必须显式提供桌面端可达的源地址。 | 没有废弃别名。Den API 和 Gateway。 |
+| `DB_MODE` | `mysql` 或 `planetscale`；缺失时，设了 `DATABASE_URL` 就推断为 `mysql`，否则为 `planetscale`。 | 用 Helm 时请显式写 `config.databaseMode`。 |
+| 数据库变量和 `DEN_DB_ENCRYPTION_KEY` | 如上所述必填；即使能力处于关闭状态，Gateway 仍然需要它的数据库和加密配置。 | 这几个名字没有 `GATEWAY_*` 的替代品。 |
+| `GATEWAY_PORT` | `8791`；整数 `1` 到 `65535`。 | 优先级：`GATEWAY_PORT`，然后 `PORT`，然后 `INFERENCE_PORT`。只对 Gateway；Helm 用 `gateway.containerPort`。 |
+| `GATEWAY_ADMIN_TOKEN` | 可选；缺失或为空时，内部管理员/汇总端点的 bearer 访问关闭。 | `INFERENCE_ADMIN_TOKEN`。只作用于 Gateway，不是组织管理页的登录 token。 |
+| `GATEWAY_WEBHOOK_SECRET` | 可选；缺失或为空时，生产环境下的 webhook 凭据关闭。 | `INFERENCE_WEBHOOK_SECRET`。只作用于 Gateway。 |
+| `GATEWAY_UPSTREAM_TIMEOUT_MS` | 提供商转发（`upstreamTimeoutMs`）：`1800000`；托管 Models 聊天（`managedUpstreamTimeoutMs`）：两个别名都没设时是 `120000`。显式配置会同时作用到两者。整数 `1000` 到 `86400000`。 | `INFERENCE_UPSTREAM_TIMEOUT_MS`。只作用于 Gateway；按路由区分的行为见下文。 |
+| `GATEWAY_STREAM_IDLE_MS` | `120000`；整数 `1000` 到 `900000`。 | `INFERENCE_STREAM_IDLE_MS`。用于托管 Models 聊天的流式，不用于提供商中继。 |
+| `GATEWAY_RESPONSE_START_MS` | `20000`；整数 `1000` 到 `86400000`。 | 无别名。流式请求（托管聊天和 SSE 提供商协议）到点仍无提供商应答时，返回 `200 text/event-stream`，用 SSE 注释充当心跳；之后提供商失败会转成该请求所用协议里的一条错误事件。这个值要明显小于 Gateway 前面任何代理的响应超时（Cloudflare 是 100 秒，超时按 HTTP 524 结束）。 |
+| `GATEWAY_RESPONSE_HEARTBEAT_MS` | `15000`；整数 `1000` 到 `90000`。 | 无别名。提供商尚未应答期间这些心跳的间隔。 |
+| `GATEWAY_CREDITS_PER_DOLLAR` | `1000000`；正数。 | `INFERENCE_CREDITS_PER_DOLLAR`。只影响 Gateway 的记账，不会启用某个产品。 |
+| `GATEWAY_EGRESS_ALLOWED_ORIGINS` | 可选，逗号分隔的精确源地址；为空表示公网 HTTPS 出网策略没有例外。 | `INFERENCE_EGRESS_ALLOWED_ORIGINS`。在 Den API 和 Gateway 上设置同一份策略。 |
+| `CORS_ORIGINS` | 可选，逗号分隔的浏览器源地址。启用 Gateway 时要求精确源地址（不能用通配符）；生产环境接入还要求非本地 HTTPS。关闭状态的部署沿用旧的解析方式，包括 `*`。 | 没有新别名。Gateway 的 CORS 设置不是出网允许清单。 |
+| `OPENROUTER_UPSTREAM_URL` | 可选；默认为 `https://openrouter.ai/api/v1`。接入之后，生产环境要求非本地 HTTPS，且不含凭据/查询/片段；允许带提供商 API 路径。 | 这是现有的 Models 上游设置，不是改名后的 Gateway 目标。 |
+| `OPENAI_REALTIME_API_KEY` | 对现有的 realtime 集成可选；会回退到非空的 `OPENAI_API_KEY`。 | 属于现有集成的配置，Gateway 基本接入并不需要。请通过密钥管理注入。 |
+
+规范别名的优先级看变量有没有被设置，空字符串也算设置。空的 token 值会关掉那项凭据；空的出网允许清单是移除继承来的例外，而不是和它们合并。无效或为空的规范数值会让启动失败，不会回退。启用状态下，空的规范代理 URL 会校验失败；旧值在关闭状态下的行为不是受支持的接入捷径。请保持 `OPENWORK_INFERENCE_BASE_URL`、`STRIPE_INFERENCE_PRICE_ID` 和 `config.inference.*` 这些 Models 约定不变。
+
+这些超时的名字对应不同的处理逻辑，不是可以互换的两个产品。在 `gateway.ts` 里，`/api/v1/providers/:inferenceProviderId/*` 用 `env.upstreamTimeoutMs` 管上游的整个生命周期，包括响应中继。在 `proxy.ts` 里，保留下来的 `/api/v1/chat/completions` API 用 `env.managedUpstreamTimeoutMs` 服务托管的 OpenWork Models：响应头和非流式响应体各有独立的计时器，流式成功时改用 `env.streamIdleMs`。共享的那个超时覆盖会同时设置两个超时字段，但不会让它们的时间行为变得一致。
+
+出网例外可能放行私网目标或 HTTP，所以要针对运维人员持有的精确源地址做一次安全评审。不要用通配符，也不要把上游出网例外和 Gateway 的内网/公网 URL 混为一谈。默认的出网检查会拒绝私网/保留地址和重定向。
+
+### 可选的管理员、webhook 与保留策略
+
+规范化的 Helm 启用方式不会连带启用管理员或 webhook 凭据。要接入，就在同一个预创建的共享 Secret 里引用相应的键：
+
+```yaml
+gateway:
+  enabled: true
+  admin:
+    enabled: true
+  webhook:
+    enabled: true
+secret:
+  create: false
+  existingSecret: REPLACE_PRECREATED_DEN_SECRET
+  keys:
+    gatewayAdminToken: GATEWAY_ADMIN_TOKEN
+    gatewayWebhookSecret: GATEWAY_WEBHOOK_SECRET
+```
+
+这几个可选的规范键设置会按是否存在优先覆盖 `secret.keys.inferenceAdminToken` 和 `secret.keys.inferenceWebhookSecret`。没有规范设置时，默认的 Secret 数据键仍是 `INFERENCE_ADMIN_TOKEN` 和 `INFERENCE_WEBHOOK_SECRET`。功能处于关闭状态时，会显式清掉这两个运行时 token 别名，从而避免 `envFrom` 意外把它们启用。不要在 `gateway.env` 或 `inference.env` 里设置 token 值。
+
+只有在核对过记账相关的迁移和策略之后才启用保留策略。它是产品的维护 CronJob，不是成员用的 Automation：
+
+```yaml
+gateway:
+  enabled: true
+  retention:
+    enabled: true
+    adminTokenSecret: REPLACE_PRECREATED_RETENTION_SECRET
+    adminTokenKey: GATEWAY_ADMIN_TOKEN
+```
+
+保留策略里的 Secret 引用对 Gateway 和 CronJob 上的 `GATEWAY_ADMIN_TOKEN` 与 `INFERENCE_ADMIN_TOKEN` **两者**都是权威来源，即使共享 Secret 里的两个 token 不同。它不需要 `gateway.admin.enabled` 就能开启管理员访问。服务本身也得启用。
+
+这个任务每小时运行一次，和托管环境一致。每次调用保留下来的内部 Service 的 `/internal/rollups/run`，把两天以前的请求日志折叠进按小时的用量汇总，并在同一个事务里删掉已折叠的行；90 天以前的按小时汇总再折叠进按天的汇总。用量看板会同时读取原始日志和汇总，所以两次运行之间合计仍然正确。
+
+| 设置 | 默认值 | 说明 |
+| --- | --- | --- |
+| `schedule` | `5 * * * *` | 此次改动之前的 chart 默认是每天一次 `0 3 * * *`。显式设置过的 schedule 会保留。 |
+| `timeZone` | `Etc/UTC` | |
+| `maxBucketsPerRun` | `48` | 每次处理的小时数或天数，`1` 到 `1000`。 |
+| `maxSourceRowsPerBucket` | `5000` | 每次运行在一个事务里消费的每小时行数，`1` 到 `5000`。 |
+
+单次运行最多消费 `maxBucketsPerRun` × `maxSourceRowsPerBucket` 行（默认 240,000）。行数更多的那些小时会在后续运行里处理完，所以每小时一次的节奏大致能跟上每小时 240,000 次请求。任务会记录它的汇总，例如 `{"hourBuckets":1,"dayBuckets":0,"rawRowsDeleted":1253,...}`。如果 `hourBuckets` 连续几次都大于 `1`，说明任务正在补进度。
+
+不用 Helm 的部署要自己安排每小时一次的调用方，用同样的 token 和请求体：
+
+```sh
+curl -fsS -X POST -H "Authorization: Bearer $GATEWAY_ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"maxBucketsPerRun":48,"maxSourceRowsPerBucket":5000}' \
+  http://<gateway-internal-host>:8791/internal/rollups/run
+```
+
+不带请求体的调用使用同样的默认值。
+
+## 稀疏 values 的 Helm 兼容性
+
+默认的 `gateway: {}` 是有意不设任何规范默认值的。`gateway` 根节点缺失——包括用 `--reuse-values` 升级的旧 release——是支持的，会按 `{}` 处理；显式给出一个非映射的值会被拒绝。根节点是空映射，意思是没有规范覆盖，而不是删除旧组件。旧的 `inference.*` 值仍然会配置这个组件，但只有显式的 `gateway.enabled: true` 才接入能力版本 `1`。
+
+| 最终 values | 组件 | 能力意图 |
+| --- | --- | --- |
+| 全部默认值 | 缺失 | false |
+| `inference.enabled: true`，`gateway.enabled` 缺失 | 保留 | false；两个服务都会拿到 `GATEWAY_ENABLED=false` |
+| `gateway.enabled: false`，即使 `inference.enabled: true` | 缺失 | false |
+| `gateway.enabled: true`，共享配置合法 | 存在 | Den API 和 Gateway 上均为 true |
+
+镜像、副本数、service、env、探针、资源、Pod 元数据和保留策略这些结构型设置，除非规范键存在，否则都从 `inference.*` 继承。非空映射递归合并；显式的 `{}`、`[]`、`false`、`0` 和 `""` 会替换继承来的值。这些规则作用于「规范值覆盖旧值」的合并，**发生在 Helm 合并且保存 values 之后**。举例来说，新增的 `gateway.env: {}` 会清掉继承来的 `inference.env`，`gateway.probes: {}` 会移除继承来的探针，`gateway.replicaCount: 0` 会缩容而不会改变能力意图。组件启用时，清掉必填字段会导致校验失败。
+
+组件镜像 tag 留空会清掉继承来的 tag，回退到共享 `image.tag`，再回退到 `Chart.appVersion`。它不会替你挑出一个兼容的发布版本。
+
+清除**已保存的规范映射**是另一回事。Helm 可能在模板运行之前就用旧值重新填上空映射：保存过 `gateway.env.SAVED` 之后，`--reuse-values --set-json 'gateway.env={}'` 仍然会留着那一条。更早的 values 文件也能重新填入嵌套映射。要清掉此前的规范条目，请用 `--reset-values` 配合一份完整、经过审阅的 values 文件，它省略旧条目并显式写出你想要的空映射。保留其他所有部署设置和 Secret 引用。留空的最终覆盖文件或 `--reset-then-reuse-values` 都靠不住。请检查渲染结果；`null` 是 Helm 的删除操作符，不是本 chart 支持的清除值。
+
+## 开放 Gateway 并退役旧的接入流程
+
+部署验证完成后，以组织管理员或更高角色登录，打开 **AI Gateway → AI Providers**。这对每个组织都适用，包括一个还没有任何能力元数据的新组织。不需要后台授权；平台管理员路由仍沿用已有的允许名单鉴权，但不再提供 Gateway 管理页开关。
+
+为了给旧客户端兼容，组织和后台能力响应里的 `capabilities.gatewayDashboard` 恒为 `true`。它只是废弃的线上兼容值，**不是真正的功能开关**，不是部署就绪信号，也不是鉴权结论。管理能力的 API 仍接受 `gatewayDashboard` 的布尔/null 输入，但那是废弃的空操作；传 `true`、`false` 或 `null` 都改不了 Gateway 访问。其他能力保留它们原有的控制方式。
+
+已存下的 `organization.metadata.capabilities.gatewayDashboard` 值会被忽略，包括显式的 `false`。这次退役不需要数据库迁移或回填。本版本必需的 schema 迁移仍然照常适用。不要新增替代的组织标记，也不要用写元数据的变通办法。
+
+## Google Vertex AI：每位成员各自登录
+
+Google 现在把这个产品叫 **Gemini Enterprise Agent Platform（原 Vertex AI）**。完整的项目、计费、IAM、模型访问、OAuth 客户端和应用内设置步骤，请看 [Google Agent Platform（Vertex AI）](/ai-gateway/google-agent-platform)。下面这份运行参考保留 OpenWork 使用的目录名称。
+
+这个模式用于 `google-vertex`（Gemini）或 `google-vertex-anthropic`（在 Vertex 上的 Claude）。每位成员把自己的 Google 账户委托给 Gateway。Google 的 access/refresh token 和 OAuth 客户端密钥始终以加密形式存在服务端；桌面端和托管工作进程只会拿到一份 OpenWork Gateway 凭据。这个模式下成员**不需要** gcloud、本地的 Application Default Credentials（ADC）、`GOOGLE_APPLICATION_CREDENTIALS` 或服务账户密钥。它和 Google Workspace 连接、以及共享服务账户认证都是两回事。
+
+### 准备 Google Cloud 和 OAuth 应用
+
+1. 在提供推理的那个项目里启用 Vertex AI API 和计费，安排好模型配额，并确认所选模型在配置的位置上可用。用 Claude 时，启用所需的合作方模型访问并接受其条款。`global` 端点不等于所有模型都支持它；每个模型与位置的组合都要单独核实。
+2. 给每位成员的 **Google 主体**授予所需推理项目的 IAM 权限。文档里那个范围较宽的角色是 `roles/aiplatform.user`；改用经过审阅的更窄角色时，必须包含该模型需要的预测权限，例如 `aiplatform.endpoints.predict`。OpenWork 的成员身份、模型授权、Google 同意和 Google IAM 是四项彼此独立的检查。Google 邮箱不必和成员的 OpenWork 邮箱一致；这个模式默认不强制 Workspace 域名限制。
+3. 配置你所在组织的 Google OAuth 同意屏，并创建一个应用类型为 **Web application** 的 OAuth 客户端，不要用 Desktop app。符合条件时用 Internal 受众；否则配置合适的外部受众/测试用户，并完成 Google 的生产与验证要求。你的组织要满足 Google 对回调所在部署的授权域名政策，包括使用一个并非你自有的托管回调时。
+4. 在 Den 的 **AI Gateway > AI Providers > Add provider** 里选择对应的 Vertex 提供商。在 **Key** 里选择 **Each member signs in**，填入目标项目和位置，并提供网页端 OAuth 客户端 ID 和客户端密钥。保存前核对 **Models** 和 **Who can use it**；这个表单会一并创建上游凭据集合和所选的访问规则。打开已保存提供商那一行，可查看它的回调或编辑 **Key**。密钥只写不回读；普通编辑时留空。项目和位置在提供商上是固定的：要改目标地址就另建一个提供商。
+5. 把 **Den 显示的那个确切回调 URL** 复制到 Google 的 **Authorized redirect URIs** 里。这个值是给当前部署生成的，结尾是 `/v1/inference-providers/oauth/callback`；提供商详情里它叫 `oauthCallbackUrl`。不要换成 Gateway 的推理源地址、`/gateway/connect`、桌面端回环 URL，或者别的部署的主机名。确认 Den 的规范公网 API URL（显式配置过的 `DEN_API_PUBLIC_URL`）、HTTPS 反向代理和浏览器会话 cookie 都与显示的 URL 一致。要比对完整的 URI，包括部署自带的路径前缀，并且不要添加结尾斜杠。
+6. 确认 **Who can use it** 只包含目标成员、团队或组织。表单默认是 **Everyone in the organization**；关掉它，用 **Add person** 或 **Add team** 收紧访问。保存时会通过访问规则把选定的模型和凭据集合关联起来。只通过 API 建一个集合、成为它的创建者、或者身为管理员，都不会自动授予推理访问权。每位被授权的成员仍要自己连接 Google 账户。
+
+授权请求使用的 scope 恰好是这几项：
+
+- `openid`
+- `email`
+- `https://www.googleapis.com/auth/cloud-platform`
+
+它会带上同意和 PKCE 申请离线访问。cloud-platform 的同意本身不授予 IAM 权限。OAuth 客户端所在项目和推理项目可以不同；两者都不会自动成为单独配置的配额项目。
+
+<Warning>
+  目前没有可由管理员配置的配额项目设置，Gateway 也不会注入 `x-goog-user-project`。调用方自带的配额项目请求头和 Vertex 的配额查询参数都会被剥除。如果你的 Google 配置确实需要显式的配额项目，那是一个暂不支持的缺口，不能靠加一个客户端请求头或本地 ADC 来补。将来受支持的实现要从管理员掌控的配置里选取该项目，并核实该项目上的 `serviceusage.services.use`。
+</Warning>
+
+参考 Google 的[网页服务端 OAuth 指南](https://developers.google.com/identity/protocols/oauth2/web-server)、[OAuth 政策](https://developers.google.com/identity/protocols/oauth2/policies)和 [Vertex 访问控制指引](https://cloud.google.com/vertex-ai/generative-ai/docs/access-control)。
+
+### 成员连接与浏览器账户
+
+在桌面端的 AI 提供商设置里打开所分配 OAuth 提供商的 **Login** 操作，或者使用 Den 的 **My Model Connections** 页面，路径是 `/dashboard/model-connections`。分配了多于一份凭据集合时，选择你要用的那一份。浏览器会先打开一个 OpenWork 连接入口页，然后继续跳到 Google：
+
+1. 在该浏览器里用**发起这次 Connect 的同一个 OpenWork 账户**登录 Den。桌面端的登录不会自动让外部浏览器也登录。如果浏览器正在用另一个 OpenWork 账户，就在那里退出登录，改用发起请求的账户；一个入口链接或 OAuth state 替代不了那个会话。
+2. 选择一个对配置好的推理项目有 IAM 权限的 Google 账户，并批准所请求的 scope。登录 Google 不会改变拥有这条连接的 OpenWork 成员。
+3. 回到 OpenWork，按需刷新连接/模型状态。测试模型之前，先核对已连接的账户和选定的集合。关闭浏览器或不再等待，都不会吊销连接；要取消待处理的登录并移除凭据，请用 **Disconnect**。这次尝试过期后，重新发起 Connect。
+
+**Configured** 指管理员提供了 OAuth 应用。**Connected/ready** 描述的是存储下来的成员授权状态，不是实时的 Vertex 权限或配额测试。缺少离线授权、token 响应格式不对、或者旧凭据没有有效过期时间，这些都要求重新登录，而不是当成永久有效的凭据。替换用的授权失败时，不会替换数据库里已存的凭据；这也不能证明它对应的 Google 授权仍然有效。如果 Google 给出了一个通过校验的 token 响应，但 OIDC 验证失败，OpenWork 不会存下替换内容，并会尽力吊销新签发的 refresh token。当签名密钥获取超时或遇到网络故障、导致验证无法完成时，这套 fail-closed 清理策略同样适用。可识别的密钥获取超时/网络错误会报成「验证暂时不可用」，而不是「身份无效」；其他验证失败仍返回通用错误。清理时的吊销可能影响到共用同一份授权/OAuth 客户端的上一个连接和其他 Google 连接，所以即便它们的本地记录看起来仍然可用，也可能需要重新连接。token 响应校验失败，不会让清理环节对任意未校验的 token 内容取得处置权。
+
+### 会话策略、轮换与断开连接
+
+- Google Cloud 的会话控制策略可能要求交互式重新认证（`invalid_grant`，包括 `invalid_rapt`）。吊销和 token 过期也会导致同样的情况。需要时用 **Reconnect**；成员 OAuth 无法保证无限期无人值守运行，也不能绕过组织策略。不能暂停等待用户登录的工作负载，请改用另行批准的工作负载认证模式；Gateway 不会悄悄回退过去。
+- 处于 **Testing** 状态的外部 OAuth 应用，对这套 scope 一般签发的 refresh token **七天**后过期。因为请求了 cloud-platform，只涉身份的那条例外不适用。请走相应的 Google 生产流程，而不是放松会话策略。参考 Google 的 [token 过期指引](https://developers.google.com/identity/protocols/oauth2)和[生产就绪指南](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)。
+- 在一个凭据集合里轮换 OAuth 客户端 ID 或客户端密钥，会取消它待处理的登录，并吊销/清除它受影响的本地 Google 凭据。请先协调 Google 侧的改动和 Den 的更新，再让受影响的成员重新连接。通过 API 编辑时不传密钥，会保留原密钥；只改名不会吊销凭据。改动凭据模式、或者禁用这个**凭据集合**，同样会吊销它的凭据。重新启用也不会恢复已清除的 token。
+- 禁用**提供商**会拦住推理并取消待处理的登录，但保留已存的凭据；移除一条访问授权只是拦住那部分访问，不等于在 Google 侧断开连接。这些操作都不等同于吊销 Google 的授权。组织成员在失去授权或提供商被禁用之后，仍能为自己保留的凭据执行断开；成员离开的清理由流程负责处理。
+- **Disconnect** 会立刻把选中的那条本地成员凭据标记为已吊销，清除它的 token 内容，并取消待处理的登录。远端 Google 侧的吊销只是尽力而为；本地断开成功不能证明 Google 已完成吊销，token 也不会为后续重试而保留。必要时直接在 Google 账户里移除该应用的访问权。在已打开的桌面端/Web 会话里刷新模型；Gateway 的实时授权仍然会拦住使用已吊销凭据的新请求。
+- Google 可能吊销共用同一份 Google 授权许可的其他连接，包括另一个本地集合，或者使用同一个 OAuth 客户端的另一个 Vertex 提供商。不要以为本地分行存着就是彼此独立的 Google 授权。断开连接不会删除你的 Google OAuth 应用。Gateway 客户端密钥和 `DEN_DB_ENCRYPTION_KEY` 是两种不同的凭据：轮换它们替代不了在 Google 侧断开，替换数据库加密密钥也不是 OAuth 的轮换流程。
+
+### 发布前先验证
+
+<Warning>
+  自动化的夹具和配置检查都不是真实 Google 的验收证据。它们不能证明一个组织自有的 OAuth 客户端可以用你的托管/自托管回调，不能证明 Google 已验证该应用，也不能证明某位成员拥有 Vertex IAM、合作方模型权限、配额，或策略上可用的 refresh。发布前请用一个明确授权的测试项目和测试账户核实这些。
+</Warning>
+
+用经批准、不含敏感内容的提示词，在桌面端和托管 Web 上分别测试 Gemini 和 Claude，各自覆盖流式与非流式，全程本地不留 Google 凭据。要验证显示的账户、模型/集合选择、token 复用与刷新、轮换或吊销后的重新连接、对没有 IAM 的 Google 账户的拒绝，以及适用场景下的会话控制行为。开启了 Cloud Audit Logs 时，在里面核对 Google 主体归属。只记录脱敏后的结果和版本标识，绝不记录 token、客户端密钥、cookie、回调查询串或原始的 token 端点响应。
+
+面向客户端的 SDK 就是普通的 Google 和 Anthropic 静态密钥 SDK；Gateway 把它们的请求适配给 Google 或 Anthropic 对应的 Vertex 发布方。模型级的 Vertex SDK 覆盖项也会映射，同时保持模型别名和受支持的元数据完好。跨 SDK 的合作方模型不在这个支持范围内：Google 登录不会让无关的适配器生效。现有的 HTTP 夹具覆盖了 Vertex 路由和中继行为，但经过实体化路径的真实「SDK 到 Vertex 适配器」解码，对两个提供商、两种响应模式都还有待验证。
+
+遇到 `redirect_uri_mismatch`，把显示的确切回调和 Google 里的注册逐项对比。遇到 `invalid_client`，请该凭据集合的管理员修复 OAuth 客户端，而不是反复让成员重新同意。遇到 Vertex 权限/模型访问失败，请核对 IAM、项目、区域和合作方访问权；不要假定所有上游的 `401`/`403` 都是 refresh token 过期。token 端点的瞬时失败和配额错误需要分别定位。不要自动重放一次结果不明确或只送达一部分的推理流。
+
+## Amazon Bedrock 与 Microsoft Foundry：每位成员各自登录
+
+成员也可以用自己的账户登录 **Amazon Bedrock** 和 **Amazon Bedrock (OpenAI)**（走 AWS IAM Identity Center），以及 **Microsoft Foundry (Claude)**（走 Microsoft Entra ID）。云侧配置请看 [Amazon Bedrock](/ai-gateway/amazon-bedrock) 和 [Microsoft Foundry](/ai-gateway/microsoft-foundry)。
+
+这两者以及 Microsoft Foundry 提供商本身，在每个组织里都可用；`/admin` 里没有任何需要打开的东西。
+
+先执行本版本的数据库迁移：它会新增 `aws_sso` 这种凭据类型，以及凭据集合上的 `oauth_tenant_id` 和 `aws_sso` 两列。
+
+和 Google 登录一样，Den 负责完成每次登录并加密存储成员的 refresh token；Gateway 负责续期，并且在 AWS 情况下把它换成短期的角色凭据，用来给 Bedrock 请求签名。Den API 和 Gateway 需要有到下列地址的公网 HTTPS 出网：
+
+| 主机 | 服务 | 使用方 |
+| --- | --- | --- |
+| `oidc.<sso-region>.amazonaws.com` | IAM Identity Center 登录与续期 | Den API、Gateway |
+| `portal.sso.<sso-region>.amazonaws.com` | 角色凭据；登出 | Den API、Gateway |
+| `sts.<sso-region>.amazonaws.com` | 核对登录者身份 | Den API |
+| `login.microsoftonline.com` | Entra ID 登录、续期与签名密钥 | Den API、Gateway |
+| `<resource>.services.ai.azure.com` | Microsoft Foundry 推理 | Gateway |
+
+这些都是 AWS 和 Microsoft 的公网端点，能通过默认的出网策略；不需要 `GATEWAY_EGRESS_ALLOWED_ORIGINS` 例外。Microsoft Foundry 的登录使用和 Google 相同的 Den 回调，结尾是 `/v1/inference-providers/oauth/callback`。AWS 的登录走 OAuth 设备流程，不需要回调。
+
+## 验证与排障
+
+以组织管理员身份登录 Den，选中目标组织，然后用浏览器的 Network 面板或你批准使用的认证 API 客户端，查看它那份经过认证的 **`GET /v1/org`** 响应。要看 Den API 的响应，不是健康端点、组织元数据字段或 Web 的 runtime-config 响应。相关的顶层字段是：
+
+```json
+{
+  "deploymentCapabilities": { "version": 1, "aiGateway": true },
+  "capabilities": { "gatewayDashboard": true }
+}
+```
+
+上面这个 `capabilities.gatewayDashboard` 只是废弃的、恒为 true 的兼容响应，别用它来验证启用状态。应该核对 `deploymentCapabilities.version` 和 `deploymentCapabilities.aiGateway`。
+
+不要把 cookie、认证请求头或完整的组织响应导出到工单里。只记录能力字段和版本镜像标识。`deploymentCapabilities` 对象缺失或格式不对、版本不受支持、或者 `aiGateway` 不是字面布尔值 `true`，都属于不受支持的情况，界面会按 fail-closed 处理。要确认所有 API 副本都在服务配套的那个版本；单个响应证明不了一次一致的放量。
+
+| 状态 | 预期结果 / 操作 |
+| --- | --- |
+| 组织访问权正在加载或切换 | `Checking workspace access...`；管理界面和请求都会等待。这不是「部署不可用」的判定。 |
+| 是组织管理员，但部署不受支持或未启用 | 显示下文那条精确提示，并且不做提供商编辑器或管理请求。核对镜像、顶层约定和运维配置。 |
+| 组织角色权限不足 | 重定向到管理页；核对成员身份。Gateway 没有单独的组织授权项。 |
+| 组织上下文请求失败 | 显示错误提示，而不是伪造一个「能力未启用」。请先解决会话/API 故障。 |
+| 部署已启用，但上游/提供商故障 | 排查凭据、DNS、TLS、出网、目录告警和上游错误。可用性表达的是配置意图，不是上游健康探针；不要把部署重新标成不受支持。 |
+
+部署不可用时的界面提示原文是：
+
+> `This feature is not part of your deployment system, please ask an instance admin to configure deployment`
+
+在未启用的部署上发起一次经过认证且有权限的管理 API 请求，会返回 HTTP `403`、错误码 `gateway_not_enabled`，以及：
+
+> `Gateway management is not enabled on this deployment. Ask your administrator to configure GATEWAY_ENABLED=true.`
+
+认证、角色和全新会话的失败仍然各自区分。成员的 usable/connect/sign-in/revoke 路径和 OAuth 回调不受部署管理层级的拦截；退役组织标记不会改变它们的鉴权。
+
+`/health` 证明进程活着。Gateway 的 `/ready` 执行 `select 1` 来检查数据库连通性；它**不能**证明 Gateway 的 schema 或迁移已经存在。能力响应也证明不了 schema 健康。请单独核对迁移的执行凭据和真实 schema，然后用批准过的、不含敏感的数据测一条被授权的提供商路径，之后再放开流量。
+
+对组织管理员来说，导航入口是 **AI Gateway**，下面有 **AI Providers** 和 **OpenWork Models** 两个标签页。创建和编辑提供商都留在 **AI Providers** 标签页里。Gateway 的提供商管理保留它的部署和管理员两道防护；加载期间会暂缓访问判定。组织授权那道防护已经不再保留。OpenWork Models 标签页沿用它自己的可用性规则。这处导航不会改动订阅、计费、Models 密钥或提供商数据。在关掉任何东西之前，请看[关闭与恢复的几种选择](/zh/self-host/gateway-upgrade)。

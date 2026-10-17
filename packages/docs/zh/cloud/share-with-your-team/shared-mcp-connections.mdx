@@ -26,7 +26,7 @@ keywords: ["connectors", "MCP", "add connector", "share connection", "Notion", "
 6. 在 **Who can use it** 下开启 **Everyone in the organization**，或点击 **Add person**、**Add team**。刚创建时只有你自己能用。
 7. 点击 **Add {name}**。
 
-你授予权限的人会在自己的资源库（Library）里找到这个连接器。
+你授予权限的人会在自己的资源库(Library)里找到这个连接器。
 
 如果你中途离开，列表中该连接器会显示 **Setup not finished**。点击 **Finish** 就能从上次停下的地方继续。
 
@@ -36,7 +36,7 @@ keywords: ["connectors", "MCP", "add connector", "share connection", "Notion", "
 
 - Exa 需要来自你 Exa 账户的 API 密钥。见[启用 Exa 搜索](/start-here/connect-your-stack/enable-exa-search)。
 - Context7 不需要登录。
-- Slack 需要先创建一个 Slack 应用，见本页「Slack」一节。
+- Slack 需要先创建一个 Slack 应用，见 [Slack](#slack)。
 - Gmail、Google Calendar、Google Drive 和 Microsoft 365 的连接方式，见[连接你的服务](/start-here/connect-your-stack/connect-services)。
 
 非管理员成员可以在 **My Library › Add to your Library › Connector** 里为自己添加部分应用。需要 API 密钥、OAuth 应用或共享单一账户的应用，必须由管理员来添加。
@@ -210,5 +210,5 @@ https://api.openworklabs.com/v1/mcp-connections/oauth/callback
 
 **可用性。** Connect 在所有组织都可用，Cloud 与自托管都是；不存在需要打开的开关。访问仍然遵循每个成员的授权与凭证。凭证缺失时返回 `needs_connection` 和 HTTP `409`。
 
-**已退役的组织开关。** 更早的版本允许平台管理员为单个组织关闭 Connect（`capabilities.mcpConnections`）。这个开关是有意退役的：原本关闭的组织现在也启用了 Connect，包括 Google Workspace 和 Microsoft 365 的原生动作。要限制谁能使用某项服务，请把连接的访问范围设为指定团队，或移除该连接。用较早的组织级 OAuth 客户端配置的 Google Workspace 或 Microsoft 365 会作用于整个组织；要停止成员使用，请移除该配置。
+**已退役的组织开关。** 更早的版本允许平台管理员为单个组织关闭 Connect(`capabilities.mcpConnections`)。这个开关是有意退役的：原本关闭的组织现在也启用了 Connect，包括 Google Workspace 和 Microsoft 365 的原生动作。要限制谁能使用某项服务，请把连接的访问范围设为指定团队，或移除该连接。用较早的组织级 OAuth 客户端配置的 Google Workspace 或 Microsoft 365 会作用于整个组织；要停止成员使用，请移除该配置。
 </Accordion>

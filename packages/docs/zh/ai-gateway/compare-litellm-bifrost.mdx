@@ -1,0 +1,45 @@
+---
+title: "AI Gateway 与 LiteLLM、Bifrost 对比"
+sidebarTitle: "对比：LiteLLM 与 Bifrost"
+description: "把 OpenWork AI Gateway 与 LiteLLM、Bifrost 逐项对比：授权、SSO、花费跟踪、MCP 和团队共享，以及如何让它们一起工作。"
+---
+
+LiteLLM 和 Bifrost 是给任意应用使用的独立网关；OpenWork AI Gateway 管理的是在 OpenWork 里工作的人如何访问模型。两者可以一起用。
+
+| | OpenWork AI Gateway | LiteLLM | Bifrost |
+| --- | --- | --- | --- |
+| **它是什么** | OpenWork 工作区与控制台内部的模型访问层 | Python SDK 加代理服务器，以 OpenAI 格式对接 100 多个 LLM API | 用 Go 编写的网关，用同一个兼容 OpenAI 的 API 覆盖 1000 多个模型 |
+| **授权** | 桌面应用与核心：MIT。网关与控制面（`ee/`）：源码可用的 [OpenWork EE License](https://github.com/different-ai/openwork/blob/dev/ee/LICENSE) | MIT，但 `enterprise/` 目录适用另一份授权 | Apache-2.0（开源版） |
+| **部署** | OpenWork Cloud，或用 Helm 在 Kubernetes 上自托管 | 在你自己的基础设施上自托管（Docker 镜像或 pip 包） | 自托管（Docker、Kubernetes、Go 二进制）；企业版支持 VPC 内部署与离线环境 |
+| **SSO / RBAC** | Team 套餐支持 SSO/SAML；Enterprise 支持 SCIM 和 RBAC | 5 个用户以内可免费使用 SSO；企业授权后提供 SSO 加 SCIM、JWT 认证，以及按组织/团队划分的 RBAC | 企业版提供 SAML/OIDC SSO 和 RBAC |
+| **花费跟踪** | 按模型、团队和个人统计 token 与估算费用；以 USD 计的额度并带硬性上限 | OSS 即有花费跟踪与预算；企业版有更多的预算与报表能力 | 通过虚拟密钥提供预算与速率限制；内置可观测性 |
+| **给调用方的密钥** | 每位成员一把 Gateway 密钥，自动签发 | 虚拟密钥 | 虚拟密钥 |
+| **成员各自登录提供商** | 支持 Google Vertex AI（每位成员用自己的 Google 账户登录） | — | — |
+| **MCP 网关** | 支持，作为独立服务：[OpenWork MCP 网关](/start-here/connect-openwork-mcp) | 支持 | 支持，并带 Code Mode 与工具过滤；企业版支持联合身份认证 |
+| **技能与插件共享** | 支持：把插件、技能和连接分配给团队或个人 | AI Hub 页面可列出模型、MCP 服务器、智能体和技能（企业版） | — |
+| **面向非技术员工的终端应用** | 支持：OpenWork 桌面应用与 OpenWork Web | — | — |
+| **编程智能体集成** | 通过 MCP 网关服务 Claude Code、Codex、Cursor 等 | — | Bifrost CLI 可治理 Claude Code、Codex CLI 和 Gemini CLI |
+| **护栏、缓存、回退** | — | 护栏（部分集成需要授权）、回退、负载均衡 | OSS 提供自动回退、自定义路由、语义缓存；企业版提供护栏与自适应负载均衡 |
+| **定价** | 云端与自托管都有公开的按席位套餐；见[定价与授权](/start-here/pricing-and-licensing) | OSS 免费；企业版按部署规模计价，提供 30 天试用 | OSS 免费；企业版按需定价，提供 14 天试用 |
+
+破折号（—）表示我们无法确认。信息截至 2026 年 9 月 25 日，来源：[LiteLLM](https://github.com/BerriAI/litellm)、[LiteLLM Enterprise](https://docs.litellm.ai/docs/enterprise)、[Bifrost](https://github.com/maximhq/bifrost)、[Bifrost 定价](https://www.getmaxim.ai/bifrost/pricing)。
+
+## 该选哪个
+
+- **LiteLLM 或 Bifrost**：一个网关服务很多应用，需要缓存、路由或护栏。
+- **OpenWork AI Gateway**：你的员工使用 OpenWork，你希望模型、技能、MCP 和花费都在同一个仪表盘里。
+- **两者都用**：路由仍交给你的网关；让 OpenWork 去消费它。
+
+## 让它们一起工作
+
+<Steps>
+  <Step title="准备网关信息">
+    Base URL（通常以 `/v1` 结尾）、模型名称，以及一个密钥。
+  </Step>
+  <Step title="把它加入 OpenWork">
+    如果是 LiteLLM，请在 AI Gateway 中添加 [LiteLLM 提供商](/zh/ai-gateway/litellm)：它会同步你的模型和团队。其他网关则在 OpenWork Cloud 中添加[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)并授予访问权限。只想给一个人用时，见[添加自定义 LLM 或 AI 网关](/start-here/connect-your-stack/add-a-custom-llm)。
+  </Step>
+  <Step title="为每人配发各自的密钥（可选）">
+    如果你的网关能签发虚拟密钥，请使用[按成员的 LLM 凭据](/cloud/share-with-your-team/per-member-llm-credentials)。
+  </Step>
+</Steps>

@@ -25,7 +25,7 @@ keywords: ["desktop policy", "desktop policies", "team access", "app permissions
 
 - 所有者可以创建、编辑、删除策略，并修改团队访问设置。企业版组织可以把这项能力授予管理员或某个带 Permissions 的团队。
 - 管理员可以查看策略和团队访问设置，但不能修改。
-- 桌面策略管理属于企业版（Enterprise）计划。
+- 桌面策略管理属于企业版(Enterprise)计划。
 
 ## 策略能控制什么
 
@@ -123,18 +123,18 @@ keywords: ["desktop policy", "desktop policies", "team access", "app permissions
 
 **模型访问的存储。** **Only models you provide** 以默认桌面策略中的 `allowCustomProviders: false` 存储；`Admins may still add their own keys on their device` 以一条管理员角色策略存储。
 
-**开关如何合并。** 如果组织没有任何策略，所有开关都是开的。否则每个开关都从关闭开始，默认策略或任一命中的成员、团队、角色策略中出现的 `true` 会把它打开。团队访问设置（`access.capabilities`）显式给出的 `false` 在此之后应用，并且优先生效。
+**开关如何合并。** 如果组织没有任何策略，所有开关都是开的。否则每个开关都从关闭开始，默认策略或任一命中的成员、团队、角色策略中出现的 `true` 会把它打开。团队访问设置(`access.capabilities`)显式给出的 `false` 在此之后应用，并且优先生效。
 
 **命令与浏览。** 存储在策略文档的 `execution` 下：
 
 - `commands` 取 `allow` 或 `deny`。任何一条命中的策略给出 `deny` 就会封锁命令。
 - `blockedCommands` 是使用 `*` 匹配任意文本的模式；所有命中策略的模式会累加，每条策略最多 100 个。
-- `browserOrigins`：字段缺失时不做网站限制；空列表（`[]`）会封锁所有网站。列表在默认策略与所有命中的成员、团队、角色策略之间取交集，因此一个站点必须出现在每一份存在的列表里。
+- `browserOrigins`：字段缺失时不做网站限制；空列表(`[]`)会封锁所有网站。列表在默认策略与所有命中的成员、团队、角色策略之间取交集，因此一个站点必须出现在每一份存在的列表里。
 - `blockBrowserUploads`：任何一条命中的策略给出 `true` 即开启。
 
 **已批准网站的格式。** 每一项都是精确的 HTTP 或 HTTPS origin：包含协议、主机名和端口。默认端口会被归一化，所以 `https://portal.example.com:443` 等同于 `https://portal.example.com`，而 `http://portal.example.com` 与 `https://portal.example.com:8443` 是不同的 origin。路径、凭证、查询串和片段都会被拒绝，不支持通配符。
 
-**恢复强制执行后的设计行为。** 网站规则覆盖内置浏览器的每个请求，包括导航、重定向、框架、脚本和图片；来自未批准 origin 的资源即使在已批准页面上也会被拦截。设置了已批准站点期间，引擎内置的 `websearch` 与 `webfetch` 工具会被拒绝；第三方 MCP 搜索或抓取工具不在过滤范围内。**Block browser uploads and form submissions** 会拦截 WebSocket（`ws:`/`wss:`）连接、带上传数据的请求，以及除 `GET`、`HEAD`、`OPTIONS` 之外的方法。基于 GET 的表单仍可向已批准站点发送数据。这些控件都不是设备级的数据防泄漏：被放行的计算机命令和第三方连接可以走其他网络路径。
+**恢复强制执行后的设计行为。** 网站规则覆盖内置浏览器的每个请求，包括导航、重定向、框架、脚本和图片；来自未批准 origin 的资源即使在已批准页面上也会被拦截。设置了已批准站点期间，引擎内置的 `websearch` 与 `webfetch` 工具会被拒绝；第三方 MCP 搜索或抓取工具不在过滤范围内。**Block browser uploads and form submissions** 会拦截 WebSocket(`ws:`/`wss:`)连接、带上传数据的请求，以及除 `GET`、`HEAD`、`OPTIONS` 之外的方法。基于 GET 的表单仍可向已批准站点发送数据。这些控件都不是设备级的数据防泄漏：被放行的计算机命令和第三方连接可以走其他网络路径。
 
 **刷新。** 桌面应用会缓存最后一次收到的配置并在启动时应用；成员登录时、Cloud 账户或当前组织变化时，以及每小时，都会拉取一次新配置。
 </Accordion>

@@ -1,0 +1,122 @@
+---
+title: "Microsoft Entra SAML SSO"
+description: "通过 SAML 把 Microsoft Entra ID 连接到 OpenWork Cloud"
+---
+
+当组织希望成员用 Microsoft Entra ID 登录 OpenWork 时，用这份指南。
+
+SAML 登录跑通之后，再用 [Microsoft Entra SCIM 开通](/cloud/scim-microsoft-entra)自动同步成员和组。
+
+## 开始之前
+
+你需要：
+
+- 一个使用 Team 或 Enterprise 计划的 OpenWork 组织。
+- 该 OpenWork 组织的所有者权限。
+- 一个 Microsoft Entra 企业应用的管理员权限。
+- 最终确定的 OpenWork auth origin，例如 `https://app.openworklabs.com`。
+
+在你完成域名验证、跑通一次真实认证测试并显式启用 SSO 之前，OpenWork 会把新的 SSO 配置保持为禁用状态。配置期间请保留密码登录或已有的恢复通道。
+
+## 1. 创建 Entra 企业应用
+
+在 Microsoft Azure 门户中打开 **Microsoft Entra ID**，为 OpenWork 新建一个企业应用，并把单点登录方式选为 **SAML**。
+
+## 2. 配置 Basic SAML Configuration
+
+在 Entra 中打开 **Single sign-on**，编辑 **Basic SAML Configuration**。
+
+设置：
+
+| Entra 字段 | 值 |
+| --- | --- |
+| Identifier (Entity ID) | OpenWork 的 auth origin，例如 `https://app.openworklabs.com` |
+| Reply URL (Assertion Consumer Service URL) | 保存 SAML 后 OpenWork 显示的 ACS URL，例如 `https://app.openworklabs.com/api/auth/sso/saml2/sp/acs/openwork-sso-<org-id>` |
+| Sign on URL | 保存 SAML 后显示的、按组织区分的 OpenWork **Sign-in URL**，例如 `https://app.openworklabs.com/sso/<org-slug>` |
+| Relay State | 留空 |
+
+Entity ID 必须是 OpenWork 的 auth origin。不要把 Entra 租户标识符 `https://sts.windows.net/<tenant-id>/` 当作 Entity ID 使用。
+
+OpenWork 的 SAML 连接是按组织划分的。如果一个用户属于多个 OpenWork 组织，那么由 Entra 应用、ACS URL 和 Sign-in URL 决定他进入的是哪个组织。
+
+## 3. 配置 SAML 签名
+
+打开 **SAML Certificates**，编辑令牌签名证书的设置。
+
+设置：
+
+- **Signing Option**：`Sign SAML assertion`
+- **Signing Algorithm**：`SHA-256`
+
+OpenWork 要求签名过的 SAML 断言。如果 Entra 只对响应签名，回调会以 `saml_error` 和 `Invalid SAML response` 失败。
+
+任何证书变更之后，都要重新复制一次当前生效的证书。Entra 可能在你编辑 SAML 设置期间新建或启用一张新的签名证书，而 OpenWork 必须保存当前正在生效的那一张。
+
+## 4. 把 Entra 的值填入 OpenWork
+
+在 OpenWork 中打开组织控制台，然后进入 **SSO**，选择 **SAML** 并填入：
+
+| OpenWork 字段 | Entra 的值 |
+| --- | --- |
+| IdP Issuer URL | **Microsoft Entra Identifier**，例如 `https://sts.windows.net/<tenant-id>/` |
+| Domain | 由 Entra 管理的邮箱域名，例如 `example.onmicrosoft.com` |
+| SAML Entry Point | **Login URL**，例如 `https://login.microsoftonline.com/<tenant-id>/saml2` |
+| Audience URL | 留空，让 OpenWork 使用 auth origin；除非支持团队给了你别的 audience |
+| IdP Certificate | Entra 中当前生效的 **Certificate (Base64)** |
+
+保存 SSO 连接。OpenWork 随后会显示包括 **Sign-in URL**、**Redirect URL**、**ACS URL** 和 **Metadata URL** 在内的配置值。如果首次保存前拿不到 ACS URL，就把生成的 **ACS URL** 回填到 Entra 的 **Reply URL**。请把 OpenWork **Sign-in URL** 填入 Entra 的 **Sign on URL**，这样 Entra 磁贴才能发起同一个按组织区分的流程。
+
+此时保存下来的配置仍是禁用状态。
+
+## 5. 验证邮箱域名
+
+在 OpenWork 的 **Settings → SSO** 中，于域名验证部分选择 **Request token**，并为该邮箱域名创建一条 DNS TXT 记录：
+
+| DNS 字段 | 值 |
+| --- | --- |
+| Type | `TXT` |
+| Host / name | OpenWork 显示的 **Host / name** 值 |
+| Value | OpenWork 显示的 token |
+
+当你的 DNS 服务商会自动补上域名后缀时使用 host 值；当它要求填写完整记录名时使用完整的 DNS 名称。TXT 记录能被公网解析后，在 OpenWork 中选择 **Verify domain**。
+
+Token 是一次性证明，七天后失效。验证成功后，你可以删除这条 TXT 记录。
+
+## 6. 指派测试用户
+
+在 Entra 中打开该企业应用的 **Users and groups** 页面，指派允许登录的用户。
+
+对于外部用户，请指派 Entra 显示的那个访客身份，而不只是原来的外部邮箱地址。
+
+## 7. 在 OpenWork 中测试并启用 SSO
+
+Entra 指派和域名验证都完成后：
+
+1. 在 OpenWork 的 **Settings → SSO** 中选择 **Enable Config** 或 **Enable SSO**。
+2. 在 **Test SSO before enabling it** 对话框中选择 **SSO Login**。
+3. 在弹出的独立窗口中完成 Microsoft 认证。
+4. 返回 OpenWork，确认显示 **Authentication test successful**。
+5. 选择 **Enable SSO**。
+
+在测试成功后你没有显式启用之前，组织成员看不到 SSO 入口。如果测试成功后又修改了 SSO 配置，请在启用前重新测试一次。测试链接五分钟后失效。
+
+## 即时开通与密码注册
+
+在为已验证的域名启用 Entra SAML SSO 之后，OpenWork 的标准登录流程会把该邮箱域名的用户导向组织的 SSO 流程。用户成功完成 SAML 登录后，OpenWork 可以即时 (just in time) 为其创建组织成员关系，默认角色是 `Member`。
+
+JIT 开通只发生在 SAML 认证成功之后。用同一邮箱域名创建邮箱/密码账户，不会把用户加入组织，也不会创建由 SCIM 管理的身份。如果该用户之后完成了 SSO，OpenWork 可以把匹配的账户关联起来，并通过 SSO 开通组织成员关系。
+
+OpenWork 不会把 `role`、`groups`、`admin` 这类 SAML 属性转换成更高的组织角色。角色由所有者在 OpenWork 中指派；所有者的变更要走所有权转移。要基于组授予 Admin，请先配置 [Entra SCIM 开通](/cloud/scim-microsoft-entra)，再用[团队 Admin 权限](/cloud/members-and-rbac#team-admin-access)显式批准这个已同步的团队。
+
+## 问题排查
+
+| 现象 | 可能原因 | 解决办法 |
+| --- | --- | --- |
+| `AADSTS700016: Application with identifier 'https://app.openworklabs.com' was not found` | Entra 的 Entity ID 与 OpenWork 的 SAML issuer 不一致 | 把 **Identifier (Entity ID)** 设为 OpenWork 的 auth origin |
+| `/?error=saml_error&error_description=Invalid%20SAML%20response` | Entra 使用的签名证书与保存在 OpenWork 中的不是同一张，或者断言没有签名 | 确认 **Signing Option** 是 `Sign SAML assertion`，然后把 Entra 当前生效的 **Certificate (Base64)** 粘贴到 OpenWork 并保存 |
+| `/?error=unsolicited_response&error_description=IdP-initiated+SSO+not+allowed` | 该部署运行的是较旧的 OpenWork 版本，它会拒绝由 IdP 发起的 SAML | 升级 OpenWork，或改为从按组织区分的 OpenWork **Sign-in URL** 发起 |
+| 用户能到 Microsoft，但无法继续 | 该用户没有被指派到这个企业应用 | 在 **Users and groups** 下添加该用户 |
+| Reply URL 不匹配 | Entra 的 Reply URL 与 OpenWork 的 ACS URL 不完全一致 | 从 OpenWork 复制 ACS URL，粘贴到 Entra |
+| OpenWork 显示 `Verify the SSO domain before testing this configuration` | DNS TXT 证明还没有通过 | 创建 OpenWork 提示的 TXT 记录，等待 DNS 生效，然后选择 **Verify domain** |
+| 测试对话框显示 `The SSO authentication window was closed before the test completed` | 在 OpenWork 收到测试结果之前，弹窗被关闭或被重定向走了 | 重新发起一次测试，并保持认证窗口打开，直到它返回或自行关闭 |
+| 修改设置后 OpenWork 不肯启用 SSO | 当前配置还没有成功通过测试 | 再次运行 **SSO Login**，测试成功后再选择 **Enable SSO** |

@@ -1,0 +1,72 @@
+---
+title: "私有网络部署"
+description: "笔记本具备联网和 VPN 访问、而 Den 留在私有网络内时，如何运行 OpenWork。"
+---
+
+多数企业级 OpenWork 安装并不是完全离线的。常见的形态是：
+
+- 员工笔记本既有普通互联网访问，也有 VPN 访问。
+- Den web 和 Den API 运行在客户自己的私有网络里。
+- 桌面应用通过 VPN 使用一个客户提供的 Den URL。
+
+本页写给负责审批这两条网络路径的 IT 和平台团队。完全隔离的术语定义和检查项见 [离线（air-gapped）部署](/start-here/air-gapped-deployment)。
+
+## 桌面应用必须访问到什么
+
+把桌面应用指向一个 Den web 源站。已登录的桌面应用会读取 `${DEN_BASE_URL}/api/runtime-config`，并用其中的 `denApiUrl` 值作为 Den API 与 MCP 流量的唯一依据。Den Web 在配置了 `DEN_API_PUBLIC_URL` 时返回它，否则按 `api.${DEN_BASE_URL}` 推导 API 源站：
+
+- API 默认值：`https://api.<den-web-host>/v1/...`
+- MCP 默认值：`https://api.<den-web-host>/mcp/...`
+
+请把 `DEN_BASE_URL` 设为 Den web 源站。`DEN_API_BASE` 是 Den Web 访问 Den API 的服务端专用 URL，例如集群内的服务地址；它绝不会下发给浏览器或桌面应用。如果浏览器、桌面应用或外部 MCP 客户端需要一个单独可外部访问的 API 源站，请设置 `DEN_API_PUBLIC_URL`，例如 `https://api.openwork.example.internal`。请使用不带路径的源站，因为当前的 web 客户端会把这个值规范化为其源站。
+
+如果你发布了独立的 Den API 源站，那么一次性的安装链接交接和外部 MCP 客户端也必须能访问到那个源站。
+
+Cursor、Claude Code、VS Code、ChatGPT、OpenCode 这类外部 MCP 客户端与桌面应用是两回事。它们必须能访问你为它们配置的 MCP 端点，通常是 `<DEN_API_PUBLIC_URL>/mcp/agent`。外部客户端流程见 [OpenWork Connect MCP](/cloud/run-in-the-cloud/cloud-mcp)。
+
+除非你在内部镜像或替换了公共依赖，笔记本可能还需要出站访问以下载 installer、release 资源、`npx` 用到的 npm 包和 OpenCode 模型目录。这份放行名单维护在 [出站网络访问](/zh/start-here/outbound-network-access) 里；installer 下载必须留在 Den 内部时，请按 [installer 分发](/zh/start-here/installer-delivery) 操作。
+
+## Den 必须访问到什么
+
+硬性要求很少：
+
+- Den 配置的那个 MySQL 兼容数据库端点。
+- 部署或拉取镜像时的 OpenWork chart 和镜像，除非你把 Helm chart 和启用的镜像镜像到了内部镜像仓库。
+
+其余都是按功能决定的，在该功能获批之前可以一直拦着：Google Workspace、Microsoft 365、GitHub 插件导入、事务性邮件、模型提供商、MCP 预设、自定义 MCP 服务器，以及 OAuth/令牌端点。给客户 IT 使用的主机名清单维护在 [出站网络访问](/zh/start-here/outbound-network-access) 里。
+
+如果私有网络使用 TLS 检测、私有根证书或出站代理，请配置正确的信任面，而不是设置只在浏览器里生效的值。参见 [证书信任与代理](/start-here/certificate-trust-and-proxies)。
+
+## 运维人员容易踩的三个坑
+
+### 内部 MCP 服务器被拒绝
+
+**现象：** 添加或测试一个私网地址上的 MCP 服务器时失败，返回 `MCP_URL_BLOCKED`，运维提示语是“请改用公网 HTTPS 的 MCP URL，或经安全评审修改该部署的私有网络策略”。
+
+**原因：** Den 是在服务端拉取 MCP URL 的。作为多租户部署的 SSRF 防护，它默认会拦截私有地址和保留地址。
+
+**解决办法：** 在 Den 上设置 `DEN_ALLOW_PRIVATE_MCP_URLS=1`，或对应的 Helm 公开配置值。这会关闭上述 SSRF 防护，因此只应在 Den 的网络位置可信、且被允许添加 MCP 连接的人员可信时使用。
+
+### 云端 MCP 诊断被跳过
+
+**现象：** 设置 → 调试报告没有观测到实时的云端目录，详情说明该端点不在诊断信任策略之内。
+
+**原因：** 这项诊断只会向受信任的源站发送带凭证的探测。默认情况下它信任托管的 OpenWork 源站，不信任你自托管的 Den 源站。
+
+**解决办法：** 在 OpenWork 启动之前把你的 Den 源站加入信任。它只影响这项诊断；Cloud MCP 本身在真实会话里仍然可以工作，不需要这个变量，所以不要把一次被跳过的探测当作部署坏了的证据。确切的语法和该在哪一层启动环境上设置，见 [网络诊断](/zh/start-here/network-diagnostics)。
+
+### Den 的出站自检指向了一个公网主机
+
+**现象：** 由管理员触发的 Den 出站诊断，在只通过 VPN 可达、与公网隔离的 Den 部署里访问不到默认的公网诊断主机。
+
+**原因：** `DEN_DIAGNOSTICS_ORIGIN` 默认指向公网的 OpenWork 诊断服务。
+
+**解决办法：** 把一个受支持的、内部可达的运行时/源站上部署好诊断应用，然后用 `DEN_DIAGNOSTICS_ORIGIN` 和 `DEN_DIAGNOSTICS_BEARER_TOKEN` 指向它。除非你的部署路径已经验证过，否则不要假设可以直接套用通用的 Kubernetes 包。这项检查是可选的、由管理员触发的，不是 Den 的后台依赖。见 [网络诊断](/zh/start-here/network-diagnostics)。
+
+## 验证清单
+
+| 链路 | 成功时的表现 | 失败时先查哪里 |
+| --- | --- | --- |
+| installer 针对内部 Den 完成激活 | 通过 VPN 打开 Den 的安装页面，installer 下载完成，并且在改动本机配置之前，**Open OpenWork** 显示了预期的组织和服务器。 | 应用能打开就用 设置 → 调试 确认 Den 的 web 和 API 端点。完全打不开就回到 Den 安装页面，并检查 [installer 分发](/zh/start-here/installer-delivery)。 |
+| 桌面应用登录并进入就绪的工作区 | 用户通过内部 Den URL 登录，看到正确的组织，并能打开就绪的工作区或直接开始会话。 | 用 设置 → 调试 查看服务器端点、登录状态、代理以及 TLS/证书线索。桌面侧的 DNS/TLS/代理证据用 [网络诊断](/zh/start-here/network-diagnostics) 采集。 |
+| Cloud MCP 在真实会话里可用 | 在会话中，智能体能搜索可用的 OpenWork 能力，并执行一个该用户被允许运行的能力。 | 提供商登录或管理员配置看 设置 → OpenWork Connect。用 设置 → 调试 解读诊断结果，尤其是被跳过的目录探测。 |

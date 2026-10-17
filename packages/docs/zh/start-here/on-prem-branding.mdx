@@ -1,0 +1,132 @@
+---
+title: "为本地部署做品牌定制"
+description: "配置组织名称、字标、强调色和桌面图标，不需要依赖公网 CDN。"
+---
+
+组织品牌定制让所有者可以为某个本地 Den 组织里登录的所有成员自定义 OpenWork 的使用体验。上传的图片留在部署环境内部：Den 把图片的二进制数据存进现有的 MySQL 数据库，并通过你的 Den API 面提供带签名、带版本的 URL。
+
+不需要额外的资源 PVC、公网对象存储或公网图片 CDN。
+
+## 品牌定制会改什么
+
+| 设置项 | 成员在哪里看到 |
+| --- | --- |
+| 应用名称 | 下载页、安装流程、窗口标题和桌面界面 |
+| 字标 | 桌面应用侧边栏的左上方 |
+| 方形应用图标 | Windows 标题栏、Alt-Tab 和任务栏；macOS Dock；Linux 窗口图标 |
+| 强调色 | 支持的按钮与强调高亮处 |
+
+<Note>
+  品牌定制改变的是展示出来的组织体验。它不会重命名或重新签名已安装的可执行文件，已签名的应用身份仍然是 OpenWork。
+</Note>
+
+## 配置本地部署的源站
+
+正常的已登录桌面流量可以用一个 Den web 源站。在这种拓扑下，桌面应用指向 `config.public.desktopDenBaseUrl`，API、MCP 和带签名的品牌资源 URL 都通过该 web 源站的 `/api/den` 代理访问。
+
+采用这种单源站形态的 Helm 安装，请让公开值与内部可达的 HTTPS 名称保持一致：
+
+```yaml
+config:
+  public:
+    webOrigin: "https://openwork.example.internal"
+```
+
+这会把 `config.public.webOrigin` 映射到 `DEN_BASE_URL`；Den 的 Better Auth URL、CORS/受信任源站、API 默认值、MCP 资源默认值和 web 应用主机名都从它推导而来。不要把它设成 `localhost`、Kubernetes 服务名，或者成员桌面设备访问不到的公网主机名。
+
+如果你另外发布了一个独立的 Den API 源站，请把 `config.public.apiOrigin` 设为 `DEN_API_PUBLIC_URL` 兼容覆盖值。成员设备必须也能解析并信任那个 API 源站，才能完成一次性的安装链接交接、外部 MCP 客户端访问，以及带签名的品牌资源 URL 访问。单源站的细节见 [私有网络部署](/zh/start-here/private-network-deployment)。
+
+如果你的组织使用私有证书颁发机构或做 TLS 检测的代理，请在 [证书信任与代理](/start-here/certificate-trust-and-proxies) 里配置好相应的桌面、sidecar、Den 和数据库信任面。在 Linux 上，不要以为只把根证书装进 `/etc/ssl` 就够了，Electron 可能还需要发行版的 NSS 或用户信任数据库。
+
+## 上传品牌
+
+你必须是该组织的所有者，并且这套部署要为该组织开放桌面策略的使用权。
+
+1. 打开你本地部署的 Den web URL，并选择该组织。
+2. 进入 `Org settings`，找到 `Brand Appearance`。
+3. 填写你希望成员看到的应用名称。
+4. 上传字标：
+   - PNG 或 JPEG
+   - 128×32 到 4096×4096
+   - 横向宽高比介于 1.5:1 到 8:1
+   - 不超过 2 MB
+5. 上传方形应用图标：
+   - PNG 或 JPEG
+   - 正方形，64×64 到 4096×4096
+   - 不超过 2 MB
+6. 选择强调色，然后点击 `Save settings`。
+
+Den 会在保存前校验并规范化每张图片。替换图片会生成一个全新的 SHA-256 版本化 URL，桌面设备因此不会保留过期的缓存字节。
+
+<Frame>
+  ![Brand Appearance 界面，显示字标已保存在 Example Corp 的 Den 中](/images/on-prem-branding/brand-assets-saved-in-den.png)
+</Frame>
+
+## 成员什么时候拿到新图标
+
+桌面应用收到更新后的组织配置之后，应用新图标**不需要**重启桌面应用。
+
+这里有两个各自独立的时间环节：
+
+| 环节 | 预期耗时 |
+| --- | --- |
+| 组织配置送达正在运行的桌面应用 | 云端会话/设置刷新后立即生效；否则等每小时一次的后台刷新 |
+| Windows 在收到配置后应用图标 | 下载并校验图片，随后是 Explorer 任务栏有意分阶段的约 500 毫秒，再加上正常的磁盘和系统开销 |
+
+在真实的 Windows 验证流程中，一次受控的配置刷新后，可见的任务栏和 Alt-Tab 大约用了 5.4 秒就在没有重启的情况下完成更新。请把它当作一次验证结果，而不是网络 SLA。
+
+因此，一个已经在运行、且没有收到刷新事件的桌面应用，可能还会停留在旧的组织配置上长达一小时。关闭并重新打开 OpenWork 会立即发起一次配置拉取，所以当更新看起来迟滞时，重新打开是最快的用户操作。
+
+在 Windows 上，OpenWork 会短暂移除活动的任务栏按钮，把新图标和 AppUserModelID 准备好，再把按钮加回来。那两次 250 毫秒的等待是为了防止 Explorer 把这一系列操作合并掉、继续保留可执行文件自带图标。这一行为使用 Electron 的 [`setSkipTaskbar`、`setAppDetails` 和 `setIcon`](https://www.electronjs.org/docs/latest/api/browser-window) API。
+
+<Frame>
+  ![公司图标出现在真实的 Windows 任务栏和 Alt-Tab 切换器中](/images/on-prem-branding/windows-taskbar-and-alt-tab.png)
+</Frame>
+
+## 重新启动与离线行为
+
+首次下载成功后，桌面应用会缓存一份规范化后的 PNG，在 Windows 上还会缓存一个多分辨率 ICO。重新启动时，会在第一个窗口显示出来之前先套用这份缓存的身份标识。因此品牌图标能在桌面应用重启后保留下来，Den 暂时不可达时也可能照常显示。
+
+Windows 还会创建或替换一个按用户的 `OpenWork Organization` 开始菜单快捷方式，使用同样的 AppUserModelID 和图标。这不需要管理员权限。微软用 AppUserModelID 和 [`RelaunchIconResource`](https://learn.microsoft.com/en-us/windows/win32/properties/props-system-appusermodel-relaunchiconresource) 来关联任务栏分组、固定、重新启动信息以及图标。底层 Windows 行为见微软的 [Application User Model ID 指南](https://learn.microsoft.com/en-us/windows/win32/shell/appids)。
+
+<Tip>
+  如果 Windows 上仍然显示另一个更早的、自带样式的固定快捷方式，请把那个过期快捷方式取消固定，然后把当前正在运行的品牌任务栏按钮固定一次。除此之外，正在运行的窗口不需要重新固定，也不需要重启。
+</Tip>
+
+## 备份与恢复
+
+品牌图片的字节以原始二进制形式存放在 MySQL 的 `organization_brand_asset` 表里。组织元数据里保存的是当前生效的版本以及带签名的 Den URL。
+
+请把下面这些纳入同一套运维方案：
+
+- MySQL 备份与恢复演练
+- 存放 `BETTER_AUTH_SECRET` 的 Kubernetes Secret 或密钥管理服务取值
+- 桌面设备使用的私有 CA 与 DNS 配置
+
+恢复数据库时必须恢复同一个 `BETTER_AUTH_SECRET`。已有的资源 URL 里包含由该密钥派生的签名；更换密钥会让这些 URL 失效，直到资源重新上传。
+
+由于每个 Den API 副本读的都是同一个数据库，品牌功能不需要多个副本共享一个文件系统卷。
+
+## 清除或更换品牌
+
+- 用 `Replace image` 并保存，即可发布一个全新的不可变版本。
+- 用 `Clear` 并保存，即可回到 OpenWork 的默认品牌。
+
+下一次桌面配置刷新后，清除图标会一并移除缓存的组织图标和那个按用户的 Windows 快捷方式，然后恢复默认的任务栏身份标识。想立即强制拉取配置，就重新打开桌面应用。
+
+## 问题排查
+
+### 控制台已经保存，但某台桌面应用仍显示旧图标
+
+1. 确认该成员登录的是预期的组织。
+2. 重新打开 OpenWork，立即拉取配置，而不是等每小时一次的后台刷新。
+3. 在该成员的设备上确认所配置的 Den 源站能解析出来，且带签名的资源 URL 可以访问。
+4. 确认私有 CA 已安装到正确的桌面信任面上。在 Linux 的 Electron 上，如果发行版有此要求，请把 Chromium/Electron 兼容的 NSS 或用户信任存储也一并配置。
+
+### 标题栏变了，但 Windows 任务栏没变
+
+确认该桌面应用版本包含组织任务栏身份标识支持。较早的版本只改了窗口图标。如果某个旧的固定快捷方式仍作为独立的默认按钮存在，请取消固定它，再固定正在运行的品牌按钮。
+
+### 更换 Den 容器后图片不见了
+
+检查 MySQL 连接和 migrations。品牌资源是数据库里的行，不是 Den 容器内的文件，因此替换 Den 应用容器不应该把它们删掉；但如果重建数据库又没有恢复数据，就会丢。

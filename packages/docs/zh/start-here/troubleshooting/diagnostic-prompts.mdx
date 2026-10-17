@@ -1,0 +1,160 @@
+---
+title: "诊断提示词"
+description: "可直接粘贴的提示词，让你的智能体自己排查 OpenWork 的问题。"
+---
+
+当 OpenWork 里有什么看起来不对时，最快的调试者往往是智能体本身：它能读自己的配置、探测服务器，并在同一条链路里验证修复结果。本页收集了一批可直接粘贴的诊断提示词。按你的情况把整块内容复制进会话，让智能体逐项走完。
+
+每个提示词默认都是安全的：先收集证据、对密钥做脱敏，并且在改动任何东西之前先征求你的同意。
+
+如果症状涉及 DNS、TCP 443、TLS 链、代理，或 Den 的出站可达性，请改用 [网络诊断](/zh/start-here/network-diagnostics)。
+
+## 1. 云端搜索显示的能力过时或缺失
+
+**症状**
+
+- `search_capabilities` 返回的工具比预期少（例如只有 `postCapabilitiesGoogleWorkspaceGmailDrafts`，而更新的 Google Workspace 能力本该存在）。
+- 对某个本该存在的工具名，`execute_capability` 返回 `unknown_capability`。
+- 云端控制台显示某个连接是 “Connected as you”，但智能体报告 `connected: false`。
+
+**通常是什么出了问题**
+
+你智能体里的 `openwork-cloud` MCP 条目是一份快照：它存的是连接那一刻拿到的服务器 URL 和令牌。如果当初是对着本地开发服务器或旧部署建的 —— 包括经由某个遗留的 `desktop-bootstrap.json` 文件在设置界面之下覆盖了服务器 URL —— 智能体就会永远查询那个旧世界，而控制台显示的是当前世界。
+
+**把下面这段贴给你的智能体**
+
+````text
+Debug and fix my OpenWork Cloud MCP connection. It may be pointed at a stale or local server instead of my real OpenWork Cloud server. Work through ALL phases, show your findings after each, and ask before anything destructive. Never print bearer tokens or Authorization headers — redact them.
+
+My expected cloud web URL: https://app.openworklabs.com (replace with your self-hosted Den web URL if you run your own).
+
+## Phase 1 — Evidence: what am I actually connected to?
+
+1. Print the `openwork-cloud` MCP entry's `url` (redact headers) from every config you can find:
+   - `~/.config/opencode/opencode.json`
+   - any `.opencode/opencode.json` or `opencode.jsonc` in the current project
+   - your own runtime config if you have an export tool
+2. Inspect these files if they exist (they can silently override server URLs beneath the Settings UI), but report only `baseUrl`, `apiBaseUrl`, `requireSignin`, and `writtenAt`. Never print `handoff`, `claimLinks`, grants, tokens, or other credential-bearing fields:
+   - `~/.config/openwork/desktop-bootstrap.json`
+   - `~/Library/Application Support/com.differentai.openwork/desktop-bootstrap.json`
+3. If the url from step 1 is a localhost address, find what serves that port:
+   - `lsof -nP -iTCP:<port> -sTCP:LISTEN`
+   - for each PID: `ps -p <PID> -o pid=,command=` and `lsof -a -p <PID> -d cwd -Fn | tail -1`
+
+## Phase 2 — Probe both servers directly (no auth needed)
+
+4. The server from Phase 1, through the Den web proxy:
+   `curl -s -m 5 <that-origin>/api/den/openapi.json | python3 -c "import json,sys; d=json.load(sys.stdin); ps=[p for p in d.get('paths',{}) if 'google-workspace' in p]; print(len(ps)); [print(p) for p in ps]"`
+5. The expected cloud web URL, same command. Compare the two lists.
+
+## Phase 3 — Probe through your own MCP tools (in-band ground truth)
+
+6. Call search_capabilities with {"query":"google workspace","limit":10} and report the match names.
+7. Call execute_capability with {"name":"getCapabilitiesGoogleWorkspaceCalendarEvents"} and report the exact error or result shape.
+
+## Phase 4 — Diagnose
+
+State which world you are in:
+- openwork-cloud url is localhost/127.0.0.1, OR search returned only gmail-drafts, OR execute returned unknown_capability → you are bound to a STALE server, not the expected cloud.
+- a desktop-bootstrap.json contains localhost URLs → that file is the root cause (it is the desktop app's Cloud URL source of truth).
+
+## Phase 5 — Fix (confirm with me before each destructive step)
+
+8. If a desktop-bootstrap.json contains stale/localhost URLs: show it, then delete that file.
+9. If a stale local server process is still listening: show the process, then stop it, so nothing can silently serve old answers again.
+10. Tell me to do these steps in OpenWork, then wait:
+    - Restart the OpenWork app.
+    - In the affected workspace, open Settings → Library and click Refresh (re-mints the token and rewrites the Cloud MCP config).
+    - Click Show hidden, then verify OpenWork Cloud Control under Your apps.
+    - Run Reload OpenCode config from the command palette.
+    - Start a NEW task so it receives the current tool set.
+
+## Phase 6 — Verify (run in the NEW session)
+
+11. search_capabilities {"query":"google workspace","limit":10} → PASS = the full current capability set (calendar, drive, and gmail capabilities ranked on top), not just drafts.
+12. execute_capability {"name":"getCapabilitiesGoogleWorkspaceCalendarEvents","query":{"timeMin":"<today ISO>","timeMax":"<+3 days ISO>"}} → PASS = real events, or a clean needs_connection / missing-permission message — NOT unknown_capability.
+13. Print a final report: root cause, what changed, and the before/after of probes 6/7 vs 11/12.
+````
+
+**通过时的预期状态**
+
+- `openwork-cloud` 条目的 `url` 指向你真正的服务器，并以 `/mcp/agent` 结尾（可以是 API 主机直连，也可以是 web 应用的 `/api/den` 代理）。
+- `search_capabilities` 反映的是你服务器上当前的目录。
+- 对一个已知能力调用 `execute_capability`，返回的是数据，或者一条可操作的连接提示 —— 绝不会是 `unknown_capability`。
+
+如果智能体走完了所有阶段，验证仍然失败，请[提交一个 issue](https://github.com/different-ai/openwork/issues)，并把智能体的最终报告贴上去（它已经做过脱敏）。
+
+## 2. Cloud MCP 已配置，但它的工具不见了
+
+**症状**
+
+- 设置里能看到 `openwork-cloud` 的 MCP 条目，但遇到涉及已连接服务的请求时，智能体调用的是 `openwork_docs_search`。
+- 智能体声称 `search_capabilities` 和 `execute_capability` 只是“概念上的能力”（conceptual capabilities），而不是可以调用的工具。
+- 像 ServiceNow 这样的已连接服务在 OpenWork Cloud 里显示就绪，但任务里没有暴露 `openwork-cloud_search_capabilities` 或 `openwork-cloud_execute_capability`。
+
+**这个诊断在查什么**
+
+下面的提示词会把 OpenWork 自带的 OpenCode 可执行文件跑在它生成的运行时配置上，检查一个全新的 OpenCode 进程能否连上 `openwork-cloud`。它不会附加到 OpenWork 内部那个已在运行的 OpenCode 服务器上，因此它把这个结果与 OpenWork 里显示的实时状态、以及从新任务里发起的一次强制工具调用结合起来判断。
+
+**把下面这段贴给你的智能体**
+
+````text
+Diagnose whether OpenWork Cloud MCP tools are available in this workspace. Gather evidence only: do not modify configuration, authenticate, log out, remove anything, restart services, or print configuration-file contents.
+
+## Phase 1 — Test the task's actual tools
+
+1. Attempt to call `openwork-cloud_search_capabilities` with `{"query":"ServiceNow incident","type":"mcp","limit":10}`. Do not use documentation or explain alternatives. Record whether the runtime accepts the tool call and its exact non-secret result or rejection.
+2. Attempt to call `openwork_extension_list_actions`. Record whether the runtime accepts the call. Do not infer tool availability from an answer to "list your tools"; models can omit or invent tools.
+
+## Phase 2 — Find OpenWork's exact OpenCode runtime
+
+3. Detect whether this machine is Windows, macOS, or Linux.
+4. Find the exact OpenCode executable used by the OpenWork desktop app. Prefer the bundled executable in OpenWork's `resources/sidecars` directory; do not assume an unrelated `opencode` on `PATH` is the same binary. If multiple OpenWork builds are running, use the process associated with this task when that can be established safely; otherwise report the ambiguity.
+5. Find OpenWork's generated `runtime-opencode-config.json` beside the active `server.json`. Respect discovered `OPENWORK_SERVER_CONFIG`, `OPENWORK_RUNTIME_DB`, or XDG overrides. Typical locations are:
+   - Windows: `%APPDATA%\openwork\runtime-opencode-config.json`
+   - macOS/Linux: `${XDG_CONFIG_HOME:-$HOME/.config}/openwork/runtime-opencode-config.json`
+6. Report whether the runtime config exists and its last-modified time. Never display, copy, parse, or summarize its contents: it can contain Authorization headers and other credentials.
+
+## Phase 3 — Run a safe fresh-process probe
+
+7. From this task's workspace root, set `OPENCODE_CONFIG` to the discovered runtime config for the subprocess only, then run:
+   - `<exact-opencode-executable> --version`
+   - `<exact-opencode-executable> mcp list`
+8. Do not run `mcp add`, `mcp auth`, `mcp logout`, `debug config`, or any command that changes or prints configuration. Do not use `--print-logs` if it could expose headers or tokens.
+9. Report:
+   - operating system
+   - exact OpenCode executable path and version
+   - runtime config path, existence, and last-modified time
+   - whether `openwork-cloud` is listed
+   - its exact status and non-secret error
+   - whether the failing workspace is the primary managed workspace or may be a secondary workspace configured dynamically
+
+Important: `opencode mcp list` starts a fresh process. Do not claim that it attaches to or tests the OpenCode server already running inside OpenWork. Describe it only as a fresh-process probe using the same binary and generated config.
+
+## Phase 4 — Classify the result
+
+- Fresh probe omits `openwork-cloud`: the generated config is missing, the wrong runtime config was selected, or this is a secondary workspace whose MCPs are registered dynamically.
+- Fresh probe reports `failed` or `needs_auth`: preserve the exact non-secret error; investigate token, endpoint, TLS, or authentication.
+- Fresh probe reports `connected`, but Phase 1 rejects the Cloud tool: the stored endpoint and token work, but the live desktop engine or task has stale/missing tool registration.
+- Both Phase 1 calls are rejected: investigate whether the running engine loaded the injected config and plugins, plus project/global tool-deny policy.
+- The forced Cloud call works, but a natural request chooses documentation: tool exposure is healthy; investigate system-prompt steering.
+
+Finish with a concise redacted report. Never reveal bearer tokens, Authorization values, cookies, passwords, API keys, local server tokens, or strings beginning with `ow_mcp_at_`.
+````
+
+**在 OpenWork 内部验证**
+
+1. 在受影响的工作区里打开 **设置 → 资源库**，点击 **刷新**。
+2. 点击 **Show hidden**，然后在 **你的应用** 下找到 **OpenWork Cloud 控制**。这一行显示的是 OpenCode MCP 的实时状态；目录卡片只能证明该条目已配置。
+3. 展开这一行，记下它的状态和非密钥错误信息：**就绪**、**异常**、**需要登录**、**离线** 或 **已暂停**。
+4. 回到该任务，打开命令面板，执行 **重新加载 OpenCode 配置**，并在同一个工作区里新建一个任务。
+5. 重复第 1 阶段那次强制的云端工具调用。
+
+**怎么结合两个结果来判读**
+
+| 全新进程的 `opencode mcp list` | OpenWork 状态 / 强制调用 | 问题最可能在哪一层 |
+| --- | --- | --- |
+| 缺失或失败 | 缺失或失败 | 生成的配置、端点、令牌、TLS 或认证 |
+| 已连接 | 应用内状态为异常 | 实时引擎的注册，或工作区路由 |
+| 已连接 | 应用内显示就绪，但强制调用被拒绝 | 任务的工具快照过期，或引擎兼容性 |
+| 已连接 | 强制调用成功，但自然请求走了文档 | 是智能体的引导问题，不是 MCP 暴露问题 |

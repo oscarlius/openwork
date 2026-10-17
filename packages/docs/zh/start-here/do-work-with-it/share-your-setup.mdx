@@ -1,0 +1,80 @@
+---
+title: "把技能和 MCP 服务器共享给团队"
+description: "通过 OpenWork Cloud 给同事同样的技能、插件、连接器和模型，不用复制文件，也不用改 MCP 配置。"
+keywords: ["share skill", "share plugin", "share with team", "who can use it", "collections", "share MCP server", "connectors", "team setup", "library", "共享技能", "共享插件", "团队配置"]
+---
+
+在 OpenWork Cloud 里配置一次，选好谁可以使用，同事就能在桌面应用里拿到它。没有人需要复制文件夹或修改 MCP 配置文件。
+
+你可以共享三类东西：
+
+- **技能和插件**：你团队的 AI 会遵循的说明和打包好的组合。
+- **连接器**：AI 可以在其中干活的各类应用和 MCP 服务器，例如 Slack 或 Notion。
+- **模型**：你团队被允许使用的 AI 模型。
+
+<Note>
+**本地或托管。** 本地工作区技能是免费的，不需要登录 OpenWork Cloud。你可以自己把它们的文件拷给同事。要用带访问控制和自动更新的方式共享，就需要 OpenWork Cloud（或一套自托管部署），这属于 Team 和 Enterprise 套餐的内容。见[定价与授权](/start-here/pricing-and-licensing)。
+</Note>
+
+## 共享技能
+
+一个技能就是一组用平实语言写成的说明。每个技能都待在一个插件里，一个插件可以放一个技能，也可以放好几个。
+
+1. 在 OpenWork Cloud 里创建这个技能或插件。任何成员都可以从 **My Library** 完成这件事。
+2. 打开它并选择 **Who can use it**：组织内所有人、指定团队，或者指定的人。
+3. 同事在桌面应用的 **Settings › Library** 里就能找到它。
+
+任何成员都能把自己创建的东西共享给指定的人和团队。只有管理员才能共享给组织内所有人。
+
+完整步骤，以及如何在不动原技能的情况下做一份自己的副本，见[发布与复制技能](/zh/start-here/do-work-with-it/publish-and-copy-a-skill)。要把同一批受众一次性配好几个插件，管理员可以把它们归进一个 [Collection](/cloud/share-with-your-team/collections)。
+
+## 共享 MCP 服务器
+
+由管理员把 MCP 服务器添加为连接器。成员永远看不到服务器 URL 或 token。
+
+1. 在 OpenWork Cloud 控制台里打开 **Manage › Connectors**，点击 **Add connector**。
+2. 选一个预设，例如 GitHub 或 Notion。要用别的服务器，就把它的 URL 粘贴到筛选框里，或者点击 **Add any MCP**。
+3. OpenWork 会检查这个服务器。如果它要求，请登录该服务或填入其 API 密钥，然后点击 **Save key**。
+4. 在 **How people sign in** 下，选择 **Each person signs in**（各人用自己的账户）或 **One account for everyone**（你为整个团队登录一次）。
+5. 在 **Who can use it** 下选择授予谁，然后点击 **Add**，后面会带上连接器名字。
+6. 成员在桌面应用里打开 **Settings › Library**。如果选了各人各自登录，他们需要在该连接器上点一次 **Sign in**。
+
+关于登录选项、Slack 和问题排查，见[共享 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)和 [MCP 服务器兼容性](/cloud/share-with-your-team/mcp-server-compatibility)。
+
+## 在其他 AI 工具里用同一套配置
+
+同样的共享技能和连接器，也能通过 OpenWork MCP 网关在桌面应用之外使用。[一条命令把它加进 Claude Code、Codex、Cursor、VS Code 或其他 MCP 客户端](/zh/start-here/connect-openwork-mcp)。
+
+## 模型也一起共享
+
+要让团队用上同样的模型，由管理员一次性添加一个[托管](/cloud/share-with-your-team/managed-llm-provider)或[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)。要管控成员在应用里能改哪些设置，见[桌面策略](/cloud/share-with-your-team/desktop-policies)。
+
+## 不用 OpenWork Cloud 的共享方式
+
+技能就是普通的 `SKILL.md` 文件夹。工作区把技能放在 `.opencode/skills/` 下。你可以把一个技能文件夹拷进同事的工作区，或者提交到一个共享仓库里。代价是失去访问控制和自动更新，而且每个人仍然要各自连接自己的 MCP 服务器。
+
+## 常见问题
+
+<AccordionGroup>
+  <Accordion title="我的同事需要懂技术吗？">
+    不需要。一旦某样东西共享给了他们，它就会出现在桌面应用里。最多只需要成员登录一次某个服务。
+  </Accordion>
+  <Accordion title="谁能为别人发布技能？">
+    任何成员都可以创建技能或插件，并共享给指定的人或团队。只有管理员（owner、super-admin 和 admin）可以共享给组织内所有人、修改别人创建的插件的共享设置，或者管理 Collection。
+  </Accordion>
+  <Accordion title="如果我更新了一个共享技能，大家都拿得到改动吗？">
+    会。所有拿到该技能的人，都会在下一次任务里用上新版本。想先自己试一下改动，请做一份副本。见[复制而不改动已共享的技能](/zh/start-here/do-work-with-it/publish-and-copy-a-skill)。
+  </Accordion>
+  <Accordion title="我能共享一个本地（stdio）MCP 服务器吗？">
+    不能。连接器是通过 URL 访问的远程 MCP 服务器。对于只在你自己电脑上跑的服务器，请在每台机器上用[添加自定义 MCP 服务器](/zh/start-here/connect-your-stack/add-an-mcp-server)分别添加。
+  </Accordion>
+  <Accordion title="我能把这套东西跑在自己的基础设施上吗？">
+    可以。管理插件、连接器和访问权限的那个组织控制平面是可以[自托管](/start-here/self-host)的。
+  </Accordion>
+</AccordionGroup>
+
+## 相关文档
+
+- [连接器、技能与插件](/zh/start-here/do-work-with-it/skills-plugins-and-mcp)
+- [团队快速上手](/cloud/team-quickstart)
+- [从 Claude Cowork 迁移](/start-here/migrate-from-claude-cowork)

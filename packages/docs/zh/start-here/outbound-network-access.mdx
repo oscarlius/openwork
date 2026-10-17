@@ -1,0 +1,90 @@
+---
+title: "出站网络访问"
+description: "面向客户 IT 的放行名单指引：OpenWork 桌面应用、Den、部署产物，以及需要主动启用的提供商。"
+---
+
+OpenWork 在客户 IT 按组件逐条放行出站访问时表现最好。机器可读的唯一权威来源是 [`docs/enterprise/outbound-access.json`](https://github.com/different-ai/openwork/blob/dev/docs/enterprise/outbound-access.json)，CI 用 `node scripts/check-outbound-access.mjs` 守护该文件；本页是面向人的公开摘要。
+
+## 托管桌面应用的最小放行名单
+
+要让 OpenWork Cloud 的桌面安装真正可用，请对以下主机放行 TCP 443：
+
+```text
+app.openworklabs.com
+api.app.openworklabs.com
+github.com
+release-assets.githubusercontent.com
+objects.githubusercontent.com
+registry.npmjs.org
+models.openworklabs.com
+inference.openworklabs.com
+```
+
+常见的遗漏：
+
+- 从 GitHub 下载 release 时会跳出 `github.com`。请放行 `release-assets.githubusercontent.com`（当前已验证的 GitHub release 资源主机），以及为兼容旧客户端和回滚路径而保留的 `objects.githubusercontent.com`。
+- 打包好的桌面应用在启动 `npx -y openwork-ui-mcp` 时会用到 `registry.npmjs.org`。它被拦截时桌面应用仍能打开，但界面操控 MCP 不可用。
+- `models.openworklabs.com` 是默认的 OpenCode 模型目录。如果公网目录被拦截，请把 `OPENCODE_MODELS_URL` 指向一个已批准的内部镜像。
+
+## 桌面与本地运行时的目标地址
+
+| 主机 | 要求 | 为什么会访问 | 被拦截会坏什么 |
+| --- | --- | --- | --- |
+| `app.openworklabs.com` | OpenWork Cloud 必需 | 托管的 Cloud web 源站。桌面应用只用一个基址，并通过 `/api/den/...` 推导 Den API/MCP 调用。 | 无法加载 Cloud 登录、组织设置和 Collections。 |
+| `api.app.openworklabs.com` | 托管安装与 OpenWork Connect 必需 | 托管的公开 API 和 OpenWork Connect MCP 端点，安装流程与外部客户端流程都会用到。 | 托管安装的校验和公开 OpenWork Connect 都会失败。 |
+| `app.openwork.software`、`api.openwork.software` | 仅旧的托管配置需要 | 较早的桌面配置可能仍从这两个旧的托管源站推导 Cloud 与 OpenWork Connect 流量。 | 在迁移到当前托管源站之前，旧配置无法对齐 OpenWork Connect 或原生 MCP Apps。 |
+| 你的自托管 Den web 源站 | 自托管桌面必需 | 已登录的桌面流量用它替代 `app.openworklabs.com`。单源站形态下，API 和 MCP 走同一源站上的 `/api/den/...`。 | 桌面应用无法登录，也连不到 Den。 |
+| 你的独立 Den API 源站（如已配置） | 仅该拓扑需要 | 当 `DEN_API_PUBLIC_URL` 指向另一个源站时，一次性的安装链接交接和外部 MCP 客户端会用它。 | 安装链接交接或外部 MCP 客户端无法完成。 |
+| `github.com` | 实际必需，除非做了镜像 | installer/更新器的 release URL，以及 GitHub issue 链接。 | 无法开始安装/更新下载；GitHub 链接可能打不开。 |
+| `release-assets.githubusercontent.com` | 实际必需，除非做了镜像 | 当前 GitHub release 资源的重定向目标。 | 下载从 `github.com` 开始，但中途失败。 |
+| `objects.githubusercontent.com` | 遗留/回滚路径实际需要 | 旧的 GitHub release 资源重定向目标。 | 旧客户端或回滚下载可能中途失败。 |
+| `registry.npmjs.org` | 实际必需，除非镜像了 npm | `openwork-ui-mcp` 以及仅开发用的辅助命令的 `npx` 包解析。 | OpenWork 的界面操控 MCP 不可用。 |
+| `models.openworklabs.com` | 实际必需，除非做了镜像 | 作为 `OPENCODE_MODELS_URL` 传入的默认 OpenCode 模型目录。 | 模型选择可能过期、不完整，或者不可用。 |
+| `inference.openworklabs.com` | 使用 Auto 时必需 | OpenWork 网关，在登录前后为 Auto（免费起步模型）提供推理。 | Auto 不可用；已连接的提供商仍然可用。 |
+| `cdn.simpleicons.org` | 可选 | 本地没有图标时用来取提供商图标。 | 部分图标缺失。 |
+| `www.google.com` | 可选 | 站点图标服务和内置浏览器新标签页。 | 站点图标或浏览器面板的新标签页可能加载不出来。 |
+| `accounts.google.com` | 需主动启用，浏览器登录 | Cloud 连接流程打开的 Google 授权页。 | 无法完成 Google Workspace 登录。 |
+| `us.i.posthog.com` | 可选 | 开启分析后的产品分析上报。 | 分析数据被静默丢弃。 |
+| `openworklabs.com`、`openwork.dev`、`discord.gg`、`ollama.com`、`opencode.ai`、`linear.app`、`mail.google.com` | 可选或仅为链接 | 文档、反馈、社区、提供商帮助、本地模型链接、示例链接，以及生成的 Gmail 链接。 | 链接打不开；核心应用行为不受影响。 |
+
+`code.claude.com` 和 `schemas.agentskills.io` 出现在源码或 schema 元数据里。能在 manifest 中找到它们，但 OpenWork 的正常运行时行为不会去拉取。
+
+### 企业激活之前
+
+尚未与你所在组织关联的 OpenWork Enterprise 安装，不会向机器之外发起任何请求。在使用者输入工作区地址之前，桌面应用不会为运行时配置去探测 `app.openworklabs.com`，不会向 `us.i.posthog.com` 发送分析数据，不会去 `github.com` 检查更新或下载（唯一的例外是安装包的架构与本机不匹配时，它会去查正确的下载地址），不会拉取 OpenWork Cloud 清单，在 Windows 和 Linux 上也不会从 `redirector.gvt1.com` 下载 Chromium 拼写检查词典。第一个出站请求发往使用者输入的那个工作区地址。只有激活完成、并且你的桌面策略被读取过一次之后，分析和更新检查才会开始。
+
+## Den 运行时目标地址
+
+请把 Den 与桌面客户端分开审批。位于 VPN 之后或 Kubernetes 内部的自托管 Den 用的是服务器网络，不是用户笔记本的网络。
+
+| 目标 | 要求 | 为什么会访问 | 被拦截会坏什么 |
+| --- | --- | --- | --- |
+| 你为 Den 配置的 MySQL 兼容数据库主机 | 必需 | Den 控制平面状态。 | Den 无法启动、无法执行 migration、无法让用户登录，也无法保存组织状态。 |
+| 你的 SMTP 主机或 Resend | 可选 | 配置后用于事务性邮件。 | 无法发送邀请、生命周期或通知邮件。 |
+| `api.github.com`、`raw.githubusercontent.com` | 需主动启用 | 托管在 GitHub 上的插件导入与同步。 | 插件导入无法查看仓库，也无法下载 manifest、技能、命令、智能体和 MCP 配置。 |
+| Google Workspace 各主机 | 需主动启用 | Google OAuth 与 Google API。 | Google 登录或 Workspace 操作失败。 |
+| 提供商与 MCP 主机 | 需主动启用 | 调用已启用的模型提供商、OAuth/令牌端点和 MCP 服务器。 | 只有被启用的那个提供商或 MCP 连接会失败。 |
+
+对于 Google Workspace，Den 会调用 `oauth2.googleapis.com` 做令牌交换和刷新，调用 `www.googleapis.com` 访问用户资料、Calendar 和 Drive API，调用 `gmail.googleapis.com` 访问 Gmail API。这些是 Cloud 服务器侧的目标地址，并不是桌面本地对 Google Workspace API 的要求。客户端 manifest 里只保留浏览器侧的 `accounts.google.com` 和 `mail.google.com`。请通过 [连接你的服务](/start-here/connect-your-stack/connect-services#google-workspace) 设置 Google，而不是配置本地 OAuth 环境变量。
+
+## 部署与镜像拉取目标地址
+
+| 主机 | 要求 | 为什么会访问 | 被拦截会坏什么 |
+| --- | --- | --- | --- |
+| `ghcr.io` | 必需，除非做了镜像 | OpenWork Helm chart 与容器镜像。 | Kubernetes 无法拉取 chart，以及 `openwork-den-api`、`openwork-den-web` 和可选的网关镜像 `openwork-inference`（沿用的仓库名）。 |
+| 内部镜像仓库 | 公网 GHCR 被拦截时必需 | 你镜像过来的 chart 和镜像。 | 在镜像仓库里有目标版本之前，安装和升级都会失败。 |
+
+对于完全隔离的部署，还需要镜像 installer 产物、`npx` 用到的 npm 包以及模型目录。见 [离线（air-gapped）部署](/start-here/air-gapped-deployment) 和 [installer 分发](/zh/start-here/installer-delivery)。
+
+## 需主动启用的提供商与连接主机名
+
+只有当对应的功能、提供商、连接或导入路径被启用时，才需要下面这些主机：
+
+| 功能组 | 主机名 | 被拦截会坏什么 |
+| --- | --- | --- |
+| OpenAI 直连功能 | `api.openai.com` | 已配置 OpenAI 的用户，其 OpenAI 实时语音和图像生成功能会失败。 |
+| 通过 Cloud 使用 Google Workspace | 浏览器：`accounts.google.com`、`mail.google.com`。Den：`oauth2.googleapis.com`、`www.googleapis.com`、`gmail.googleapis.com`。 | 在访问被拦截的那一侧，浏览器登录和 Gmail 链接，或 Cloud 的令牌刷新与 Workspace 操作会失败。 |
+| 内置 MCP 预设 | `mcp.notion.com`、`mcp.linear.app`、`mcp.sentry.dev`、`mcp.stripe.com`、`mcp.context7.com`、`mcp.slack.com` | 该 MCP 预设无法连接。 |
+| 示例或自定义 MCP URL | `api.githubcopilot.com`，或客户自己配置的 MCP URL | 只有指向该 URL 的那个连接会失败。 |
+
+精确的主机元数据、要求等级、覆盖变量名以及被拦截后的影响，仍以 JSON manifest 为准。评审沟通用本页，自动化用那个 JSON 文件。

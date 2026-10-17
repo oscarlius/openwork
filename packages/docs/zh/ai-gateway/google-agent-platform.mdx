@@ -1,0 +1,241 @@
+---
+title: "Google Agent Platform (Vertex AI)"
+description: "用自己的 OAuth 应用，并通过 OpenWork AI Gateway 让每位成员用各自的 Google 账户登录，从而在 Google 的 Gemini Enterprise Agent Platform 上配置 Gemini 与 Claude。"
+---
+
+把 Google 的 **Gemini Enterprise Agent Platform (formerly Vertex AI)** 接入 OpenWork AI Gateway。你的组织创建一个 Google OAuth 应用，每位成员用自己的 Google 账户登录，使用你分配给他们的模型。
+
+Google 已[正式把 Vertex AI 更名](https://docs.cloud.google.com/gemini-enterprise-agent-platform/vertex-ai-name-changes)。它的控制台现在使用 **Agent Platform**、**Agent Platform API**、**Agent Platform Model Garden** 这类名称。OpenWork 的提供商目录仍在使用下列标识：
+
+| 你想要的模型 | OpenWork 提供商 |
+| --- | --- |
+| 通过 Google Cloud 访问 Gemini | **Google Vertex AI** — `google-vertex` |
+| 通过 Google Cloud 访问 Claude | **Google Vertex Anthropic** — `google-vertex-anthropic` |
+
+本指南用 **Agent Platform** 指代这个 Google 产品，并保留你在 OpenWork 中需要选择的提供商标识。
+
+<Info>
+  这种登录模式不需要 gcloud、本地的 Application Default Credentials (ADC)、服务账户密钥，也不需要 Anthropic API 密钥。它与用于 Gmail、Drive 或 Calendar 的 Google Workspace 连接是两回事，也与登录 OpenWork 本身是两回事。
+</Info>
+
+## 开始之前
+
+你需要：
+
+- 一个已启用结算的 Google Cloud 项目，以及配置它的 API、IAM 访问和 OAuth 应用的权限。
+- 一个有权访问该项目模型的 Google 账户。团队使用时，请用 Google 群组来管理推理访问。
+- 一个支持 AI Gateway 和成员 Google 登录的 OpenWork 部署，并且你的组织可以使用 Gateway 管理功能。
+- 一位 OpenWork 组织所有者/管理员来配置提供商及其访问规则。
+
+自托管部署请先完成[启用 OpenWork 网关](/self-host/gateway)。配置 OAuth 期间要保持部署运行：回调必须指向成员将要登录的那个实例。
+
+## 1. 选择项目并启用结算
+
+打开 [Google Cloud 控制台](https://console.cloud.google.com/)，用项目选择器选一个已有项目，或专门新建一个测试项目。合适的时候选择你的 Google Workspace/Cloud Identity 组织。
+
+请记下 **Project ID**，而不只是显示名称或项目数字编号。你要在 OpenWork 里填入这个 ID。
+
+打开 **Billing**，把项目关联到结算账户。经由这套集成发出的 Gemini 和 Claude 请求通过 Google Cloud 计费。在这里使用 Claude 不需要单独的 Anthropic API 计费账户。
+
+测试期间，可以考虑在 **Billing → Budgets & alerts** 下设置一个小额度提醒。预算提醒只是一条通知，**不是花费上限**。
+
+## 2. 启用 Agent Platform API
+
+1. 在所选项目中打开 **APIs & Services → Library**。
+2. 搜索 **Gemini Enterprise Agent Platform API**。某些控制台页面仍把它标为 **Vertex AI API**。
+3. 确认服务标识是 `aiplatform.googleapis.com`。
+4. 选择 **Enable**。
+
+对于本文涉及的托管 Gemini 和 Claude 模型，你不需要创建虚拟机或部署自定义推理端点。项目前置条件见 Google 的[入门指南](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstarts/quickstart-multimodal)；使用 OpenWork 的成员登录流程时，请跳过其中本地的 gcloud/ADC 步骤。
+
+## 3. 授予 Google 用户推理访问权
+
+打开 **IAM & Admin → IAM → Grant access**：
+
+1. 输入应当执行推理的 Google 邮箱地址或 Google 群组。
+2. 选择标识为 **`roles/aiplatform.user`** 的角色。Google 可能把它标为 **Agent Platform User** 或 **Vertex AI User**。
+3. 保存。
+
+安全管理员也可以改用范围更窄、经过评审的自定义角色。它必须包含推理所需的权限，例如 `aiplatform.endpoints.predict`。参见 Google 的[访问控制文档](https://cloud.google.com/vertex-ai/generative-ai/docs/access-control)。
+
+<Note>
+  请把访问权授予 Google 用户或群组，而不是 OAuth client ID。创建 OAuth 应用并不会为其用户授予 IAM 权限。OpenWork 成员身份、OpenWork 模型访问规则、Google 同意授权和 Google IAM 是各自独立的检查；最终用户只是要执行推理，并不需要 Project Owner 或 Editor。
+</Note>
+
+## 4. 选择模型与位置
+
+先用一个模型，这样便于验证配置。之后你可以再加。
+
+添加 `google-vertex` 或 `google-vertex-anthropic` 时，OpenWork 会把 **Region** 预填为 `global`。只有当所选模型支持 global 端点、并且它符合你组织的数据驻留要求时才保留；否则请在保存前填入一个受支持的地域。这个默认值不会改动已有提供商，也不会替换你填入的地域。
+
+### Gemini
+
+打开 **Agent Platform → Model Garden**，选一个托管的 Gemini 文本/对话模型，查看它的模型 ID 和支持的位置。记下你要在 OpenWork 中使用的位置。
+
+只有在模型支持 `global` 且它符合你组织的数据驻留要求时才使用 `global`。否则请选择一个受支持的地域。
+
+### Claude
+
+在 **Model Garden** 中搜索 **Anthropic Claude** 并打开对应的模型卡片：
+
+1. 选择 **Enable**、**Manage access**，或该模型上显示的访问操作。
+2. 完成必需的申请表单，并审阅/接受适用条款。
+3. 查看它支持的位置和模型 ID。
+
+请使用托管的 API 方式，不要选择会预置自定义基础设施的选项。模型访问、可用性和配额都取决于所选的项目、模型和位置。参见 [Claude on Google Cloud](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/claude)。
+
+## 5. 配置 Google OAuth 同意应用
+
+在控制台中打开 **Google Auth Platform**。较旧的布局请从 **APIs & Services → OAuth consent screen** 开始。
+
+### 品牌信息
+
+填写一个成员能认出来的应用名称，例如 **OpenWork model access**，以及支持邮箱和开发者联系方式。成员在 Google 授权同意时会看到这个应用名。
+
+### 受众
+
+- 当符合条件、且所有目标用户都属于你的 Google Workspace/Cloud Identity 组织时，选择 **Internal**。内部应用不需要 Google 的外部应用验证。
+- 对于个人 Google 账户或该组织之外的用户，选择 **External**。初步测试时请把应用保持在 **Testing** 状态，并在 **Test users** 下添加每位测试者的 Google 账户。在更大范围推广之前，请先满足 Google 的发布与验证要求。
+
+对于这一组权限范围，处于 Testing 状态的 External 应用获得的刷新 token 通常会在 **七天** 后过期。身份认证的例外情形在这里不适用，因为这套集成请求的是 Cloud 访问。参见 Google 的[生产就绪指南](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)。
+
+### 数据访问
+
+在同意配置中添加这些权限范围：
+
+```text
+openid
+https://www.googleapis.com/auth/userinfo.email
+https://www.googleapis.com/auth/cloud-platform
+```
+
+Google 可能把 email 范围显示为账户邮箱访问。OpenWork 请求的是它等价的短形式 `email`，并与 `openid`、`cloud-platform` 一起请求。
+
+不要为这套集成添加 Gmail、Drive 或 Calendar 的权限范围。cloud-platform 的同意授权的是代管的 Cloud API 访问；用户在你的项目里能做什么，仍由 IAM 决定。
+
+## 6. 创建 Web OAuth 客户端
+
+打开 **Google Auth Platform → Clients → Create client**：
+
+| 字段 | 值 |
+| --- | --- |
+| Application type | **Web application** |
+| Name | 一个容易识别的名称，例如 **OpenWork model access — test** |
+| Authorized JavaScript origins | 这套服务端授权流程不需要 |
+| Authorized redirect URIs | 你的 OpenWork 部署显示的那个一模一样的回调地址 |
+
+<Warning>
+  请选择 **Web application**，不要选 **Desktop app**。即使成员是从 OpenWork Desktop 开始的，处理 Google 回调的也是 Den，Google 凭据由 Gateway 保管。面向本地 loopback 监听的 Desktop OAuth 客户端属于另一种架构。
+</Warning>
+
+### 注册正确的回调
+
+在 OpenWork 中打开 **AI Gateway → AI Providers**，按下一步的说明创建对应的提供商。打开已保存提供商的那一行；它的 **Key** 区块会显示 OAuth 回调 URL。在开始成员登录之前，把这个**确切**的值复制到 Google 的 **Authorized redirect URIs** 中。
+
+典型的 HTTPS 部署下，回调是这个形式：
+
+```text
+https://<den-api-host>/v1/inference-providers/oauth/callback
+```
+
+显示的数值才是权威来源，包括任何部署路径前缀。它是 **Den API callback**，不是 Gateway 推理 URL、Web 仪表盘 URL，也不是 `/gateway/connect` 入口页。请不要追加结尾斜杠，也不要换成别的主机名。
+
+本地开发时，Google 允许 loopback 重定向 URI。请使用正在运行的开发实例显示的完整 URL，包括它当前的 API 端口。请让这个端口保持稳定，变动时同步更新 Google 的注册。本地登录时请始终使用同一个主机名；对浏览器会话而言，`localhost` 和 `127.0.0.1` 不能互换。
+
+Google 的重定向域名策略同样适用：你的组织必须被授权使用该回调域名，托管部署也不例外。参见 [Google 的 Web OAuth 指南](https://developers.google.com/identity/protocols/oauth2/web-server)和 [OAuth 政策](https://developers.google.com/identity/protocols/oauth2/policies)。
+
+创建客户端并安全保存它的 **Client ID** 和 **Client secret**。请在 Google 展示时抓取这个 secret，它可能只在创建时可见。把它存在密码管理器里，并直接填入 OpenWork 的密钥字段，不要放进聊天、截图、源代码或公开仓库。
+
+## 7. 在 OpenWork 中添加提供商与凭据集
+
+以组织所有者/管理员身份，打开 **AI Gateway → AI Providers → Add provider**：
+
+1. Gemini 选 `google-vertex`，Claude 选 `google-vertex-anthropic`。
+2. 在 **Key** 中选择 **Each member signs in**。
+3. 填入 **Google Cloud project** 的 ID。**Region** 默认是 `global`；请确认模型支持情况和你组织的数据驻留要求，或者换成之前记下的受支持地域。
+4. 在 **Models** 中选择 **Only the ones I pick**，并挑你的首个测试模型。请先完成下面的 OAuth 客户端与访问字段再保存。
+
+该项目/位置这一目标在提供商上是固定的。如果需要改变目标，请另建一个提供商。
+
+### 在 Key 中配置凭据集
+
+1. 在同一个提供商表单的 **Key** 区块中，填入 Google 的 **Web OAuth client ID** 和 **client secret**。表单会在你保存时创建上游凭据集；没有单独的 **Add upstream key** 操作。
+2. **Read setup instructions** 会在新标签页打开本指南。
+3. 按下面的说明检查 **Who can use it**，然后为所选提供商点击 **Add**。
+4. 在 **AI Providers** 中打开已保存提供商的那一行，从 **Key** 复制它的回调 URL，并在成员连接之前确认它与 Google 中的注册完全一致。
+5. 之后要改 OAuth 客户端，请在同一个提供商上编辑 **Key** 并选择 **Save changes**。
+
+client secret 只写不读，并在服务端加密。留空表示保持不变；填入新值会替换它，留空不会清除它。修改 OAuth client ID 或 secret 时，必须先确认轮换警告才能保存，受影响的成员需要重新连接。提供商表单上的 **Remove** 操作会删除该提供商及其配置。通过 API 管理单个凭据集时，请先删除该成员集的访问规则，再删除这个集。通过 API 禁用某个集会撤销它的凭据，但保留它的 OAuth 应用配置。
+
+### 分配模型访问权
+
+在提供商表单中，用 **Models** 选择成员应使用的模型，用 **Who can use it** 选择目标 OpenWork 受众。默认选中 **Everyone in the organization**；如需在保存前收紧访问范围，请关掉它并使用 **Add person** 或 **Add team**。
+
+保存表单会创建或更新底层的**模型组（model group）**、成员登录用的**凭据集（credential set）**，以及把该组与该集连接到所选受众的**访问规则（access rules）**。直接使用 API 时，仅创建提供商或凭据集**并不**授予推理访问权。管理员身份本身也不是访问授权；如果你要自己测试，请把自己列入所选受众。
+
+## 8. 以成员身份登录
+
+在 Den 中，打开 `/dashboard/model-connections` 处的 **My Model Connections**。在 Desktop 中，使用 AI 提供商设置里被分配的 OAuth 提供商的 **Login** 操作。API 密钥类提供商仍然使用 **Connect**。
+
+你也可以从 Desktop 的模型选择器开始：尚未登录时被分配的 OAuth 提供商和模型依然可见。选择一个需要授权的模型时，会出现 `Log in to this provider to use the models`。选择 **Login** 会启动同样的浏览器流程，选择 **Cancel** 则保留你当前的模型。登录确认且模型可用之后，OpenWork 会选中你挑的那个模型。没有授予你访问权的模型不会被这个流程加进来。
+
+1. 找到目标提供商和凭据集，选择 **Connect with Google**。
+2. 打开浏览器登录链接。
+3. 连接页面会检查你的浏览器登录状态。如果它显示 **Sign in to OpenWork**，请用该链接在新标签页以**发起 Connect 的那个 OpenWork 账户**登录，然后回到连接标签页。如果该账户已经登录，这一步会被跳过。看到 **Switch OpenWork account** 就意味着你必须先退出当前浏览器账户。
+4. 当页面显示 **Sign in to Google** 时，选择 **Continue to Google**。检查或刷新你的浏览器登录状态并不会启动 Google 授权；只有这个按钮才会继续走向 Google。
+5. 选择你已授予项目 IAM 访问权的那个 Google 账户，并批准所请求的权限。
+6. 回到 Model connections，必要时刷新状态。确认页面显示的已连接 Google 邮箱。
+7. 按需打开 Desktop 或 Web 会话并刷新/同步模型。
+
+你的 Google 邮箱和 OpenWork 邮箱可以不同。连接归该 OpenWork 成员所有；Google 主体提供的是在所配置 Google 项目中调用模型的许可。
+
+<Info>
+  OAuth 客户端配置、Google 授权同意、推理成功是三个不同的里程碑。显示已连接或 token 就绪，并不能证明该 Google 账户拥有模型权限、IAM 权限或足够的配额。请紧接着完成一次测试请求。
+</Info>
+
+## 9. 测试一个请求
+
+在 OpenWork 中选择被分配的模型，发一条简短且不含敏感内容的提示，例如：
+
+> Reply with exactly: Connection works.
+
+这是一次会计费的 Google Cloud 推理请求。先确认能收到响应，然后再测试一个更长的响应，以验证流式输出。
+
+如果你同时需要 Gemini 和 Claude，请对另一个提供商重做提供商、凭据集和访问规则的配置。分别连接并分别测试。你可以复用同一个 Google OAuth 客户端，但 Google 侧的授权撤销会影响共用它的其他连接；本地凭据记录彼此独立，并不代表 Google 侧的授权也相互独立。
+
+在向团队推广之前，请分别在 Desktop 和 Web（凡是用到的）上验证、在 token 被撤销后重新连接，并用一个没有所需 IAM 访问权的 Google 账户确认会被拒绝。不要假设在一个模型/位置上测试成功，就等于对所有其他模型和位置都有访问权。
+
+## token 刷新、重新连接与断开
+
+OpenWork 在服务端加密保存 OAuth client secret 和每位成员的 Google token 材料。客户端拿到的是 OpenWork Gateway 凭据，而不是 Google 刷新 token 或本地的 ADC 文件。每个请求使用一个有效的 Google 访问 token；Gateway 会复用尚未过期的 token，并在需要时刷新，而不是为每个请求都新签一个。
+
+- **Reconnect：** 当 Google 撤销或过期了授权，或要求一次新的交互式会话时使用。Google Cloud 的会话控制策略可能要求重新认证；成员登录并不保证可以无限期地无人值守运行。当前流程在连接或重新连接时都需要一个新的刷新 token。
+- **Rotate the client：** 在凭据集中修改 OAuth client ID 或 secret，会取消进行中的登录，并撤销/抹除受影响的本地凭据。成员必须重新连接。仅重命名该集不会撤销它们。
+- **Disconnect：** 取消进行中的登录，并移除所选成员的本地凭据。Google 侧的撤销只是尽力而为，可能影响共用同一 Google 授权的其他连接。Disconnect 不会删除组织的 OAuth 应用。
+- **Remove access：** 禁用提供商或移除某条 OpenWork 访问规则会阻止推理；但它不等同于撤销 Google 的授权。禁用某个凭据集会撤销它的本地凭据。细节见[网关运维指南](/self-host/gateway#session-policy-rotation-and-disconnect)。
+
+## 问题排查
+
+| 症状 | 检查项 |
+| --- | --- |
+| 看不到 Gateway 管理入口 | 请你的部署/平台管理员启用 Gateway，并给你的组织授予仪表盘访问权。参见[启用 OpenWork 网关](/self-host/gateway)。 |
+| 成员那边没有出现连接项 | 检查 OpenWork 的模型组、凭据集以及访问规则的分配。仅有 Google IAM 并不会创建这份分配。 |
+| `redirect_uri_mismatch` | 把显示的回调地址与 Google 中的注册逐字比对，包括协议、主机名、端口、路径前缀和结尾斜杠。 |
+| `invalid_client` / **Administrator action required** | 在凭据集中修复 Web OAuth client ID/secret。成员反复同意并不能修复无效的客户端。 |
+| Google 拦住了测试者 | 检查 Internal 的受众限制、External 的 test-user 名单，以及你组织的应用访问策略。不要绕过管理员设置的限制。 |
+| 浏览器账户不匹配 | 在 **Switch OpenWork account** 上选择 **Sign out of this browser account**。页面会重新检查你的登录状态，然后提供 **Sign in to OpenWork**。用发起 Connect 的那个账户登录后，回到连接标签页。Desktop 的登录不会自动让浏览器也登录。 |
+| 已同意授权，但推理被拒绝 | 检查该 Google 用户的 IAM、所配置的项目/位置、模型访问与条款，以及配额。并非所有上游的 `401` 或 `403` 都是 token 过期。 |
+| 几小时或几天后又要登录 | 检查 Google Cloud 的会话策略、授权撤销，以及 External Testing 的 token 过期。 |
+| Google 没有授予离线访问 | 重新发起 Connect 并批准同意。如果确实必须在 Google 侧移除对该应用的授权，请先考虑共用该授权的其他连接。 |
+| 连接之后模型缺失 | 刷新/同步客户端，然后检查模型组分配，以及受支持的模型/位置组合。 |
+| 本地预览停止了 | 重启开发实例并核对它的回调端口。一次性预览实例过期时可能删除本地配置；Google Cloud 的配置是另一回事。 |
+
+### 显式配额项目与其他限制
+
+OAuth 客户端所在的项目与执行推理的项目可以不同。两者都不会自动替你选定一个配额项目。
+
+<Warning>
+  Gateway 目前不提供由管理员配置的配额项目，也不会注入 `x-goog-user-project`。调用方自带的配额请求头，以及 Vertex 的配额查询参数都会被剥除。如果你的场景确实需要显式的配额项目，这是当前集成的限制——不要试图用客户端请求头或本地 ADC 绕过它。请先联系你的 OpenWork 管理员再继续。
+</Warning>
+
+这套配置覆盖上文提到的 Google 和 Anthropic 提供商适配器。它不会自动启用 Google 目录下列出的所有混合 SDK 伙伴模型，也不覆盖为没有 Google 身份的用户使用 Workforce Identity Federation。

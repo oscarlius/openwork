@@ -1,0 +1,67 @@
+---
+title: "定价与许可"
+description: "OpenWork 的方案 —— Free、Team 和 Enterprise —— 以及 MIT + OpenWork EE License 这套双许可是怎么划分的。"
+---
+
+Free 和 Team 的价格是公开的。Enterprise 按部署单独报价 —— [联系销售](mailto:sales@openworklabs.com)。无论你用 OpenWork Cloud 还是自托管，条款都一样，没有部署费，而且每一档付费方案都包含支持服务。
+
+## 方案
+
+| | Free | Team | Enterprise |
+| --- | --- | --- | --- |
+| **价格** | $0 | 每席位每月 $10 | [联系销售](mailto:sales@openworklabs.com) |
+| **计费** | — | 按月，自助 | 按年，开票 |
+| **用户数** | Cloud：前 5 个席位免费；自托管：最多 5 个用户 | 不限 | 不限 |
+| **桌面应用（MIT，开源）** | ✓ | ✓ | ✓ |
+| **自托管整个平台** | ✓ | ✓ | ✓ |
+| **扩展市场、共享密钥与技能** | — | ✓ | ✓ |
+| **云端自动化** | — | ✓ | ✓ |
+| **用量与采用度分析** | — | 基础 | ✓ |
+| **SSO / SAML** | — | ✓ | ✓ |
+| **SCIM 开通与 RBAC** | — | — | ✓ |
+| **桌面策略与版本控制** | — | — | ✓ |
+| **审计日志与费用可观测性** | — | — | ✓ |
+| **内部白标（你自己的名称、logo、品牌）** | — | — | ✓ |
+| **支持** | 社区 | 标准，含在内 | 带 SLA 的标准支持，含在内 |
+
+### 附加项
+
+Team 和 Enterprise 可用，按成员计费，与方案一起开票：
+
+| 附加项 | 价格 | 是什么 |
+| --- | --- | --- |
+| **OpenWork Cloud Computer** | 每成员每月 $50 | 每位成员一台云电脑，可以从浏览器访问。它与云端自动化是分开的，云端自动化已包含在 Team 和 Enterprise 中。 |
+| **OpenWork 模型** | 每用户每月 $10 | 托管推理 —— 不用自带密钥，直接使用 OpenWork 提供的模型。 |
+
+分析、SCIM、桌面政策和白标属于 **Enterprise Features** —— 在[订阅条款](https://openworklabs.com/terms/subscription)里有明确定义 —— 只保留给 Enterprise 方案（也用于评估和试点，好让你测试自己将要购买的东西）。
+
+Enterprise 的白标覆盖的是你自己的内部部署。若要对外分发、作为托管服务运营，或以你的品牌转售，需要另行签订书面协议。
+
+Enterprise 是按年签署的合同，带有 60 天退出权，如果你觉得不合适可以提前退出。折扣只按席位数和合同期限来给。
+
+## 许可是怎么划分的
+
+[仓库](https://github.com/different-ai/openwork)按目录划分许可，与 GitLab 类似：
+
+- **`ee/` 之外的一切都是 MIT。** 桌面应用和核心平台是开源的，任何用途都免费。
+- **`ee/` 之下的一切（OpenWork Den，也就是组织控制平面）在 [OpenWork EE License](https://github.com/different-ai/openwork/blob/dev/ee/LICENSE) 下源码可见。** 代码公开，好让你的安全团队精确审计你部署的是什么。
+
+按 EE License，以下用途不需要订阅：
+
+1. **最多 5 个用户的组织的生产使用。** Enterprise Features（分析、SCIM、桌面政策、白标）不包含在内，需要付费方案。
+2. **最多 30 天的内部评估**，任何用户规模都可以，功能全开 —— 可以书面延长。
+3. **开发与测试。**
+
+超出上述授权范围的生产使用，需要按[订阅条款](https://openworklabs.com/terms/subscription)购买订阅。此外，每个 `ee/` 版本在发布两年后都会转为 MIT。在采用 EE License 之前发布的版本仍受其原始许可约束（FSL-1.1-MIT），每个版本都按它当时附带的那份许可文本来执行 —— 许可更新绝不追溯。
+
+关于这一划分在长期 stewardship 上我们做出的承诺 —— 哪些能力可以在档位之间移动、哪些不能，以及 MIT 转换如何生效 —— 见 [Stewardship 承诺](/zh/start-here/stewardship)。
+
+## 评估与试点
+
+你可以自助评估，30 天内免费。[只拉取镜像的 Docker Compose 方案](/self-host/evaluate-with-docker-compose)是在你自己的环境里部署控制平面最快的方式，不需要 clone 或构建仓库。时间不够？评估延长需要书面授予 —— [找我们](mailto:sales@openworklabs.com)。
+
+Enterprise 的标准路径是带 60 天退出权的年度合同 —— 从第一天起你就拿到完整产品和支持性的上线方案，头两个月内觉得不合适可以退出。对于集成量大的部署（SSO、SCIM、自托管），我们可以按你的报价跑一个 30–60 天的付费试点，试点费用抵扣到第一年。[联系销售](mailto:sales@openworklabs.com)。
+
+## 为什么企业版代码是公开的
+
+我们的买家是安全团队。公开企业版源码，意味着你可以在运行之前读完在你网络里运行的每一行代码。订阅买到的，是在生产环境中规模化运行它的权利，外加一条有支持、有补丁的发布流，以及一个受合同约束的供应商。

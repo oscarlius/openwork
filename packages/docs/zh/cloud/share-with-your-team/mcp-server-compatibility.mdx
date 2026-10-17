@@ -6,15 +6,15 @@ description: "OpenWork 要能连接你的成员，MCP 服务器的 OAuth 配置�
 
 这一页面向运行 MCP 服务器、而 OpenWork 成员想要连接它的人：托管远程 MCP 服务器的 SaaS 提供商，或自建服务器的团队。这里逐条列出 OpenWork 在登录过程中发送什么，以及你的授权服务器必须接受什么。
 
-OpenWork 通过 OpenWork Cloud（Den）代表组织连接 MCP 服务器。每位成员通过浏览器用自己的账户登录你的服务器，OpenWork 在服务端保存该成员由此产生的 token，随后 [OpenWork MCP 网关](/cloud/run-in-the-cloud/cloud-mcp)把你的工具暴露给该成员的 AI 应用。因此 OpenWork 是一个 OAuth 客户端、代表众多成员、托管在固定 origin 上。如果你的授权服务器只接受它已知的客户端，OpenWork 必须在其中。
+OpenWork 通过 OpenWork Cloud(Den)代表组织连接 MCP 服务器。每位成员通过浏览器用自己的账户登录你的服务器，OpenWork 在服务端保存该成员由此产生的 token，随后 [OpenWork MCP 网关](/cloud/run-in-the-cloud/cloud-mcp)把你的工具暴露给该成员的 AI 应用。因此 OpenWork 是一个 OAuth 客户端、代表众多成员、托管在固定 origin 上。如果你的授权服务器只接受它已知的客户端，OpenWork 必须在其中。
 
 ## 检查清单
 
 做到以下几点，OpenWork 侧无需任何手工配置即可连接：
 
 1. **按 MCP 授权规范公布 OAuth。** 对未认证的 MCP 请求返回 `401`，并带上 `WWW-Authenticate: Bearer` 质询，其中的
-   `resource_metadata` 指向你的受保护资源元数据（RFC 9728）。
-   该文档会列出你的 `authorization_servers`，而每个授权服务器都会发布自身的元数据（RFC 8414）。
+   `resource_metadata` 指向你的受保护资源元数据(RFC 9728)。
+   该文档会列出你的 `authorization_servers`，而每个授权服务器都会发布自身的元数据(RFC 8414)。
 2. **支持带 PKCE 的公开客户端。** `code_challenge_methods_supported`
    包含 `S256`，`token_endpoint_auth_methods_supported` 包含 `none`，
    且 `grant_types_supported` 包含 `authorization_code` 和
@@ -32,7 +32,7 @@ OpenWork 通过 OpenWork Cloud（Den）代表组织连接 MCP 服务器。每位
    https://api.openworklabs.com/v1/mcp-connections/oauth/callback
    ```
 
-5. **登录后能应答 MCP 会话。** 签发 token 后，OpenWork 会先打开会话（`initialize`）并列出工具（`tools/list`），然后才把连接报告为可用。这些响应必须是 MCP JSON，或带标准 `Content-Type` 的事件流；在这里返回登录页、门户 HTML 或代理错误页都会让连接失败。
+5. **登录后能应答 MCP 会话。** 签发 token 后，OpenWork 会先打开会话(`initialize`)并列出工具(`tools/list`)，然后才把连接报告为可用。这些响应必须是 MCP JSON，或带标准 `Content-Type` 的事件流；在这里返回登录页、门户 HTML 或代理错误页都会让连接失败。
 
 <Note>
 **自托管的 OpenWork。** 把 `https://api.openworklabs.com` 替换为正在发起连接的实例的
@@ -66,7 +66,7 @@ OpenWork 的客户端元数据文档，同时也是它动态注册请求的请�
 - **state。** OpenWork 发送自己签名的 `state` 值，并要求在重定向时原样回传，这是 OAuth 规范要求的。
 - **Resource indicator。** 当你的受保护资源元数据声明了
   `resource` 时，OpenWork 会在授权请求和 token 请求中带上它
-  （RFC 8707），使签发的 token 专门面向你的 MCP 服务器。
+  (RFC 8707)，使签发的 token 专门面向你的 MCP 服务器。
 - **Issuer 校验。** 如果你公布
   `authorization_response_iss_parameter_supported: true`，请在重定向时带上 `iss`；OpenWork 会拿它与自己选定的授权服务器比对。
 - **作用域。** OpenWork 请求你的 `WWW-Authenticate`
@@ -86,7 +86,7 @@ OpenWork 的客户端元数据文档，同时也是它动态注册请求的请�
   </Step>
   <Step title="授权">
     成员的浏览器被送往你的 `authorization_endpoint`，携带 PKCE
-    （`S256`）、OpenWork 的 `state`、上面的重定向 URL、前文描述的作用域，以及适用时的 resource indicator。你展示同意页，然后带 code 重定向回来。
+    (`S256`)、OpenWork 的 `state`、上面的重定向 URL、前文描述的作用域，以及适用时的 resource indicator。你展示同意页，然后带 code 重定向回来。
   </Step>
   <Step title="换取 token 并校验">
     OpenWork 在你的 `token_endpoint` 上用 code 换取 token，为该成员保存 token，然后带着新的访问令牌对你的 MCP 服务器执行 `initialize` 和 `tools/list`。只有工具列表成功返回，成员才会被标记为已连接。
@@ -112,7 +112,7 @@ OpenWork 每个连接向你的 `registration_endpoint` 提交一次上面的元�
 
 如果你的授权服务器既不公布客户端元数据文档，也不发布 `registration_endpoint`，OpenWork 就无法自行注册。请像为你手工批准的其他 AI 客户端一样，给 OpenWork 签发一个客户端，并绑定上面的重定向 URL：
 
-- 公开客户端（`token_endpoint_auth_method: none`）就够了。如果你的服务器要求密钥，就签发一个，OpenWork 会把它保存在服务端。
+- 公开客户端(`token_endpoint_auth_method: none`)就够了。如果你的服务器要求密钥，就签发一个，OpenWork 会把它保存在服务端。
 - 授予 `authorization_code` 和 `refresh_token`。
 - 把 `client_id`（以及密钥）交给 OpenWork 组织管理员。他们在 OpenWork Cloud 中打开 **Manage › Connectors › Add connector**，粘贴你的 MCP 服务器 URL，在 **Client ID** 和 **Client secret** 下填入这些值，然后点击 **Save app**。对于已存在的连接器，他们打开其 **Settings**，点击 **Add OAuth app**，再点击 **Save changes**。需要注册的 URL 见[与团队共享 MCP 连接](/zh/cloud/share-with-your-team/shared-mcp-connections)。
 
@@ -135,13 +135,13 @@ OpenWork 里每一次失败的连接尝试都带一条诊断信息，包含阶�
 | `tools/list` 或 `initialize` 返回 HTML，或返回非 MCP 的 `Content-Type` | `MCP_HTTP_HTML_RESPONSE` 或 `MCP_HTTP_CONTENT_TYPE` | 提供 MCP JSON 或 `text/event-stream`；把登录页和代理错误页移出 MCP 路径。 |
 | 任意步骤返回 `429` | `MCP_HTTP_429`，会以有限退避重试 | 标准的限流响应头有帮助；没有其他要求。 |
 
-成员可以复制的参考 ID（`req_…`）用于在 OpenWork 的日志中定位这次尝试。如果成员把它分享给你，其中就编码了尝试的确切时间，OpenWork 支持可以据此匹配你的服务器实际收到的请求。
+成员可以复制的参考 ID(`req_…`)用于在 OpenWork 的日志中定位这次尝试。如果成员把它分享给你，其中就编码了尝试的确切时间，OpenWork 支持可以据此匹配你的服务器实际收到的请求。
 
 ## 申请模板
 
 需要请提供商批准 OpenWork 的成员和管理员，可以把这段发出去：
 
-> 我们使用 OpenWork（openworklabs.com）把团队连接到你们托管在
+> 我们使用 OpenWork(openworklabs.com)把团队连接到你们托管在
 > `<your MCP server URL>` 的 MCP 服务器。目前登录在客户端注册这一步失败，因为 OpenWork 的重定向 URL 未被批准。请任选一种：(a) 接受我们的 Client ID Metadata Document `https://api.openworklabs.com/oauth/client-metadata.json` 作为 client_id；(b) 为动态客户端注册放行重定向 URL
 > `https://api.openworklabs.com/v1/mcp-connections/oauth/callback`（主机
 > `api.openworklabs.com`）；(c) 给 OpenWork 签发一个绑定该重定向 URL 的预注册 OAuth 客户端：使用 PKCE S256 的公开客户端，授予 `authorization_code` 与 `refresh_token`。客户端名称为 OpenWork。失败尝试的参考 ID：`<req_… from the connection error>`。
