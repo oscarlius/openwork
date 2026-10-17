@@ -2,6 +2,7 @@
 
 import { ShieldCheck, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useDenT } from "../../_lib/i18n/client";
 import { DenButton, buttonVariants } from "./ui/button";
 import { DenInput } from "./ui/input";
 import { DenNotice } from "./ui/notice";
@@ -58,8 +59,8 @@ export function ReauthDialog({
   orgContext,
   onCancel,
   onVerified,
-  title = "Confirm your identity to change workspace settings",
-  description = "Your change will finish automatically after you confirm.",
+  title,
+  description,
 }: {
   open: boolean;
   user: AuthUser | null;
@@ -69,6 +70,7 @@ export function ReauthDialog({
   title?: string;
   description?: string;
 }) {
+  const t = useDenT();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [waitingForPopup, setWaitingForPopup] = useState(false);
@@ -115,7 +117,7 @@ export function ReauthDialog({
         return;
       }
       stopPopupWatcher();
-      setError("The sign-in window was closed before confirmation. Try again when you're ready.");
+      setError(t("denAuth.reauth.popupClosed"));
       setBusy(false);
     }, 500);
   }
@@ -170,7 +172,7 @@ export function ReauthDialog({
           }
         }
       } catch (nextError) {
-        if (!cancelled) setError(nextError instanceof Error ? nextError.message : "Could not load sign-in methods. Try again.");
+        if (!cancelled) setError(nextError instanceof Error ? nextError.message : t("denAuth.reauth.methodsLoad"));
       } finally {
         if (!cancelled) {
           setLoadingMethods(false);
@@ -200,7 +202,7 @@ export function ReauthDialog({
       popup?.close();
 
       if (message.error) {
-        setError("Sign-in was cancelled or failed. Try again.");
+        setError(t("denAuth.reauth.socialCancelled"));
         setBusy(false);
         return;
       }
@@ -215,11 +217,11 @@ export function ReauthDialog({
           const result = await requestJson("/api/auth/get-session", { method: "GET" });
           const verifiedUser = getUser(result.payload);
           if (!result.response.ok || !verifiedUser || verifiedUser.id !== user?.id) {
-            throw new Error(`Sign in as ${user?.email} to confirm this change.`);
+            throw new Error(t("denAuth.reauth.confirmSignIn", { email: user?.email ?? "" }));
           }
           await onVerifiedRef.current();
         } catch (nextError) {
-          setError(nextError instanceof Error ? nextError.message : "Re-authentication failed.");
+          setError(nextError instanceof Error ? nextError.message : t("denAuth.reauth.reauthFailed"));
           setBusy(false);
         }
       })();
@@ -249,14 +251,14 @@ export function ReauthDialog({
       });
 
       if (!response.ok) {
-        setError(getErrorMessage(payload, `Re-authentication failed (${response.status}).`));
+        setError(getErrorMessage(payload, t("denAuth.reauth.reauthFailedStatus", { status: response.status })));
         return;
       }
 
       await onVerified();
       setPassword("");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Re-authentication failed.");
+      setError(nextError instanceof Error ? nextError.message : t("denAuth.reauth.reauthFailed"));
     } finally {
       setBusy(false);
     }
@@ -265,7 +267,7 @@ export function ReauthDialog({
   async function continueSocial(provider: SocialAuthProvider) {
     const popup = window.open("", "openwork-reauth", "popup,width=480,height=640");
     if (!popup) {
-      setError("OpenWork could not open the sign-in window. Allow popups for OpenWork, then try again.");
+      setError(t("denAuth.reauth.popupBlocked"));
       return;
     }
 
@@ -285,7 +287,7 @@ export function ReauthDialog({
       if (!response.ok) {
         stopPopupWatcher();
         popup.close();
-        setError(getErrorMessage(payload, `${getSocialLabel(provider)} sign-in failed (${response.status}).`));
+        setError(getErrorMessage(payload, t("denAuth.reauth.socialFailed", { provider: getSocialLabel(provider), status: response.status })));
         setBusy(false);
         return;
       }
@@ -294,7 +296,7 @@ export function ReauthDialog({
       if (!redirectUrl) {
         stopPopupWatcher();
         popup.close();
-        setError(`${getSocialLabel(provider)} sign-in did not return a redirect URL.`);
+        setError(t("denAuth.reauth.socialNoRedirect", { provider: getSocialLabel(provider) }));
         setBusy(false);
         return;
       }
@@ -304,20 +306,20 @@ export function ReauthDialog({
       if (popupRef.current !== popup) return;
       stopPopupWatcher();
       popup.close();
-      setError(nextError instanceof Error ? nextError.message : `${getSocialLabel(provider)} sign-in failed.`);
+      setError(nextError instanceof Error ? nextError.message : t("denAuth.reauth.socialFailedPlain", { provider: getSocialLabel(provider) }));
       setBusy(false);
     }
   }
 
   function continueSso() {
     if (!ssoUrl || !user?.email) {
-      setError("This workspace is managed by your organization, but no SSO sign-in URL is available for this email.");
+      setError(t("denAuth.reauth.noSsoUrl"));
       return;
     }
 
     const popup = window.open("", "openwork-reauth", "popup,width=480,height=640");
     if (!popup) {
-      setError("OpenWork could not open the sign-in window. Allow popups for OpenWork, then try again.");
+      setError(t("denAuth.reauth.popupBlocked"));
       return;
     }
 
@@ -333,7 +335,7 @@ export function ReauthDialog({
       startPopupWatcher(popup);
     } catch (nextError) {
       popup?.close();
-      setError(nextError instanceof Error ? nextError.message : "Organization SSO sign-in failed.");
+      setError(nextError instanceof Error ? nextError.message : t("denAuth.reauth.ssoFailed"));
       setBusy(false);
     }
   }
@@ -355,7 +357,7 @@ export function ReauthDialog({
         <div className="relative border-b border-slate-100 bg-slate-50/70 px-6 pb-5 pt-6">
           <button
             type="button"
-            aria-label="Close security check"
+            aria-label={t("denAuth.reauth.closeAria")}
             className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white hover:text-slate-700"
             disabled={busy && !waitingForPopup}
             onClick={cancelSignIn}
@@ -366,14 +368,14 @@ export function ReauthDialog({
             <ShieldCheck size={20} strokeWidth={1.8} aria-hidden="true" />
           </div>
           <div className="grid gap-2 pr-8">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Security check</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{t("denAuth.reauth.eyebrow")}</p>
             <h2 id="reauth-dialog-title" className="text-[22px] font-semibold tracking-[-0.03em] text-slate-950">
-              {waitingForPopup ? "Complete sign-in in the other window" : title}
+              {waitingForPopup ? t("denAuth.reauth.popupTitle") : (title ?? t("denAuth.reauth.defaultTitle"))}
             </h2>
             <p className="text-[14px] leading-6 text-slate-600">
               {waitingForPopup
-                ? "Return here after signing in. Your change will finish automatically."
-                : description}
+                ? t("denAuth.reauth.popupDescription")
+                : (description ?? t("denAuth.reauth.defaultDescription"))}
             </p>
           </div>
         </div>
@@ -385,7 +387,7 @@ export function ReauthDialog({
                 {user.email.slice(0, 1)}
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">Signing in as</p>
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400">{t("denAuth.reauth.signingInAs")}</p>
                 <p className="truncate text-[13px] font-medium text-slate-700">{user.email}</p>
               </div>
             </div>
@@ -397,22 +399,22 @@ export function ReauthDialog({
 
           {waitingForPopup ? (
             <div className="grid gap-4" role="status">
-              <p className="text-sm text-slate-600">Waiting for confirmation…</p>
+              <p className="text-sm text-slate-600">{t("denAuth.reauth.waiting")}</p>
               <DenButton className="w-full" onClick={() => popupRef.current?.focus()}>
-                Reopen sign-in
+                {t("denAuth.reauth.reopen")}
               </DenButton>
             </div>
           ) : (
             <div className="grid gap-4">
               {loadingMethods ? (
                 <div className="rounded-[18px] border border-gray-200 bg-gray-50 px-4 py-3 text-[14px] text-gray-500">
-                  Checking available sign-in methods...
+                  {t("denAuth.reauth.checkingMethods")}
                 </div>
               ) : null}
 
               {hasManagedOrgSignIn ? (
                 <DenButton className="w-full" onClick={continueSso} loading={busy || loadingMethods} disabled={!ssoUrl || busy || loadingMethods}>
-                  Continue with SSO
+                  {t("denCommon.signin.continueSso")}
                 </DenButton>
               ) : null}
 
@@ -426,7 +428,7 @@ export function ReauthDialog({
                     disabled={busy}
                     onClick={() => void continueSocial(provider)}
                   >
-                    Continue with {getSocialLabel(provider)}
+                    {t("denAuth.reauth.continueWith", { provider: getSocialLabel(provider) })}
                   </button>
                 );
               })}
@@ -434,7 +436,7 @@ export function ReauthDialog({
               {hasPassword && !ssoUrl ? (
                 <form className="grid gap-3" onSubmit={submitPassword}>
                   <label className="grid gap-2">
-                    <span className="text-[13px] font-medium text-gray-700">Password</span>
+                    <span className="text-[13px] font-medium text-gray-700">{t("denCommon.field.password")}</span>
                     <DenInput
                       type="password"
                       value={password}
@@ -445,7 +447,7 @@ export function ReauthDialog({
                     />
                   </label>
                   <DenButton className="w-full" type="submit" loading={busy} disabled={!password.trim()}>
-                    Verify password
+                    {t("denAuth.reauth.verify")}
                   </DenButton>
                 </form>
               ) : null}
@@ -458,7 +460,7 @@ export function ReauthDialog({
             onClick={cancelSignIn}
             disabled={busy && !waitingForPopup}
           >
-            Cancel
+            {t("denCommon.action.cancel")}
           </button>
         </div>
       </div>

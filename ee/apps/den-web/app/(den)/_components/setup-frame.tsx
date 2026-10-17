@@ -2,32 +2,40 @@
 
 import type { ReactNode } from "react";
 import { ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, FileText, Folder, LayoutDashboard, MessageSquare, Network, Paperclip, Play, Plug, Search, Users, Workflow } from "lucide-react";
+import { useDenT } from "../../_lib/i18n/client";
+import type { DenTranslate } from "../../_lib/i18n/messages";
 import { OnboardingTexture } from "./onboarding-texture";
 import styles from "./setup-frame.module.css";
 
-const steps = [
-  { id: "account", label: "Account" },
-  { id: "space", label: "Your space" },
-  { id: "people", label: "People" },
-  { id: "tools", label: "Tools" },
-  { id: "ready", label: "Get to work" },
-];
+function setupSteps(t: DenTranslate) {
+  return [
+    { id: "account", label: t("denAuth.panel.eyebrowAccount") },
+    { id: "space", label: t("denSetup.frame.stepYourSpace") },
+    { id: "people", label: t("denSetup.frame.stepPeople") },
+    { id: "tools", label: t("denSetup.frame.stepTools") },
+    { id: "ready", label: t("denSetup.frame.stepGetToWork") },
+  ];
+}
 
-const simplifiedSteps = [
-  { id: "account", label: "Name" },
-  { id: "space", label: "Workspace" },
-  { id: "people", label: "Invite (optional)" },
-];
+function simplifiedSetupSteps(t: DenTranslate) {
+  return [
+    { id: "account", label: t("denSetup.frame.stepName") },
+    { id: "space", label: t("denSetup.frame.stepWorkspace") },
+    { id: "people", label: t("denSetup.frame.stepInviteOptional") },
+  ];
+}
 
 export type SetupStep = "account" | "space" | "people" | "tools" | "ready";
 
-const exampleCopy: Record<SetupStep, { request: string; reply: string; caption: string }> = {
-  account: { request: "Create a launch dashboard from my project files.", reply: "Here’s a dashboard you can keep working with.", caption: "Ask in chat. Get a dashboard you can use." },
-  space: { request: "Turn our weekly project updates into a reusable workflow.", reply: "Here’s a workflow your team can run again.", caption: "Describe the work once. Reuse the workflow." },
-  people: { request: "Draft a project brief using our team’s template.", reply: "I found your team’s shared skill and project knowledge.", caption: "Your team’s tools, right in the conversation." },
-  tools: { request: "What tools can help with my project update?", reply: "These team tools can help. Connect your account to get started.", caption: "Discover the right tool when the task needs it." },
-  ready: { request: "Summarize our project updates into a team brief.", reply: "Here’s a draft built with your team’s tools.", caption: "One conversation. Your models, tools, and results." },
-};
+function exampleCopy(t: DenTranslate): Record<SetupStep, { request: string; reply: string; caption: string }> {
+  return {
+    account: { request: "Create a launch dashboard from my project files.", reply: "Here’s a dashboard you can keep working with.", caption: t("denSetup.preview.captionAccount") },
+    space: { request: "Turn our weekly project updates into a reusable workflow.", reply: "Here’s a workflow your team can run again.", caption: t("denSetup.preview.captionSpace") },
+    people: { request: "Draft a project brief using our team’s template.", reply: "I found your team’s shared skill and project knowledge.", caption: t("denSetup.preview.captionPeople") },
+    tools: { request: "What tools can help with my project update?", reply: "These team tools can help. Connect your account to get started.", caption: t("denSetup.preview.captionTools") },
+    ready: { request: "Summarize our project updates into a team brief.", reply: "Here’s a draft built with your team’s tools.", caption: t("denSetup.preview.captionReady") },
+  };
+}
 
 function PreviewComposer() {
   return (
@@ -44,10 +52,11 @@ function PreviewComposer() {
 }
 
 function WorkPreview({ step }: { step: SetupStep }) {
-  const copy = exampleCopy[step];
+  const t = useDenT();
+  const copy = exampleCopy(t)[step];
   const gateway = step === "tools" || step === "ready";
   return (
-    <figure className={styles.preview} aria-label={`Product example: ${copy.caption}`}>
+    <figure className={styles.preview} aria-label={t("denSetup.preview.productExampleAria", { caption: copy.caption })}>
       <div className={styles.previewLabel}><span>OPENWORK, IN PRACTICE</span><span>Example</span></div>
       <div className={styles.appWindow} aria-hidden="true">
         <div className={styles.appTitlebar}>
@@ -124,22 +133,29 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
   /** Shared onboarding steps use the simplified layout unless a caller opts out (single-organization mode). */
   simplified?: boolean;
 }) {
+  const t = useDenT();
   const sharedStep = step === "account" || step === "space" || step === "people";
   const useSimplifiedSteps = sharedStep && (simplified ?? true);
-  const visibleSteps = useSimplifiedSteps ? simplifiedSteps : steps;
+  const visibleSteps = useSimplifiedSteps ? simplifiedSetupSteps(t) : setupSteps(t);
   const current = step ? visibleSteps.findIndex((item) => item.id === step) : -1;
   const plain = !step;
   const progress = (
-    <nav className={styles.progress} aria-label="Setup progress">
+    <nav className={styles.progress} aria-label={t("denSetup.frame.progressAria")}>
       <div className={styles.progressSummary}>
         <span>{visibleSteps[current]?.label}</span>
-        <span>Step {current + 1} of {visibleSteps.length}</span>
+        <span>{t("denSetup.frame.progressStep", { current: current + 1, total: visibleSteps.length })}</span>
       </div>
       <ol className={styles.steps}>{visibleSteps.map((item, index) => (
         <li
           key={item.id}
           aria-current={item.id === step ? "step" : undefined}
-          aria-label={`${item.label}: ${index < current ? "completed" : index === current ? "current step" : "upcoming"}`}
+          aria-label={
+            index < current
+              ? t("denSetup.frame.stepStateCompleted", { label: item.label })
+              : index === current
+                ? t("denSetup.frame.stepStateCurrent", { label: item.label })
+                : t("denSetup.frame.stepStateUpcoming", { label: item.label })
+          }
           className={index < current ? styles.done : ""}
         >
           <span className={styles.stepLabel}>{item.label}</span>
@@ -172,18 +188,18 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
         <div className={styles.grid}>
           <aside className={styles.story}>
             <div className={styles.intro}>
-              {step ? <p className={styles.eyebrow}>A LITTLE LESS BUSYWORK</p> : null}
+              {step ? <p className={styles.eyebrow}>{t("denSetup.frame.eyebrowBusywork")}</p> : null}
               <h1 className={compactHeader ? styles.compactHeading : undefined}>{title}</h1>
               <p className={styles.description}>{description}</p>
               {step ? (
                 <div className={styles.modelSupport}>
-                  <p>Your choice of model. One place to work.</p>
-                  <span>OpenAI</span><i aria-hidden="true">·</i><span>Anthropic</span><i aria-hidden="true">·</i><span>Google</span><i aria-hidden="true">·</i><span>and more</span>
+                  <p>{t("denSetup.frame.modelSupport")}</p>
+                  <span>OpenAI</span><i aria-hidden="true">·</i><span>Anthropic</span><i aria-hidden="true">·</i><span>Google</span><i aria-hidden="true">·</i><span>{t("denSetup.frame.andMore")}</span>
                 </div>
               ) : null}
             </div>
             {aside ? <div className={styles.customPreview}>{aside}</div> : step ? <WorkPreview step={step} /> : null}
-            {step ? <p className={styles.storyNote}>Switch models while keeping your tools and the work in one place.</p> : null}
+            {step ? <p className={styles.storyNote}>{t("denSetup.frame.storyNote")}</p> : null}
           </aside>
           <div className={styles.panel} key={step ?? "plain"}>
             {panelVisual ? <div className={styles.panelVisual}>{panelVisual}</div> : null}
@@ -191,7 +207,7 @@ export function SetupFrame({ step, title, description, children, aside, panelVis
             {children}
           </div>
         </div>
-        <footer className={styles.footer}><span>Built for work. With room for you.</span><span>Your desktop + your tools + your team</span></footer>
+        <footer className={styles.footer}><span>{t("denSetup.frame.footerTagline")}</span><span>{t("denSetup.frame.footerSub")}</span></footer>
       </>}
     </section>
   );

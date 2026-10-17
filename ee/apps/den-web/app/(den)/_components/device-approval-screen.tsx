@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getErrorMessage, requestJson } from "../_lib/den-flow";
 import { deviceReturnTarget, deviceReturnUrl } from "../_lib/device-return";
 import { useDenFlow } from "../_providers/den-flow-provider";
+import { useDenT } from "../../_lib/i18n/client";
 import { AuthPanel } from "./auth-panel";
 import { OnboardingTexture } from "./onboarding-texture";
 import { SetupFrame } from "./setup-frame";
@@ -79,6 +80,7 @@ function readClientId(payload: unknown): string | null {
 }
 
 export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initialUserCode: string; returnTo?: string }) {
+  const t = useDenT();
   const { user, sessionHydrated, signOut } = useDenFlow();
   const [userCode, setUserCode] = useState(formatUserCode(initialUserCode));
   const [draftCode, setDraftCode] = useState("");
@@ -109,7 +111,7 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
       setOrgs(list);
       setOrganizationId(list.find((org) => org.isActive)?.id ?? list[0]?.id ?? "");
       if (!lookup.response.ok) {
-        setCodeState({ kind: "invalid", message: "This code is not valid or has expired. Check it against your terminal, or run the command again." });
+        setCodeState({ kind: "invalid", message: t("denAuth.deviceApproval.invalidCode") });
         return;
       }
       const clientId = readClientId(lookup.payload);
@@ -127,7 +129,7 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
   // Only a known client may send the browser back, and only to a page on this machine.
   const returnUrl = useMemo(() => deviceReturnUrl(returnTo, clientId), [returnTo, clientId]);
   const command = (clientId && CLIENT_COMMANDS[clientId]) || "openwork-bootstrap login";
-  const returnPlace = (clientId && CLIENT_RETURN_PLACES[clientId]) || "your terminal";
+  const returnPlace = (clientId && CLIENT_RETURN_PLACES[clientId]) || t("denAuth.deviceApproval.yourTerminal");
   const isOpenCodePlugin = clientId === "openwork-opencode-plugin";
 
   async function decide(decision: "approve" | "deny") {
@@ -147,7 +149,7 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
     );
     setBusy(null);
     if (!response.ok) {
-      setError(getErrorMessage(payload, "Could not record your choice. Start sign-in again from your terminal."));
+      setError(getErrorMessage(payload, t("denAuth.deviceApproval.decideFailed")));
       return;
     }
     setCodeState(decision === "approve" ? { kind: "approved" } : { kind: "denied" });
@@ -156,20 +158,25 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
   }
 
   const shownCode = userCode || "XXXX-XXXX";
+  const emailLabel = user?.email ?? t("denCommon.word.you");
   const terminalStatus: SetupTerminalLine = codeState.kind === "approved"
-    ? { text: `Signed in as ${user?.email ?? "you"}${selectedOrg ? ` in ${selectedOrg.name}` : ""}.` }
+    ? {
+        text: selectedOrg
+          ? t("denAuth.deviceApproval.terminalSignedInOrg", { email: emailLabel, org: selectedOrg.name })
+          : t("denAuth.deviceApproval.terminalSignedIn", { email: emailLabel }),
+      }
     : codeState.kind === "denied"
-      ? { text: "Sign-in was denied." }
-      : { text: "Waiting for approval...", muted: true };
+      ? { text: t("denAuth.deviceApproval.terminalDenied") }
+      : { text: t("denAuth.deviceApproval.terminalWaiting"), muted: true };
   const description = codeState.kind === "approved"
-    ? "Your terminal is signed in."
+    ? t("denAuth.deviceApproval.descSignedIn")
     : codeState.kind === "denied"
-      ? "Your terminal did not get access."
-      : "Your terminal is waiting for approval.";
+      ? t("denAuth.deviceApproval.descDenied")
+      : t("denAuth.deviceApproval.descWaiting");
 
   const frame = (children: ReactNode) => (
     <SetupFrame
-      title={isOpenCodePlugin ? "Approve this sign-in" : `Sign in ${clientName}.`}
+      title={isOpenCodePlugin ? t("denAuth.deviceApproval.titleApprove") : t("denAuth.deviceApproval.titleSignin", { client: clientName })}
       compactHeader={isOpenCodePlugin}
       description={description}
       panelVisual={<OnboardingTexture />}
@@ -177,9 +184,9 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
         <SetupTerminal
           lines={[
             { text: `$ ${command}` },
-            { text: "Open this link to sign in:", muted: true },
+            { text: t("denAuth.deviceApproval.terminalOpenLink"), muted: true },
             { text: `  ${host || "…"}/device` },
-            { text: `and confirm the code ${shownCode}.`, muted: true },
+            { text: t("denAuth.deviceApproval.terminalConfirmCode", { code: shownCode }), muted: true },
             terminalStatus,
           ]}
         />
@@ -192,7 +199,7 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
   if (!sessionHydrated) {
     return frame(
       <SetupPanelBody>
-        <SetupPanelTitle>{`Sign in ${clientName}?`}</SetupPanelTitle>
+        <SetupPanelTitle>{t("denAuth.deviceApproval.titleSigninQuestion", { client: clientName })}</SetupPanelTitle>
         <SetupSkeletonRows count={1} />
       </SetupPanelBody>,
     );
@@ -201,14 +208,14 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
   if (!user) {
     return frame(
       <SetupPanelBody>
-        {userCode ? <SetupFacts rows={[{ label: "Code", value: <SetupCode code={userCode} testId="device-user-code" /> }]} /> : null}
+        {userCode ? <SetupFacts rows={[{ label: t("denAuth.deviceApproval.fieldCode"), value: <SetupCode code={userCode} testId="device-user-code" /> }]} /> : null}
         <AuthPanel
           bare
           emailFirstFlow
           socialFirst
           socialProviders={["google"]}
           prefillKey={userCode}
-          emailStepContent={{ title: "Sign in to OpenWork" }}
+          emailStepContent={{ title: t("denAuth.deviceApproval.signInToOpenwork") }}
         />
       </SetupPanelBody>,
     );
@@ -223,9 +230,9 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
           if (draftCode.trim()) setUserCode(formatUserCode(draftCode));
         }}
       >
-        <SetupPanelTitle>Enter the code from your terminal</SetupPanelTitle>
+        <SetupPanelTitle>{t("denAuth.deviceApproval.enterCodeTitle")}</SetupPanelTitle>
         <label className="flex flex-col gap-2">
-          <span className="den-label">Code</span>
+          <span className="den-label">{t("denAuth.deviceApproval.fieldCode")}</span>
           <input
             className="den-input font-mono uppercase tracking-[0.12em]"
             value={draftCode}
@@ -235,75 +242,75 @@ export function DeviceApprovalScreen({ initialUserCode, returnTo = "" }: { initi
             autoFocus
           />
         </label>
-        <SetupFacts rows={[{ label: "Account", value: user.email }]} />
-        <button type="submit" className="den-button-primary w-full" disabled={!draftCode.trim()}>Continue</button>
+        <SetupFacts rows={[{ label: t("denAuth.panel.eyebrowAccount"), value: user.email }]} />
+        <button type="submit" className="den-button-primary w-full" disabled={!draftCode.trim()}>{t("denConnector.action.continue")}</button>
       </form>,
     );
   }
 
   if (codeState.kind === "approved") {
-    return frame(<SetupStatus icon={<Check className="size-5" strokeWidth={1.5} />} title={`${clientName} is signed in`} line={`Return to ${returnPlace}.`} />);
+    return frame(<SetupStatus icon={<Check className="size-5" strokeWidth={1.5} />} title={t("denAuth.deviceApproval.statusSignedInTitle", { client: clientName })} line={t("denAuth.deviceApproval.statusReturnTo", { place: returnPlace })} />);
   }
 
   if (codeState.kind === "denied") {
-    return frame(<SetupStatus icon={<X className="size-5" strokeWidth={1.5} />} title="Sign-in denied" line={`${clientName} did not get access. You can close this tab.`} />);
+    return frame(<SetupStatus icon={<X className="size-5" strokeWidth={1.5} />} title={t("denAuth.deviceApproval.statusDeniedTitle")} line={t("denAuth.deviceApproval.statusDeniedBody", { client: clientName })} />);
   }
 
   if (codeState.kind === "invalid") {
     return frame(
       <SetupPanelBody gap="md">
-        <SetupPanelTitle>This code can’t be used</SetupPanelTitle>
+        <SetupPanelTitle>{t("denAuth.deviceApproval.invalidTitle")}</SetupPanelTitle>
         <SetupLine>{codeState.message}</SetupLine>
         <button type="button" className="den-button-secondary self-start" onClick={() => { setUserCode(""); setCodeState({ kind: "idle" }); }}>
-          Enter a different code
+          {t("denAuth.deviceApproval.enterDifferent")}
         </button>
       </SetupPanelBody>,
     );
   }
 
   const checking = codeState.kind === "checking" || codeState.kind === "idle" || orgs === null;
-  const orgLabel = selectedOrg ? selectedOrg.name : "no organization yet";
+  const orgLabel = selectedOrg ? selectedOrg.name : t("denAuth.deviceApproval.noOrgLower");
 
   return frame(
     <SetupPanelBody>
       <span className="flex size-10 items-center justify-center rounded-full bg-[var(--dls-hover)] text-[var(--dls-text-primary)]" aria-hidden="true">
         <Terminal className="size-5" strokeWidth={1.5} />
       </span>
-      <SetupPanelTitle>{`Sign in ${clientName}?`}</SetupPanelTitle>
+      <SetupPanelTitle>{t("denAuth.deviceApproval.titleSigninQuestion", { client: clientName })}</SetupPanelTitle>
       <div className="flex flex-col gap-1">
-        <span className="text-[13px] leading-[18px] text-[var(--dls-text-secondary)]">Code</span>
+        <span className="text-[13px] leading-[18px] text-[var(--dls-text-secondary)]">{t("denAuth.deviceApproval.fieldCode")}</span>
         <SetupCode code={userCode} size="lg" testId="device-user-code" />
       </div>
       <SetupFacts
         rows={[
-          { label: "Account", value: user.email },
+          { label: t("denAuth.panel.eyebrowAccount"), value: user.email },
           {
-            label: "Organization",
+            label: t("denCommon.word.organization"),
             value: orgs && orgs.length > 1 ? (
-              <DenSelect aria-label="Organization" value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} disabled={busy !== null}>
+              <DenSelect aria-label={t("denCommon.word.organization")} value={organizationId} onChange={(event) => setOrganizationId(event.target.value)} disabled={busy !== null}>
                 {orgs.map((org) => (
                   <option key={org.id} value={org.id}>{org.name}</option>
                 ))}
               </DenSelect>
-            ) : checking ? "…" : selectedOrg?.name ?? "None yet",
+            ) : checking ? "…" : selectedOrg?.name ?? t("denAuth.deviceApproval.noneYet"),
           },
         ]}
       />
       <p className="m-0 text-[13px] leading-5 text-[var(--setup-ink-soft)]" data-testid="device-consent-line">
-        Only approve if you started this in your own terminal and the code matches. {clientName} will act as {user.email} in {orgLabel} until you sign out of it.
+        {t("denAuth.deviceApproval.consentLine", { client: clientName, email: user.email, org: orgLabel })}
       </p>
       <div className="flex flex-col gap-3.5">
         {error ? <SetupErrorLine>{error}</SetupErrorLine> : null}
         <div className="flex gap-2.5">
           <button type="button" className="den-button-primary grow" onClick={() => void decide("approve")} disabled={checking || busy !== null}>
-            {busy === "approve" ? "Signing in…" : `Sign in ${clientName}`}
+            {busy === "approve" ? t("denAuth.deviceApproval.signingIn") : t("denAuth.deviceApproval.signInClient", { client: clientName })}
           </button>
           <button type="button" className="den-button-secondary w-30 shrink-0" onClick={() => void decide("deny")} disabled={checking || busy !== null}>
-            {busy === "deny" ? "Denying…" : "Deny"}
+            {busy === "deny" ? t("denAuth.deviceApproval.denying") : t("denAuth.deviceApproval.deny")}
           </button>
         </div>
         <SetupQuietButton className="self-start" onClick={() => void signOut()} disabled={busy !== null}>
-          Use a different account
+          {t("denAuth.deviceApproval.useDifferentAccount")}
         </SetupQuietButton>
       </div>
     </SetupPanelBody>,

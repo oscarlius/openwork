@@ -2,6 +2,7 @@
 
 import { AppWindow, Check, ChevronRight, Plus } from "lucide-react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useDenT } from "../../_lib/i18n/client";
 import styles from "./setup-frame.module.css";
 import { DenBrandMark } from "./ui/brand-mark";
 
@@ -153,10 +154,11 @@ export function SetupStatus({ icon, title, line, children }: { icon?: ReactNode;
 
 /** "Claude Code can" followed by plain sentences, each with a check. */
 export function SetupCanList({ actor, items }: { actor: string; items: string[] }) {
+  const t = useDenT();
   if (items.length === 0) return null;
   return (
-    <section className="flex flex-col gap-2.5" aria-label={`${actor} can`} data-testid="setup-can-list">
-      <p className="m-0 text-[13px] font-medium leading-[18px] text-[var(--dls-text-primary)]">{actor} can</p>
+    <section className="flex flex-col gap-2.5" aria-label={t("denSetup.canList.heading", { actor })} data-testid="setup-can-list">
+      <p className="m-0 text-[13px] font-medium leading-[18px] text-[var(--dls-text-primary)]">{t("denSetup.canList.heading", { actor })}</p>
       <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
         {items.map((item) => (
           <li key={item} className="flex items-start gap-2.5 text-[13px] leading-[18px] text-[var(--dls-text-primary)]">
@@ -180,11 +182,12 @@ export function SetupQuietButton({ children, className = "", ...props }: ButtonH
 
 /** Raw details (scopes, full addresses) stay behind one collapsed row. */
 export function SetupTechnicalDetails({ children }: { children: ReactNode }) {
+  const t = useDenT();
   return (
     <details className="group min-w-0 text-xs leading-4 text-[var(--dls-text-secondary)]">
       <summary className="flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
         <ChevronRight aria-hidden="true" className="size-4 shrink-0 transition-transform duration-150 ease-out group-open:rotate-90 motion-reduce:transition-none" strokeWidth={1.5} />
-        Technical details
+        {t("denGateway.section.technicalDetails")}
       </summary>
       <div className="mt-2 grid gap-1 break-all pl-5 font-mono">{children}</div>
     </details>
@@ -193,8 +196,9 @@ export function SetupTechnicalDetails({ children }: { children: ReactNode }) {
 
 /** Skeleton rows that hold the place of workspaces while they load. */
 export function SetupSkeletonRows({ count = 2 }: { count?: number }) {
+  const t = useDenT();
   return (
-    <div className="flex flex-col border-t border-[var(--setup-hairline)]" aria-busy="true" aria-label="Loading workspaces" data-testid="setup-skeleton-rows">
+    <div className="flex flex-col border-t border-[var(--setup-hairline)]" aria-busy="true" aria-label={t("denSetup.skeleton.loadingWorkspaces")} data-testid="setup-skeleton-rows">
       {Array.from({ length: count }, (_, index) => (
         <div key={index} className="flex min-h-13 items-center gap-3 border-b border-[var(--setup-hairline)]">
           <span className="size-8 shrink-0 rounded-lg bg-[#f0f0f0] motion-safe:animate-pulse" />
@@ -220,8 +224,9 @@ export type SetupTerminalLine = { text: string; muted?: boolean };
  * so the person can match the code on the page with the one in their terminal.
  */
 export function SetupTerminal({ lines }: { lines: SetupTerminalLine[] }) {
+  const t = useDenT();
   return (
-    <figure className="m-0 mt-10 w-full max-w-110" aria-label="Your terminal" data-testid="setup-terminal">
+    <figure className="m-0 mt-10 w-full max-w-110" aria-label={t("denSetup.terminal.ariaLabel")} data-testid="setup-terminal">
       <div className={styles.appWindow}>
         <div className={styles.appTitlebar}>
           <span className="flex gap-1.5" aria-hidden="true">

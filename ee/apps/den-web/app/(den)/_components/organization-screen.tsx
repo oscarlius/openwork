@@ -7,6 +7,7 @@ import { getErrorMessage, requestJson } from "../_lib/den-flow";
 import { type DenOrgSummary, formatRoleLabel, getJoinOrgRoute, getOnboardingPeopleRoute, getOrgDashboardRoute, parseOrgListPayload } from "../_lib/den-org";
 import { useOrgListWindow } from "../_lib/use-org-list-window";
 import { useDenFlow } from "../_providers/den-flow-provider";
+import { useDenT } from "../../_lib/i18n/client";
 
 import { SetupFrame } from "./setup-frame";
 import { DenButton } from "./ui/button";
@@ -16,6 +17,7 @@ type SettingsTab = "profile" | "organizations";
 
 export function OrganizationScreen() {
   const router = useRouter();
+  const t = useDenT();
   const { user, sessionHydrated, signOut, runtimeConfig, runtimeConfigLoaded, continueSetup } = useDenFlow();
   const [orgs, setOrgs] = useState<DenOrgSummary[]>([]);
   const [busy, setBusy] = useState(true);
@@ -68,15 +70,15 @@ export function OrganizationScreen() {
       try {
         const { response, payload } = await requestJson("/v1/me/orgs", { method: "GET" });
         if (!response.ok) {
-          throw new Error(getErrorMessage(payload, "Failed to load organizations."));
+          throw new Error(getErrorMessage(payload, t("denAuth.organization.loadFailed")));
         }
 
         if (isMounted) {
           if (typeof payload !== "object" || payload === null || !("orgs" in payload) || !Array.isArray(payload.orgs)) {
-            throw new Error("Organization lookup returned incomplete details.");
+            throw new Error(t("denAuth.organization.lookupIncomplete"));
           }
           const parsed = parseOrgListPayload(payload);
-          if (parsed.orgs.length !== payload.orgs.length) throw new Error("Organization lookup returned incomplete details.");
+          if (parsed.orgs.length !== payload.orgs.length) throw new Error(t("denAuth.organization.lookupIncomplete"));
           const nextOrgs = parsed.orgs.map((org) => ({ ...org, isActive: org.slug === parsed.activeOrgSlug }));
           const targetOrg = nextOrgs.find((org) => org.isActive) ?? nextOrgs[0] ?? null;
           if (isSingleOrgMode && targetOrg) {
@@ -90,7 +92,7 @@ export function OrganizationScreen() {
         }
       } catch (err) {
         if (isMounted) {
-          setError(err instanceof Error ? err.message : "An error occurred.");
+          setError(err instanceof Error ? err.message : t("denAuth.organization.generic"));
           setBusy(false);
         }
       }
@@ -108,18 +110,18 @@ export function OrganizationScreen() {
       const url = new URL(invitationLink.trim(), window.location.origin);
       const invitationId = url.searchParams.get("invite")?.trim();
       if (url.origin !== window.location.origin || url.pathname !== "/join-org" || !invitationId) {
-        throw new Error("Paste the invitation link for this OpenWork Cloud. Ask your team owner if you do not have one yet.");
+        throw new Error(t("denAuth.organization.invitationLinkRequired"));
       }
       router.push(getJoinOrgRoute(invitationId));
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Enter a valid invitation link.");
+      setCreateError(err instanceof Error ? err.message : t("denAuth.organization.invitationInvalid"));
     }
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (isSingleOrgMode) {
-      setCreateError("This deployment uses one managed organization.");
+      setCreateError(t("denAuth.organization.managedOrgCreate"));
       return;
     }
 
@@ -137,7 +139,7 @@ export function OrganizationScreen() {
         });
 
         if (!response.ok) {
-          throw new Error(getErrorMessage(payload, "Failed to create organization."));
+          throw new Error(getErrorMessage(payload, t("denAuth.organization.createFailed")));
         }
 
         const organization =
@@ -145,7 +147,7 @@ export function OrganizationScreen() {
             ? payload.organization
             : null;
         if (!organization || !("slug" in organization) || typeof organization.slug !== "string" || !organization.slug || !("id" in organization) || typeof organization.id !== "string") {
-          throw new Error("Organization was created, but no slug was returned.");
+          throw new Error(t("denAuth.organization.createNoSlug"));
         }
 
         nextOrg = { id: organization.id, slug: organization.slug };
@@ -154,29 +156,29 @@ export function OrganizationScreen() {
       continueSetup(nextOrg.id, getOnboardingPeopleRoute(nextOrg.slug));
       router.push(getOnboardingPeopleRoute(nextOrg.slug));
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Failed to create organization.");
+      setCreateError(err instanceof Error ? err.message : t("denAuth.organization.createFailed"));
       setCreateBusy(false);
     }
   }
 
   const creationForm = <form onSubmit={handleCreate} className="grid gap-5" aria-busy={createBusy}>
     <label className="grid gap-2">
-      <span className="text-[13px] font-medium text-gray-900">Workspace name</span>
-      <DenInput value={createName} onChange={(event) => setCreateName(event.target.value)} placeholder="My workspace" minLength={2} maxLength={120} disabled={createBusy || Boolean(createdOrg)} required autoFocus />
+      <span className="text-[13px] font-medium text-gray-900">{t("denAuth.organization.workspaceNameLabel")}</span>
+      <DenInput value={createName} onChange={(event) => setCreateName(event.target.value)} placeholder={t("denAuth.organization.workspaceNamePlaceholder")} minLength={2} maxLength={120} disabled={createBusy || Boolean(createdOrg)} required autoFocus />
     </label>
     {createError ? <p role="alert" className="text-[13px] text-red-600">{createError}</p> : null}
-    <DenButton type="submit" loading={createBusy} disabled={createName.trim().length < 2} className="w-full">Create workspace</DenButton>
+    <DenButton type="submit" loading={createBusy} disabled={createName.trim().length < 2} className="w-full">{t("denAuth.organization.createWorkspace")}</DenButton>
     <details className="group">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md text-[13px] font-medium text-gray-500 hover:text-gray-900 [&::-webkit-details-marker]:hidden">
         <ChevronRight aria-hidden className="size-4 transition-transform duration-150 ease-out group-open:rotate-90 motion-reduce:transition-none" />
-        Join an existing workspace
+        {t("denAuth.organization.joinExisting")}
       </summary>
       <div className="mt-3 grid gap-3">
         <label className="grid gap-2">
-          <span className="text-[13px] font-medium text-gray-900">Team invitation link</span>
-          <DenInput value={invitationLink} onChange={(event) => setInvitationLink(event.target.value)} placeholder="Paste your invitation link" disabled={createBusy || Boolean(createdOrg)} />
+          <span className="text-[13px] font-medium text-gray-900">{t("denAuth.organization.invitationLinkLabel")}</span>
+          <DenInput value={invitationLink} onChange={(event) => setInvitationLink(event.target.value)} placeholder={t("denAuth.organization.invitationLinkPlaceholder")} disabled={createBusy || Boolean(createdOrg)} />
         </label>
-        <DenButton type="button" variant="secondary" disabled={createBusy || Boolean(createdOrg) || !invitationLink.trim()} onClick={reviewInvitation}>Review invitation</DenButton>
+        <DenButton type="button" variant="secondary" disabled={createBusy || Boolean(createdOrg) || !invitationLink.trim()} onClick={reviewInvitation}>{t("denAuth.organization.reviewInvitation")}</DenButton>
       </div>
     </details>
   </form>;
@@ -188,18 +190,18 @@ export function OrganizationScreen() {
   if (!sessionHydrated || !runtimeConfigLoaded || busy) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#fafafa]">
-        <p className="text-sm text-gray-500">Loading organizations...</p>
+        <p className="text-sm text-gray-500">{t("denAuth.organization.loading")}</p>
       </div>
     );
   }
 
   if (!isSingleOrgMode && (showDirectCreateFlow || showCreate)) {
-    return <SetupFrame step="space" title="Create your workspace." description="">
+    return <SetupFrame step="space" title={t("denAuth.organization.createTitle")} description="">
       {error ? <p role="alert" className="mb-4 text-sm text-rose-600">{error}</p> : null}
       {creationForm}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-5 text-xs text-gray-500">
         <span className="min-w-0 max-w-[260px] truncate" title={user?.email}>{user?.email}</span>
-        {!createBusy && !createdOrg && orgs.length > 0 ? <button type="button" className="font-medium text-gray-700" onClick={() => { setShowCreate(false); setCreateName(""); setCreateError(null); }}>Cancel</button> : <button type="button" disabled={createBusy} onClick={() => void signOut()} className="font-medium text-gray-700">Log out</button>}
+        {!createBusy && !createdOrg && orgs.length > 0 ? <button type="button" className="font-medium text-gray-700" onClick={() => { setShowCreate(false); setCreateName(""); setCreateError(null); }}>{t("denCommon.action.cancel")}</button> : <button type="button" disabled={createBusy} onClick={() => void signOut()} className="font-medium text-gray-700">{t("denAuth.organization.logOut")}</button>}
       </div>
     </SetupFrame>;
   }
@@ -215,7 +217,7 @@ export function OrganizationScreen() {
           <button
             onClick={() => void signOut()}
             className="text-gray-400 transition-colors hover:text-gray-900"
-            aria-label="Log out"
+            aria-label={t("denAuth.organization.logOut")}
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -236,7 +238,7 @@ export function OrganizationScreen() {
                     {singleOrgName}
                   </h1>
                   <p className="mt-3 max-w-xl text-[13px] leading-6 text-gray-500 sm:text-sm">
-                    This deployment uses one managed organization. Once setup is complete, you will be taken straight to the workspace.
+                    {t("denAuth.organization.managedBody")}
                   </p>
                 </div>
               </div>
@@ -254,7 +256,7 @@ export function OrganizationScreen() {
                     className="w-full rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:w-auto"
                     onClick={() => router.push(`/sso/${encodeURIComponent(singleOrgSlug)}`)}
                   >
-                    Continue with SSO
+                    {t("denCommon.signin.continueSso")}
                   </button>
                 ) : null}
                 <button
@@ -262,7 +264,7 @@ export function OrganizationScreen() {
                   className="w-full rounded-2xl border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 sm:w-auto"
                   onClick={() => window.location.reload()}
                 >
-                  Check again
+                  {t("denConnector.action.checkAgain")}
                 </button>
               </div>
             </section>
@@ -272,8 +274,8 @@ export function OrganizationScreen() {
         {!isSingleOrgMode ? (
           <div className="mx-auto max-w-5xl">
             <div className="mb-6 sm:mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Settings</h1>
-              <p className="mt-1 text-sm text-gray-500">Manage your profile and organization memberships.</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t("denShell.nav.settings")}</h1>
+              <p className="mt-1 text-sm text-gray-500">{t("denAuth.organization.settingsDescription")}</p>
             </div>
 
             <div className="mb-6 flex gap-6 overflow-x-auto border-b border-gray-200 sm:mb-8 sm:gap-8">
@@ -286,7 +288,7 @@ export function OrganizationScreen() {
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Profile
+                {t("denAuth.organization.tabProfile")}
               </button>
               <button
                 type="button"
@@ -297,7 +299,7 @@ export function OrganizationScreen() {
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Organizations
+                {t("denAuth.organization.tabOrganizations")}
               </button>
             </div>
 
@@ -315,13 +317,13 @@ export function OrganizationScreen() {
                   </div>
                   <div className="min-w-0">
                     <h2 className="text-lg font-medium text-gray-900">{userDisplayName}</h2>
-                    <p className="mt-1 text-sm text-gray-500">{user?.email ?? "Signed in"}</p>
+                    <p className="mt-1 text-sm text-gray-500">{user?.email ?? t("denAuth.organization.signedIn")}</p>
                   </div>
                 </div>
 
                 <div className="grid gap-5 md:grid-cols-2">
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-gray-700">Full name</span>
+                    <span className="text-sm font-medium text-gray-700">{t("denAuth.organization.fullName")}</span>
                     <input
                       type="text"
                       value={user?.name ?? ""}
@@ -331,7 +333,7 @@ export function OrganizationScreen() {
                   </label>
 
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-gray-700">Email</span>
+                    <span className="text-sm font-medium text-gray-700">{t("denAuth.organization.emailLabel")}</span>
                     <input
                       type="email"
                       value={user?.email ?? ""}
@@ -341,7 +343,7 @@ export function OrganizationScreen() {
                   </label>
 
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-gray-700">User ID</span>
+                    <span className="text-sm font-medium text-gray-700">{t("denAuth.organization.userIdLabel")}</span>
                     <input
                       type="text"
                       value={user?.id ?? ""}
@@ -351,10 +353,10 @@ export function OrganizationScreen() {
                   </label>
 
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-gray-700">Current organization</span>
+                    <span className="text-sm font-medium text-gray-700">{t("denAuth.organization.currentOrgLabel")}</span>
                     <input
                       type="text"
-                      value={activeOrg?.name ?? "No active organization"}
+                      value={activeOrg?.name ?? t("denAuth.organization.noActiveOrg")}
                       readOnly
                       className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 outline-hidden"
                     />
@@ -365,7 +367,7 @@ export function OrganizationScreen() {
               <>
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <p className="max-w-2xl text-sm text-gray-500">
-                    Organizations are independent environments. In each organization you can collaborate with other members and manage your own resources.
+                    {t("denAuth.organization.orgsDescription")}
                   </p>
                   <div className="flex w-full flex-col gap-3 sm:w-auto sm:min-w-[18rem]">
                     {showOrgSearch ? (
@@ -373,7 +375,7 @@ export function OrganizationScreen() {
                         type="search"
                         value={orgQuery}
                         onChange={(event) => setOrgQuery(event.target.value)}
-                        placeholder="Search organizations"
+                        placeholder={t("denAuth.organization.searchPlaceholder")}
                         className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-900 outline-hidden transition focus:border-gray-400 focus:ring-4 focus:ring-gray-900/5"
                       />
                     ) : null}
@@ -381,7 +383,7 @@ export function OrganizationScreen() {
                       onClick={() => setShowCreate(true)}
                       className="w-full shrink-0 rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800 sm:w-auto"
                     >
-                      + Create New Organization
+                      {t("denAuth.organization.createNewOrg")}
                     </button>
                   </div>
                 </div>
@@ -393,12 +395,12 @@ export function OrganizationScreen() {
                         <div className="min-w-0">
                           <h2 className="truncate text-[15px] font-semibold text-gray-950">{org.name}</h2>
                           <p className="mt-1 text-xs text-gray-500">
-                            {org.role === "owner" ? "Creator plan" : "Free plan"} • {formatRoleLabel(org.role)}
+                            {org.role === "owner" ? t("denShell.workspace.planCreator") : t("denShell.workspace.planFree")} • {formatRoleLabel(org.role)}
                           </p>
                         </div>
                         {org.isActive ? (
                           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                            Current
+                            {t("denAuth.organization.badgeCurrent")}
                           </span>
                         ) : null}
                       </div>
@@ -407,12 +409,12 @@ export function OrganizationScreen() {
                           onClick={() => handleSwitch(org.slug)}
                           className="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-xs transition hover:bg-gray-50"
                         >
-                          {org.isActive ? "Open" : "Switch"}
+                          {org.isActive ? t("denConnector.action.open") : t("denAuth.organization.switchAction")}
                         </button>
                         <button
                           onClick={() => handleSwitch(org.slug)}
                           className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-3 py-2.5 text-gray-500 transition hover:bg-gray-50 hover:text-gray-800"
-                          aria-label="Organization settings"
+                          aria-label={t("denAuth.organization.orgSettingsAria")}
                         >
                           <Settings className="h-4 w-4" />
                         </button>
@@ -426,9 +428,9 @@ export function OrganizationScreen() {
                     <table className="w-full text-left text-sm">
                       <thead className="border-b border-gray-200 bg-gray-50/50">
                         <tr>
-                          <th className="px-6 py-4 font-medium text-gray-500">Organization</th>
-                          <th className="px-6 py-4 font-medium text-gray-500">Seat Type</th>
-                          <th className="px-6 py-4 text-right font-medium text-gray-500">Action</th>
+                          <th className="px-6 py-4 font-medium text-gray-500">{t("denCommon.word.organization")}</th>
+                          <th className="px-6 py-4 font-medium text-gray-500">{t("denAuth.organization.seatType")}</th>
+                          <th className="px-6 py-4 text-right font-medium text-gray-500">{t("denAuth.organization.actionHeader")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -437,7 +439,7 @@ export function OrganizationScreen() {
                             <td className="px-6 py-4">
                               <div className="font-medium text-gray-900">{org.name}</div>
                               <div className="mt-1 text-xs text-gray-500">
-                                {org.role === "owner" ? "Creator plan" : "Free plan"} • 1 member
+                                {org.role === "owner" ? t("denShell.workspace.planCreator") : t("denShell.workspace.planFree")} • {t("denShell.memberCount.one", { count: 1 })}
                               </div>
                             </td>
                             <td className="px-6 py-4">
@@ -446,20 +448,20 @@ export function OrganizationScreen() {
                             <td className="px-6 py-4 text-right">
                               {org.isActive ? (
                                 <span className="inline-flex cursor-default items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">
-                                  Current Organization
+                                  {t("denAuth.organization.currentOrganization")}
                                 </span>
                               ) : (
                                 <button
                                   onClick={() => handleSwitch(org.slug)}
                                   className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-xs transition hover:bg-gray-50"
                                 >
-                                  Switch
+                                  {t("denAuth.organization.switchAction")}
                                 </button>
                               )}
                               <button
                                 onClick={() => handleSwitch(org.slug)}
                                 className="ml-2 inline-flex items-center justify-center rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-                                aria-label="Organization settings"
+                                aria-label={t("denAuth.organization.orgSettingsAria")}
                               >
                                 <Settings className="h-4 w-4" />
                               </button>
@@ -472,25 +474,25 @@ export function OrganizationScreen() {
                 </div>
 
                 {orgFilteredCount === 0 && orgQuery ? (
-                  <p className="mt-4 text-sm text-gray-500">No organizations match your search.</p>
+                  <p className="mt-4 text-sm text-gray-500">{t("denShell.workspace.noMatch")}</p>
                 ) : null}
 
                 {orgHasMore ? (
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-gray-500">
-                      Showing {visibleOrgs.length} of {orgFilteredCount} organizations
+                      {t("denAuth.organization.showingOf", { shown: visibleOrgs.length, total: orgFilteredCount })}
                     </p>
                     <button
                       type="button"
                       onClick={showMoreOrgs}
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-xs transition hover:bg-gray-50 sm:w-auto"
                     >
-                      Show more
+                      {t("denWorkflow.friendlyValue.showMore")}
                     </button>
                   </div>
                 ) : null}
 
-                <p className="mt-8 text-center text-sm text-gray-500">You have no pending organization invites.</p>
+                <p className="mt-8 text-center text-sm text-gray-500">{t("denAuth.organization.noPendingInvites")}</p>
               </>
             )}
           </div>

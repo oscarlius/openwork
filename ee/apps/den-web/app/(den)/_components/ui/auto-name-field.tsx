@@ -2,6 +2,7 @@
 
 import { PencilLine } from "lucide-react";
 import { useState } from "react";
+import { useDenT } from "../../../_lib/i18n/client";
 import { DenInput } from "./input";
 
 export type DenAutoNameFieldProps = {
@@ -21,6 +22,7 @@ export type DenAutoNameFieldProps = {
  * to the automatic name.
  */
 export function DenAutoNameField({ value, auto, placeholder, testId, onChange }: DenAutoNameFieldProps) {
+  const t = useDenT();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -61,9 +63,9 @@ export function DenAutoNameField({ value, auto, placeholder, testId, onChange }:
       data-testid={testId}
       className="flex items-center gap-2.5 rounded-[14px] border border-dashed border-gray-200 bg-gray-50 px-4 py-3"
     >
-      <span className="shrink-0 text-[13px] font-medium text-gray-500">Name</span>
+      <span className="shrink-0 text-[13px] font-medium text-gray-500">{t("denPlugin.form.name")}</span>
       <span className="min-w-0 truncate text-[14px] font-medium text-gray-950">
-        {value || <span className="text-gray-400">{placeholder ?? "Pick a provider first"}</span>}
+        {value || <span className="text-gray-400">{placeholder ?? t("denCommon.autoName.pickProvider")}</span>}
       </span>
       {auto && value ? (
         <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700">
@@ -81,7 +83,7 @@ export function DenAutoNameField({ value, auto, placeholder, testId, onChange }:
         className="flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-gray-500 transition hover:text-gray-900"
       >
         <PencilLine className="h-3.5 w-3.5" aria-hidden="true" />
-        Rename
+        {t("denCommon.autoName.rename")}
       </button>
     </div>
   );

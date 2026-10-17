@@ -34,8 +34,10 @@
 
 ## 3. key 命名与前缀分配
 
-形状：`region.interfaceElement.semantics`，小写驼峰段，点号分隔（实测 172 个 key 中
-165 个为三段，少量两段与四段用于分组下的细分）。前缀按区域分配，新增前先在此登记：
+形状：`region.interfaceElement[.semantics]`，小写驼峰段、点号分隔；复数键再追加一段 CLDR
+形式（`.one`/`.other`/`.zero`/`.few`/`.many`/`.two`）。现状实测：两段（`denOrgSettings.loading`）
+与三段（`denShell.role.admin`）都在用，**新键优先三段**，只在某 region 下语义单一时用两段。
+前缀按区域分配，新增前先在此登记（下表为初始 172 键时的分布，随波次增长）：
 
 | 前缀 | 归属区域 | 实测 key 数 |
 | --- | --- | --- |

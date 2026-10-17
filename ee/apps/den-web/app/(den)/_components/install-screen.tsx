@@ -4,6 +4,8 @@ import { detectPlatform, DownloadPlatformGrid, type DetectedPlatform, type Downl
 import { Check, ChevronDown, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
+import { useDenT } from "../../_lib/i18n/client";
+import type { DenTranslate } from "../../_lib/i18n/messages";
 import { requestJson } from "../_lib/den-flow";
 import { getInstallConfigErrorMessage } from "../_lib/install-errors";
 import { LINK_STEP, parseGuideStep, type GuideStep } from "../_lib/install-guide";
@@ -55,43 +57,43 @@ function installerOsFor(platform: InstallPlatform | null, detected: DetectedPlat
 }
 
 /** Copy for opening the downloaded installer, per operating system. */
-function openGuidance(os: InstallerOs | null, fileName: string | null): OpenGuidance {
+function openGuidance(t: DenTranslate, os: InstallerOs | null, fileName: string | null): OpenGuidance {
   const openFile = fileName
-    ? `Double-click ${fileName} in Downloads.`
-    : "Open the OpenWork Enterprise download in your Downloads folder.";
+    ? t("denSetup.install.doubleClickFile", { fileName })
+    : t("denSetup.install.openDownload");
 
   if (os === "macos") {
     return {
-      actions: [openFile, "Drag OpenWork Enterprise to Applications, then open it."],
+      actions: [openFile, t("denSetup.install.macDragAction")],
       trust: {
-        title: "macOS confirms apps downloaded from the internet",
-        body: "Choose Open when macOS asks you to confirm the signed OpenWork Enterprise app.",
+        title: t("denSetup.install.macTrustTitle"),
+        body: t("denSetup.install.macTrustBody"),
       },
     };
   }
   if (os === "windows") {
     return {
-      actions: [openFile, "Complete the OpenWork Enterprise setup, then open the app."],
+      actions: [openFile, t("denSetup.install.windowsSetupAction")],
       trust: {
-        title: "Windows may warn before it opens the installer",
-        body: "If you see “Windows protected your PC”, choose More info, then Run anyway.",
+        title: t("denSetup.install.windowsTrustTitle"),
+        body: t("denSetup.install.windowsTrustBody"),
       },
     };
   }
   if (os === "linux") {
     return {
       actions: [
-        "Make the downloaded AppImage executable.",
-        "Open the OpenWork Enterprise AppImage.",
+        t("denSetup.install.linuxMakeExecutableAction"),
+        t("denSetup.install.linuxOpenAppImageAction"),
       ],
       trust: null,
     };
   }
   return {
-    actions: [openFile, `Choose Install in the installer window.`],
+    actions: [openFile, t("denSetup.install.chooseInstallAction")],
     trust: {
-      title: "Your computer may ask before it opens the installer",
-      body: "If you see a warning about an app from the internet, choose to open it anyway. This is normal for a new app.",
+      title: t("denSetup.install.genericTrustTitle"),
+      body: t("denSetup.install.genericTrustBody"),
     },
   };
 }
@@ -153,7 +155,7 @@ function parseInstallConfig(value: unknown): InstallConfig | null {
   };
 }
 
-async function fetchInstallConfig(token: string | null) {
+async function fetchInstallConfig(token: string | null, t: DenTranslate) {
   const path = token ? `/v1/install-config?token=${encodeURIComponent(token)}` : "/v1/me/install-config";
   const { response, payload } = await requestJson(
     path,
@@ -162,13 +164,13 @@ async function fetchInstallConfig(token: string | null) {
   );
   if (!response.ok) {
     if (!token && response.status === 401) {
-      throw new Error("Sign in to your Den portal to install OpenWork.");
+      throw new Error(t("denSetup.install.signInRequired"));
     }
     throw new Error(getInstallConfigErrorMessage(payload, response.status));
   }
   const parsed = parseInstallConfig(payload);
   if (!parsed) {
-    throw new Error("This install link returned incomplete setup details.");
+    throw new Error(t("denSetup.install.incompleteConfig"));
   }
   return parsed;
 }
@@ -223,6 +225,7 @@ function InstallStep({
 }
 
 export function InstallScreen() {
+  const t = useDenT();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
   const [config, setConfig] = useState<InstallConfig | null>(null);
@@ -262,14 +265,14 @@ export function InstallScreen() {
       setBusy(true);
       setError(null);
       try {
-        const parsed = await fetchInstallConfig(token || null);
+        const parsed = await fetchInstallConfig(token || null, t);
         if (cancelled) {
           return;
         }
         setConfig(parsed);
       } catch (loadError) {
         if (!cancelled) {
-          setError(loadError instanceof Error ? loadError.message : "Could not load this install link.");
+          setError(loadError instanceof Error ? loadError.message : t("denSetup.install.loadFailed"));
           setConfig(null);
         }
       } finally {
@@ -283,7 +286,7 @@ export function InstallScreen() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [t, token]);
 
   useEffect(() => () => {
     if (downloadStartedTimer.current !== null) {
@@ -338,7 +341,7 @@ export function InstallScreen() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setConnectError("Could not copy automatically. Select the install link and copy it manually.");
+      setConnectError(t("denSetup.install.copyLinkFailed"));
     }
   }
 
@@ -357,7 +360,7 @@ export function InstallScreen() {
       setAddressCopied(true);
       window.setTimeout(() => setAddressCopied(false), 1800);
     } catch {
-      setConnectError("Could not copy automatically. Select the address and copy it manually.");
+      setConnectError(t("denSetup.install.copyAddressFailed"));
     }
   }
 
@@ -392,9 +395,9 @@ export function InstallScreen() {
     return (
       <OnboardingShell state="install-loading" width="wide" background="surface">
         <section className="grid gap-4 rounded-[1.75rem] border border-slate-200/80 bg-white p-6 md:p-8" data-testid="install-page">
-          <p className="den-eyebrow">OpenWork Desktop</p>
-          <h1 className="den-title-lg">Loading your install link.</h1>
-          <p className="den-copy">Checking your team's OpenWork setup...</p>
+          <p className="den-eyebrow">{t("denSetup.install.eyebrow")}</p>
+          <h1 className="den-title-lg">{t("denSetup.install.loadingTitle")}</h1>
+          <p className="den-copy">{t("denSetup.install.loadingBody")}</p>
         </section>
       </OnboardingShell>
     );
@@ -405,9 +408,9 @@ export function InstallScreen() {
       <OnboardingShell state="install-error" width="wide" background="surface">
         <section className="grid gap-6 rounded-[1.75rem] border border-slate-200/80 bg-white p-6 md:p-8" data-testid="install-page">
           <div className="grid gap-2">
-            <p className="den-eyebrow">OpenWork Desktop</p>
-            <h1 className="den-title-lg">This install link can't be opened.</h1>
-            <p className="den-copy">{error ?? "Ask your workspace admin for a fresh install link."}</p>
+            <p className="den-eyebrow">{t("denSetup.install.eyebrow")}</p>
+            <h1 className="den-title-lg">{t("denSetup.install.errorTitle")}</h1>
+            <p className="den-copy">{error ?? t("denSetup.install.errorFallback")}</p>
           </div>
         </section>
       </OnboardingShell>
@@ -421,17 +424,17 @@ export function InstallScreen() {
           <div className="grid gap-6 rounded-[1.75rem] border border-[#e7eaef] bg-[#fcfcfd] p-5 text-center sm:p-6 md:p-8" data-testid="install-card">
             <div className="grid justify-items-center gap-3">
               <h1 className="m-0 text-[2rem] font-semibold leading-[1.04] tracking-[-0.05em] text-slate-950 sm:text-[2.4rem]">
-                Download OpenWork
+                {t("denSetup.install.cloudTitle")}
               </h1>
-              <p className="den-copy max-w-2xl">Choose the version for your computer, install it, and open OpenWork.</p>
+              <p className="den-copy max-w-2xl">{t("denSetup.install.cloudDescription")}</p>
             </div>
 
             {isMobile ? (
               <div className="den-frame-inset grid gap-3 rounded-[1.5rem] p-5 text-left" data-testid="install-mobile-note">
-                <p className="m-0 text-base font-medium text-[var(--dls-text-primary)]">OpenWork Cloud runs on your computer.</p>
-                <p className="den-copy">Open this link on your Mac, Windows, or Linux machine.</p>
+                <p className="m-0 text-base font-medium text-[var(--dls-text-primary)]">{t("denSetup.install.cloudMobileTitle")}</p>
+                <p className="den-copy">{t("denSetup.install.mobileOpenLink")}</p>
                 <button type="button" className="den-button-secondary w-full sm:w-auto" onClick={() => void copyCurrentLink()}>
-                  {copied ? "Copied" : "Copy install link"}
+                  {copied ? t("denSetup.install.copied") : t("denSetup.install.copyInstallLink")}
                 </button>
               </div>
             ) : (
@@ -439,7 +442,7 @@ export function InstallScreen() {
                 <DownloadPlatformGrid groups={downloadGroups} />
                 {/* Reload so the auth provider reads the desktop handoff parameters on mount. */}
                 <a className="den-button-secondary w-fit" href={token ? new URL(DESKTOP_SIGN_IN_PATH, config.webUrl).toString() : DESKTOP_SIGN_IN_PATH}>
-                  I already installed OpenWork
+                  {t("denSetup.install.alreadyInstalled")}
                 </a>
               </div>
             )}
@@ -453,7 +456,7 @@ export function InstallScreen() {
     downloadPlatform ?? detectedInstallPlatform(detected),
     config.desktopVersion,
   );
-  const guidance = openGuidance(installerOsFor(downloadPlatform, detected), installerFile);
+  const guidance = openGuidance(t, installerOsFor(downloadPlatform, detected), installerFile);
 
   return (
     <OnboardingShell state="install" width="enterprise" background="surface">
@@ -467,16 +470,16 @@ export function InstallScreen() {
               />
             </span>
             <h1 className="m-0 text-[1.5rem] font-semibold leading-tight tracking-[-0.03em] text-slate-950 sm:text-[1.7rem]">
-              Set up OpenWork Enterprise
+              {t("denSetup.install.enterpriseTitle")}
             </h1>
           </div>
 
         {isMobile ? (
           <div className="grid gap-3 border-t border-slate-200 pt-5" data-testid="install-mobile-note">
-            <p className="m-0 text-base font-medium text-[var(--dls-text-primary)]">{config.appName} runs on your computer.</p>
-            <p className="den-copy">Open this link on your Mac, Windows, or Linux machine. You can also copy it and send it to yourself.</p>
+            <p className="m-0 text-base font-medium text-[var(--dls-text-primary)]">{t("denSetup.install.appNameRunsOnComputer", { appName: config.appName })}</p>
+            <p className="den-copy">{t("denSetup.install.mobileOpenLinkWithCopy")}</p>
             <button type="button" className="den-button-secondary w-full sm:w-auto" onClick={() => void copyCurrentLink()}>
-              {copied ? "Copied" : "Copy install link"}
+              {copied ? t("denSetup.install.copied") : t("denSetup.install.copyInstallLink")}
             </button>
           </div>
         ) : (
@@ -484,7 +487,7 @@ export function InstallScreen() {
             <InstallStep
               index={1}
               state={guideStep > 1 ? "complete" : "active"}
-              title="Download"
+              title={t("denSetup.install.stepDownload")}
               expanded={expandedStep === 1}
               onExpand={() => setExpandedStep(1)}
               testId="install-guide-step-download"
@@ -501,22 +504,22 @@ export function InstallScreen() {
                     onClick={() => advanceGuide(LINK_STEP)}
                     data-testid="install-skip-download"
                   >
-                    Already installed? Skip to step 3
+                    {t("denSetup.install.skipToStepThree")}
                   </button>
                   {downloadState !== "idle" ? (
                     <div className="grid gap-2 rounded-xl border border-slate-100 bg-slate-50 p-4" aria-live="polite" data-testid="install-download-status">
                       {downloadState === "preparing" ? (
                         <>
                           <span className="size-5 animate-spin rounded-full border-2 border-[var(--dls-border-strong)] border-t-[var(--dls-accent)]" aria-hidden="true" />
-                          <p className="m-0 text-sm font-medium text-slate-950">Preparing your {downloadLabel} download...</p>
-                          <p className="m-0 text-[13px] leading-5 text-slate-500">The first download may take up to a minute. Your browser will begin downloading when it is ready.</p>
+                          <p className="m-0 text-sm font-medium text-slate-950">{t("denSetup.install.preparingDownload", { downloadLabel })}</p>
+                          <p className="m-0 text-[13px] leading-5 text-slate-500">{t("denSetup.install.preparingDownloadHint")}</p>
                         </>
                       ) : (
                         <>
-                          <p className="m-0 text-sm font-medium text-slate-950">Download started</p>
-                          <p className="m-0 text-[13px] leading-5 text-slate-500">Your browser is preparing the file. If it does not appear, try the download again.</p>
+                          <p className="m-0 text-sm font-medium text-slate-950">{t("denSetup.install.downloadStarted")}</p>
+                          <p className="m-0 text-[13px] leading-5 text-slate-500">{t("denSetup.install.downloadStartedHint")}</p>
                           <a className="den-button-secondary w-fit" href={downloadHref} onClick={() => beginDownload(downloadLabel, downloadHref)}>
-                            Try again
+                            {t("denCommon.action.tryAgain")}
                           </a>
                         </>
                       )}
@@ -527,7 +530,7 @@ export function InstallScreen() {
             <InstallStep
               index={2}
               state={guideStep === 2 ? "active" : guideStep > 2 ? "complete" : "pending"}
-              title="Install and open it"
+              title={t("denSetup.install.stepInstallOpen")}
               expanded={expandedStep === 2 && guideStep >= 2}
               onExpand={() => setExpandedStep(2)}
               testId="install-guide-step-open"
@@ -554,7 +557,7 @@ export function InstallScreen() {
                         data-testid="install-app-ready"
                         onClick={() => advanceGuide(LINK_STEP)}
                       >
-                        It&apos;s open
+                        {t("denSetup.install.itIsOpen")}
                       </button>
                   </div>
             </InstallStep>
@@ -562,13 +565,13 @@ export function InstallScreen() {
             <InstallStep
               index={3}
               state={guideStep === 3 ? "active" : "pending"}
-              title="Connect"
+              title={t("denSetup.install.stepConnect")}
               expanded={expandedStep === 3 && guideStep >= 3}
               onExpand={() => setExpandedStep(3)}
               testId="install-guide-step-link"
             >
                   <div className="grid content-start gap-3" aria-live="polite">
-                      <p className="m-0 text-sm leading-6 text-slate-600">In the app, enter your workspace address:</p>
+                      <p className="m-0 text-sm leading-6 text-slate-600">{t("denSetup.install.connectIntro")}</p>
 
                       <div className="flex h-10 w-fit max-w-full items-stretch overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.05)]" data-testid="install-workspace-address">
                         <input
@@ -583,12 +586,12 @@ export function InstallScreen() {
                           className="shrink-0 border-l border-slate-200 bg-slate-50 px-3.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
                           onClick={() => void copyWorkspaceAddress()}
                         >
-                          {addressCopied ? "Copied" : "Copy"}
+                          {addressCopied ? t("denSetup.install.copied") : t("denSetup.install.copy")}
                         </button>
                       </div>
 
                       <p className="m-0 max-w-xl text-[13px] leading-5 text-slate-500">
-                        Then choose Continue — sign-in finishes in this browser and sends you back to the app.
+                        {t("denSetup.install.connectContinueNote")}
                       </p>
 
                       {connectError ? <p className="m-0 text-sm text-red-600" role="alert">{connectError}</p> : null}

@@ -15,6 +15,7 @@ import { DenCard } from "../../_components/ui/card";
 import { DenInput } from "../../_components/ui/input";
 import { DenTextarea } from "../../_components/ui/textarea";
 import { DenNotice } from "../../_components/ui/notice";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { EnterprisePlanNotice } from "./enterprise-plan-notice";
 import { OrgWebOriginsSection } from "./org-web-origins-section";
@@ -109,6 +110,7 @@ function DeleteOrganizationDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const t = useDenT();
   if (!open) {
     return null;
   }
@@ -144,17 +146,17 @@ function DeleteOrganizationDialog({
           </div>
           <div className="min-w-0 flex-1">
             <h2 id="delete-organization-title" className="text-[18px] font-semibold tracking-[-0.02em] text-gray-950">
-              Delete {organizationName}?
+              {t("denOrgSettings.deleteDialog.title", { name: organizationName })}
             </h2>
             <p id="delete-organization-description" className="mt-1 text-[13px] leading-6 text-gray-600">
-              Type the organization name to permanently delete it.
+              {t("denOrgSettings.deleteDialog.hint")}
             </p>
           </div>
         </div>
 
         <label className="mt-5 grid gap-2">
           <span className="text-[12px] font-medium text-gray-700">
-            Organization name
+            {t("denOrgSettings.deleteDialog.nameLabel")}
           </span>
           <DenInput
             value={confirmationName}
@@ -173,7 +175,7 @@ function DeleteOrganizationDialog({
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <DenButton variant="secondary" onClick={onClose} disabled={busy}>
-            Cancel
+            {t("denCommon.action.cancel")}
           </DenButton>
           <DenButton
             type="submit"
@@ -182,7 +184,7 @@ function DeleteOrganizationDialog({
             loading={busy}
             disabled={!confirmed}
           >
-            {busy ? "Deleting..." : "Delete organization"}
+            {busy ? t("denOrgSettings.deleteDialog.deleting") : t("denOrgSettings.danger.deleteOrganization")}
           </DenButton>
         </div>
       </form>
@@ -191,6 +193,7 @@ function DeleteOrganizationDialog({
 }
 
 export function OrgSettingsScreen() {
+  const t = useDenT();
   const {
     activeOrg,
     orgContext,
@@ -318,14 +321,14 @@ export function OrgSettingsScreen() {
           throw new Error(
             getErrorMessage(
               payload,
-              `Failed to load desktop version metadata (${response.status}).`,
+              t("denOrgSettings.desktopMetadataFailed", { status: response.status }),
             ),
           );
         }
 
         const metadata = getDesktopVersionMetadata(payload);
         if (!metadata) {
-          throw new Error("Desktop version metadata was incomplete.");
+          throw new Error(t("denOrgSettings.desktopMetadataIncomplete"));
         }
 
         if (cancelled) {
@@ -344,7 +347,7 @@ export function OrgSettingsScreen() {
           setDesktopVersionOptionsError(
             error instanceof Error
               ? error.message
-              : "Could not load desktop versions.",
+              : t("denOrgSettings.desktopLoadFailed"),
           );
         }
       } finally {
@@ -393,7 +396,7 @@ export function OrgSettingsScreen() {
     return (
       <div className="mx-auto max-w-[860px] p-8">
         <div className="rounded-[28px] border border-gray-200 bg-white px-6 py-10 text-[15px] text-gray-500">
-          Loading workspace settings...
+          {t("denOrgSettings.loading")}
         </div>
       </div>
     );
@@ -403,7 +406,7 @@ export function OrgSettingsScreen() {
     return (
       <div className="mx-auto max-w-[860px] p-8">
         <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-10 text-[15px] text-red-700">
-          {orgError ?? "Workspace settings are not available right now."}
+          {orgError ?? t("denOrgSettings.notAvailable")}
         </div>
       </div>
     );
@@ -438,7 +441,7 @@ export function OrgSettingsScreen() {
     clearOrgSettingsCompletion();
 
     if (!canManageSettings) {
-      setPageError("You don't have permission to change settings.");
+      setPageError(t("denOrgSettings.errorNoPermission"));
       return;
     }
 
@@ -464,7 +467,7 @@ export function OrgSettingsScreen() {
       setPageError(
         error instanceof Error
           ? error.message
-          : "Could not update workspace settings.",
+          : t("denOrgSettings.updateFailed"),
       );
     }
   }
@@ -500,7 +503,7 @@ export function OrgSettingsScreen() {
       setDeleteError(
         error instanceof Error
           ? error.message
-          : "Could not delete organization.",
+          : t("denOrgSettings.deleteFailed"),
       );
     }
   }
@@ -508,15 +511,15 @@ export function OrgSettingsScreen() {
   return (
     <DashboardPageTemplate
       icon={SlidersHorizontal}
-      title="Org settings"
+      title={t("denOrgSettings.pageTitle")}
       description={(
         <span className="flex w-full items-baseline justify-between gap-4">
-          <span>Control your organization&apos;s settings.</span>
+          <span>{t("denOrgSettings.pageDescription")}</span>
           {denVersion ? (
             <span
               className="font-normal tabular-nums text-gray-300"
               data-den-runtime-version={denVersion}
-              title={`Den API version ${denVersion}`}
+              title={t("denOrgSettings.denApiVersionTitle", { version: denVersion })}
             >
               Den {denVersion}
             </span>
@@ -525,7 +528,7 @@ export function OrgSettingsScreen() {
       )}
     >
       {orgContext && !orgContext.entitlements.orgControls ? (
-        <EnterprisePlanNotice feature="Enforced SSO and desktop version control" />
+        <EnterprisePlanNotice feature={t("denOrgSettings.enterpriseFeature")} />
       ) : null}
       {pageError ? (
         <DenNotice message={pageError} className="mb-6" />
@@ -540,17 +543,17 @@ export function OrgSettingsScreen() {
         <DenCard size="spacious" className="grid gap-6">
           <div className="grid gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Core
+              {t("denOrgSettings.coreEyebrow")}
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">
-              Organization Identity
+              {t("denOrgSettings.identityHeading")}
             </h2>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
             <label className="grid gap-3">
               <span className="text-[14px] font-medium text-gray-700">
-                Name
+                {t("denOrgSettings.nameLabel")}
               </span>
               <DenInput
                 type="text"
@@ -569,7 +572,7 @@ export function OrgSettingsScreen() {
                 <DenInput
                   value={organizationId}
                   readOnly
-                  aria-label="Organization ID"
+                  aria-label={t("denOrgSettings.orgIdAria")}
                   className="font-mono text-[13px]"
                 />
                 <DenButton
@@ -578,7 +581,7 @@ export function OrgSettingsScreen() {
                   icon={copiedOrgId ? Check : Copy}
                   onClick={() => void handleCopyOrgId()}
                 >
-                  {copiedOrgId ? "Copied" : "Copy"}
+                  {copiedOrgId ? t("denOrgSettings.copied") : t("denOrgSettings.copy")}
                 </DenButton>
               </div>
             </div>
@@ -589,22 +592,21 @@ export function OrgSettingsScreen() {
           <div className="flex items-start justify-between gap-4">
             <div className="grid gap-2">
               <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                Access rules
+                {t("denOrgSettings.accessRulesEyebrow")}
               </p>
               <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">
-                Allowed email domains
+                {t("denOrgSettings.allowedDomainsHeading")}
               </h2>
               <p className="text-[14px] text-gray-500">
-                Only allow people with specific email domains to join this
-                Organization.
+                {t("denOrgSettings.allowedDomainsDescription")}
               </p>
             </div>
             <div className="flex items-center gap-3 pt-1">
               <span className="text-[13px] font-medium text-gray-500">
-                {domainRestrictionsEnabled ? "On" : "Off"}
+                {domainRestrictionsEnabled ? t("denOrgSettings.on") : t("denOrgSettings.off")}
               </span>
               <SettingsToggle
-                label="Restrict allowed email domains"
+                label={t("denOrgSettings.restrictDomainsLabel")}
                 checked={domainRestrictionsEnabled}
                 disabled={
                   !canManageSettings || (domainRestrictionsEnabled && hasDraftDomains)
@@ -617,10 +619,10 @@ export function OrgSettingsScreen() {
           {domainRestrictionsEnabled && domainEditModeEnabled ? (
             <label className="grid gap-3">
               <span className="text-[14px] font-medium text-gray-700">
-                Domain allowlist
+                {t("denOrgSettings.domainAllowlistLabel")}
               </span>
               <span className="text-[10px] text-gray-500">
-                Enter domains one per line or with comma as separator
+                {t("denOrgSettings.domainAllowlistHint")}
               </span>
               <DenTextarea
                 value={allowedDomainsDraft}
@@ -648,7 +650,7 @@ export function OrgSettingsScreen() {
                   </div>
                 ) : (
                   <p className="text-[14px] text-gray-600">
-                    No email domains are configured yet.
+                    {t("denOrgSettings.noDomains")}
                   </p>
                 )}
                 {canManageSettings ? (
@@ -662,9 +664,9 @@ export function OrgSettingsScreen() {
                       clearOrgSettingsCompletion();
                       setDomainEditModeEnabled(true);
                     }}
-                  >
-                    Edit
-                  </DenButton>
+                    >
+                      {t("denOrgSettings.edit")}
+                    </DenButton>
                 ) : null}
               </div>
             </div>
@@ -674,25 +676,25 @@ export function OrgSettingsScreen() {
         <DenCard size="spacious" className="grid gap-6">
           <div className="grid gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Authentication
+              {t("denOrgSettings.authEyebrow")}
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">
-              Single sign-on requirement
+              {t("denOrgSettings.ssoHeading")}
             </h2>
             <p className="text-[14px] text-gray-500">
-              Require members to use the workspace SSO entrypoint when their email domain matches this organization.
+              {t("denOrgSettings.ssoDescription")}
             </p>
           </div>
 
           <div className="flex items-start justify-between gap-4 rounded-[24px] border border-gray-200 bg-white px-5 py-4">
             <div className="grid gap-1 pr-4">
-              <p className="text-[15px] font-medium text-gray-900">Require SSO for matching domains</p>
+              <p className="text-[15px] font-medium text-gray-900">{t("denOrgSettings.ssoToggleTitle")}</p>
               <p className="text-[13px] text-gray-500">
-                Email/password sign-in will redirect users to the org SSO flow when their email domain matches the configured SSO connection.
+                {t("denOrgSettings.ssoToggleDescription")}
               </p>
             </div>
             <SettingsToggle
-              label="Require SSO for this organization"
+              label={t("denOrgSettings.ssoAriaLabel")}
               checked={requireSsoEnabled}
               disabled={!canManageSettings}
               onChange={setRequireSsoEnabled}
@@ -703,27 +705,24 @@ export function OrgSettingsScreen() {
         <DenCard size="spacious" className="grid gap-6">
           <div className="grid gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-              Desktop app
+              {t("denOrgSettings.desktopEyebrow")}
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-gray-900">
-              Allowed Desktop Versions
+              {t("denOrgSettings.desktopHeading")}
             </h2>
             <p className="text-[14px] text-gray-500">
-              Choose which supported desktop versions can sign in to this
-              workspace.
+              {t("denOrgSettings.desktopDescription")}
             </p>
             {desktopVersionRange ? (
               <p className="text-[10px] text-gray-400">
-                This server currently supports desktop v
-                {desktopVersionRange.minVersion} to v
-                {desktopVersionRange.maxVersion}.
+                {t("denOrgSettings.desktopSupported", { min: desktopVersionRange.minVersion, max: desktopVersionRange.maxVersion })}
               </p>
             ) : null}
           </div>
 
           {desktopVersionOptionsBusy ? (
             <div className="rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-4 text-[14px] text-gray-500">
-              Loading desktop versions...
+              {t("denOrgSettings.desktopLoading")}
             </div>
           ) : null}
 
@@ -775,7 +774,7 @@ export function OrgSettingsScreen() {
                         </p>
                         {requiresServerUpgrade ? (
                           <p className="text-[12px] text-gray-400">
-                            Upgrade server to allow this version
+                            {t("denOrgSettings.upgradeServer")}
                           </p>
                         ) : null}
                       </div>
@@ -783,7 +782,7 @@ export function OrgSettingsScreen() {
                         type="checkbox"
                         checked={checked}
                         disabled={!canManageDesktopVersions || requiresServerUpgrade}
-                        aria-label={`Allow desktop version v${version}`}
+                        aria-label={t("denOrgSettings.allowVersionAria", { version })}
                         onChange={(event) =>
                           setAllowedDesktopVersionsDraft((current) =>
                             toggleAllowedDesktopVersion(
@@ -804,14 +803,14 @@ export function OrgSettingsScreen() {
 
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
           <p className="text-[13px] text-gray-500">
-            {!canManageSettings ? `Read only. ${permissionLockReason("organization.update")}` : null}
+            {!canManageSettings ? t("denOrgSettings.readOnly", { reason: permissionLockReason("organization.update") }) : null}
           </p>
           <DenButton
             type="submit"
             loading={mutationBusy === "update-organization-settings"}
             disabled={!canManageSettings}
           >
-            Save settings
+            {t("denOrgSettings.saveSettings")}
           </DenButton>
         </div>
       </form>
@@ -828,13 +827,13 @@ export function OrgSettingsScreen() {
         <DenCard size="spacious" className="mt-6 grid gap-5 !border-red-200 bg-red-50/30">
           <div className="grid gap-2">
             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-red-400">
-              Owner controls
+              {t("denOrgSettings.ownerControlsEyebrow")}
             </p>
             <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-red-950">
-              Danger zone
+              {t("denOrgSettings.dangerZone")}
             </h2>
             <p className="max-w-2xl text-[14px] leading-6 text-red-700">
-              Permanently delete this organization, including members, teams, workers, plugins, and connections. This cannot be undone.
+              {t("denOrgSettings.dangerDescription")}
             </p>
           </div>
           <div>
@@ -844,7 +843,7 @@ export function OrgSettingsScreen() {
               icon={Trash2}
               onClick={openDeleteDialog}
             >
-              Delete organization
+              {t("denOrgSettings.danger.deleteOrganization")}
             </DenButton>
           </div>
         </DenCard>

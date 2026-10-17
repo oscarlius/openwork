@@ -4,6 +4,7 @@ import { CheckCircle2, Copy, ExternalLink, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getErrorMessage, requestJson } from "../_lib/den-flow";
+import { useDenT } from "../../_lib/i18n/client";
 import { OnboardingShell } from "./onboarding-shell";
 import { OrganizationBrandIdentity, type OrganizationBrand } from "./organization-brand-identity";
 
@@ -77,6 +78,7 @@ function connectUrlFor(code: string, apiBaseUrl: string) {
 }
 
 export function ActivationScreen() {
+  const t = useDenT();
   const searchParams = useSearchParams();
   const code = searchParams.get("code")?.trim() ?? "";
   const [state, setState] = useState<ActivationState>({ kind: "loading" });
@@ -85,7 +87,7 @@ export function ActivationScreen() {
 
   useEffect(() => {
     if (!CONNECT_CODE_PATTERN.test(code)) {
-      setState({ kind: "error", message: "This activation link is incomplete. Return to the install page and try again." });
+      setState({ kind: "error", message: t("denAuth.activation.incompleteLink") });
       return;
     }
 
@@ -107,14 +109,14 @@ export function ActivationScreen() {
         if (!response.ok) {
           setState({
             kind: "error",
-            message: getErrorMessage(payload, "This activation link could not be opened."),
+            message: getErrorMessage(payload, t("denAuth.activation.couldNotOpen")),
           });
           return;
         }
 
         const details = parseActivationDetails(payload);
         if (!details) {
-          setState({ kind: "error", message: "This activation link returned incomplete setup details." });
+          setState({ kind: "error", message: t("denAuth.activation.incompleteDetails") });
           return;
         }
         setState({ kind: "ready", details });
@@ -146,8 +148,8 @@ export function ActivationScreen() {
       <OnboardingShell state="activation-loading" width="wide">
         <section className="grid justify-items-center gap-4 rounded-[1.75rem] border border-slate-200/80 bg-white p-8 text-center" data-testid="activation-page">
           <LoaderCircle className="size-6 animate-spin text-slate-500" aria-hidden="true" />
-          <h1 className="den-title-lg">Preparing this computer.</h1>
-          <p className="den-copy">Checking the secure activation link…</p>
+          <h1 className="den-title-lg">{t("denAuth.activation.preparingTitle")}</h1>
+          <p className="den-copy">{t("denAuth.activation.preparingBody")}</p>
         </section>
       </OnboardingShell>
     );
@@ -155,16 +157,16 @@ export function ActivationScreen() {
 
   if (state.kind === "expired" || state.kind === "error") {
     const message = state.kind === "expired"
-      ? "This one-time activation link has expired. Return to the install page and open OpenWork again."
+      ? t("denAuth.activation.expiredBody")
       : state.message;
     return (
       <OnboardingShell state="activation-error" width="wide">
         <section className="grid gap-5 rounded-[1.75rem] border border-slate-200/80 bg-white p-6 sm:p-8" data-testid="activation-page">
-          <p className="den-eyebrow">OpenWork Desktop</p>
-          <h1 className="den-title-lg">This computer still needs approval.</h1>
+          <p className="den-eyebrow">{t("denAuth.activation.eyebrow", { app: "OpenWork" })}</p>
+          <h1 className="den-title-lg">{t("denAuth.activation.needsApprovalTitle")}</h1>
           <p className="den-copy" role="alert">{message}</p>
           <button type="button" className="den-button-secondary w-fit" onClick={() => window.history.back()}>
-            Return to the install page
+            {t("denAuth.activation.returnToInstall")}
           </button>
         </section>
       </OnboardingShell>
@@ -182,15 +184,15 @@ export function ActivationScreen() {
         data-testid="activation-page"
       >
         <div className="grid justify-items-start gap-3">
-          <p className="den-eyebrow">{details.brand.appName} Desktop</p>
+          <p className="den-eyebrow">{t("denAuth.activation.eyebrow", { app: details.brand.appName })}</p>
           <h1 className="m-0 text-[2rem] font-semibold leading-[1.04] tracking-[-0.05em] text-slate-950 sm:text-[2.5rem]">
-            {connected ? "Connected to " : "Connect this computer to "}
+            {connected ? t("denAuth.activation.connectedLead") : t("denAuth.activation.connectLead")}
             <OrganizationBrandIdentity organizationName={details.organizationName} brand={details.brand} />
           </h1>
           <p className="den-copy">
             {connected
-              ? `${details.organizationName}'s setup and branding are ready in ${details.brand.appName}.`
-              : `OpenWork will show ${details.organizationName} and its server before anything changes.`}
+              ? t("denAuth.activation.connectedBody", { org: details.organizationName, app: details.brand.appName })
+              : t("denAuth.activation.pendingBody", { org: details.organizationName })}
           </p>
         </div>
 
@@ -198,19 +200,19 @@ export function ActivationScreen() {
           <div className="grid gap-4" aria-live="polite">
             <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" data-testid="activation-connected">
               <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
-              Connected to {details.organizationName}
+              {t("denAuth.activation.connectedBadge", { org: details.organizationName })}
             </div>
             <a className="den-button-primary w-full justify-center sm:w-fit" href={RETURN_TO_OPENWORK_URL} data-testid="activation-return-openwork">
-              Return to OpenWork
+              {t("denAuth.activation.returnToOpenwork")}
               <ExternalLink className="size-4" aria-hidden="true" />
             </a>
             <div className="grid gap-2 rounded-2xl bg-slate-50 p-4">
-              <p className="m-0 text-sm text-slate-600">Nothing opened? Copy this OpenWork link and open it from your browser.</p>
+              <p className="m-0 text-sm text-slate-600">{t("denAuth.activation.nothingOpenedHint")}</p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input className="den-input min-w-0 flex-1 text-xs" value={RETURN_TO_OPENWORK_URL} readOnly onFocus={(event) => event.currentTarget.select()} />
                 <button type="button" className="den-button-secondary sm:w-auto" onClick={() => void copyLink("return", RETURN_TO_OPENWORK_URL)}>
                   <Copy className="size-4" aria-hidden="true" />
-                  {copied === "return" ? "Copied" : "Copy link"}
+                  {copied === "return" ? t("denAuth.activation.copied") : t("denAuth.activation.copyLink")}
                 </button>
               </div>
             </div>
@@ -226,21 +228,21 @@ export function ActivationScreen() {
                 window.location.assign(connectUrl);
               }}
             >
-              Open OpenWork
+              {t("denAuth.activation.openOpenwork")}
               <ExternalLink className="size-4" aria-hidden="true" />
             </button>
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-              {openAttempted ? "Waiting for OpenWork to accept this setup…" : "Waiting for your approval…"}
+              {openAttempted ? t("denAuth.activation.waitingAccept") : t("denAuth.activation.waitingApproval")}
             </div>
             {openAttempted ? (
               <div className="grid gap-2 rounded-2xl bg-slate-50 p-4" data-testid="activation-open-fallback">
-                <p className="m-0 text-sm text-slate-600">OpenWork did not appear? Copy this one-time link and open it anywhere that handles OpenWork links.</p>
+                <p className="m-0 text-sm text-slate-600">{t("denAuth.activation.didNotAppearHint")}</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input className="den-input min-w-0 flex-1 text-xs" value={connectUrl} readOnly onFocus={(event) => event.currentTarget.select()} />
                   <button type="button" className="den-button-secondary sm:w-auto" onClick={() => void copyLink("connect", connectUrl)}>
                     <Copy className="size-4" aria-hidden="true" />
-                    {copied === "connect" ? "Copied" : "Copy OpenWork link"}
+                    {copied === "connect" ? t("denAuth.activation.copied") : t("denAuth.activation.copyOpenworkLink")}
                   </button>
                 </div>
               </div>

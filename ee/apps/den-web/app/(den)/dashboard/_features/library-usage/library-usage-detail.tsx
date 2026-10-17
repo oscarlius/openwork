@@ -7,6 +7,7 @@ import { DenButton } from "../../../_components/ui/button";
 import { DenNotice } from "../../../_components/ui/notice";
 import { DenSkeleton } from "../../../_components/ui/skeleton";
 import { getMcpConnectionRoute, getPluginRoute, getPluginSkillRoute } from "../../../_lib/den-org";
+import { useDenT } from "../../../../_lib/i18n/client";
 import { ItemRow, ItemRowsSkeleton, LinkButton } from "../../_components/item-list";
 import { LetterTile } from "../../_components/item-logo";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
@@ -64,7 +65,8 @@ function StatsLoading({ cards }: { cards: number }) {
 
 /** The chart's frame with a placeholder where the bars will be, never loading prose. */
 function ChartLoading() {
-  return <div className={`${analyticsSurfaceClass} p-5`} role="status" aria-label="Loading uses per day" data-testid="library-usage-daily-loading">
+  const t = useDenT();
+  return <div className={`${analyticsSurfaceClass} p-5`} role="status" aria-label={t("denLibraryUsage.chart.loadingAria")} data-testid="library-usage-daily-loading">
     <DenSkeleton className="h-3.5 w-24" /><DenSkeleton className="mt-2 h-3 w-20" />
     <DenSkeleton className="mt-6 h-[168px] w-full" />
     <div className="mt-3 flex justify-between"><DenSkeleton className="h-2.5 w-10" /><DenSkeleton className="h-2.5 w-10" /></div>
@@ -73,29 +75,32 @@ function ChartLoading() {
 
 /** Kept counts with a way to try again when a refresh fails; the last rows stay on screen. */
 function RefreshFailed({ onRetry }: { onRetry: () => void }) {
-  return <DenNotice tone="neutral" presentation="inline" message="Couldn't refresh. Showing the last counts." action={<DenButton variant="secondary" size="sm" onClick={onRetry}>Retry</DenButton>} />;
+  const t = useDenT();
+  return <DenNotice tone="neutral" presentation="inline" message={t("denLibraryUsage.notice.refreshFailed")} action={<DenButton variant="secondary" size="sm" onClick={onRetry}>{t("denGateway.action.retry")}</DenButton>} />;
 }
 
 /** Uses per UTC day, with failures beside them where the kind can fail. */
 function DailyUses({ kind, days, scope }: { kind: LibraryUsageKind; days: LibraryUsageWindow; scope: { itemId: string } | { memberId: string } }) {
+  const t = useDenT();
   const daily = useLibraryUsageBreakdown(kind, days, "day", scope);
-  if (daily.isError && !daily.data) return <AnalyticsErrorState title="Couldn't load uses per day" onRetry={() => void daily.refetch()} retrying={daily.isFetching} />;
+  if (daily.isError && !daily.data) return <AnalyticsErrorState title={t("denLibraryUsage.error.dailyLoad")} onRetry={() => void daily.refetch()} retrying={daily.isFetching} />;
   if (!daily.data) return <ChartLoading />;
   const points = dailyLibraryUsage(daily.data);
   const failed = kind !== "skills" && points.some((point) => point.failures > 0);
   return <div data-testid="library-usage-daily">
-    <TrendChart title="Uses per day" subtitle={`Last ${days} days`} intervalLabel=""
+    <TrendChart title={t("denLibraryUsage.chart.title")} subtitle={t("denLibraryUsage.chart.lastDays", { days })} intervalLabel=""
       weeks={points.map((point) => ({ weekStart: point.date }))}
-      series={[{ label: "Uses", values: points.map((point) => point.uses) }, ...(failed ? [{ label: "Failed", values: points.map((point) => point.failures) }] : [])]} />
+      series={[{ label: t("denLibraryUsage.column.uses"), values: points.map((point) => point.uses) }, ...(failed ? [{ label: t("denLibraryUsage.column.failed"), values: points.map((point) => point.failures) }] : [])]} />
   </div>;
 }
 
 /** What started the uses: agents, Workflows, Automations, Apps or live views. */
 function StartedBy({ rows }: { rows: readonly LibraryUsageBreakdownRow[] }) {
+  const t = useDenT();
   const sources = sumLibraryUsageSources(rows);
   if (sources.length === 0) return null;
-  return <section className={analyticsSurfaceClass} aria-label="Started by" data-testid="library-usage-sources">
-    <h3 className="px-5 pb-2 pt-4 text-xs text-[var(--dls-text-secondary)]">Started by</h3>
+  return <section className={analyticsSurfaceClass} aria-label={t("denLibraryUsage.startedBy.title")} data-testid="library-usage-sources">
+    <h3 className="px-5 pb-2 pt-4 text-xs text-[var(--dls-text-secondary)]">{t("denLibraryUsage.startedBy.title")}</h3>
     <ul className="divide-y divide-[#e3e7ee] border-t border-[#e3e7ee]">
       {sources.map((entry) => <li key={entry.source} data-source={entry.source} className="flex items-center justify-between gap-4 px-5 py-2.5 text-[13px]">
         <span className="text-[var(--dls-text-primary)]">{entry.label}</span>
@@ -106,17 +111,19 @@ function StartedBy({ rows }: { rows: readonly LibraryUsageBreakdownRow[] }) {
 }
 
 function UsageColumns({ first, tracksFailures }: { first: string; tracksFailures: boolean }) {
+  const t = useDenT();
   return <div className={`grid items-center gap-4 px-5 py-2.5 text-xs text-[var(--dls-text-secondary)] ${tracksFailures ? "max-w-[732px] grid-cols-[minmax(0,1fr)_56px_72px_104px]" : "max-w-[644px] grid-cols-[minmax(0,1fr)_56px_104px]"}`}>
-    <span>{first}</span><span>Uses</span>{tracksFailures ? <span>Failed</span> : null}<span>Last used</span>
+    <span>{first}</span><span>{t("denLibraryUsage.column.uses")}</span>{tracksFailures ? <span>{t("denLibraryUsage.column.failed")}</span> : null}<span>{t("denLibraryUsage.column.lastUsed")}</span>
   </div>;
 }
 
 function UsageNumbers({ row, now, tracksFailures }: { row: Pick<LibraryUsageBreakdownRow, "uses" | "failures" | "lastUsedAt">; now: number; tracksFailures: boolean }) {
+  const t = useDenT();
   const lastUsed = lastUsedLabel(row.lastUsedAt, now);
   return <span className={`grid shrink-0 gap-4 text-[13px] tabular-nums ${tracksFailures ? "grid-cols-[56px_72px_104px]" : "grid-cols-[56px_104px]"}`}>
     <span data-item-uses className="text-[var(--dls-text-primary)]">{row.uses.toLocaleString()}</span>
     {tracksFailures ? <span data-item-failures className={(row.failures ?? 0) > 0 ? "font-medium text-[var(--ow-danger)]" : undefined}>{failureLabel({ failures: row.failures ?? 0, uses: row.uses })}</span> : null}
-    {lastUsed && row.lastUsedAt ? <time dateTime={row.lastUsedAt} title={new Date(row.lastUsedAt).toLocaleString()}>{lastUsed}</time> : <span>Not used</span>}
+    {lastUsed && row.lastUsedAt ? <time dateTime={row.lastUsedAt} title={new Date(row.lastUsedAt).toLocaleString()}>{lastUsed}</time> : <span>{t("denLibraryUsage.state.unused")}</span>}
   </span>;
 }
 
@@ -124,6 +131,7 @@ function UsageNumbers({ row, now, tracksFailures }: { row: Pick<LibraryUsageBrea
 export function ItemUsageDetail({ kind, days, item, now, usageHref }: {
   kind: LibraryUsageKind; days: LibraryUsageWindow; item: LibraryUsageRow; now: number; usageHref: UsageHref;
 }) {
+  const t = useDenT();
   const { activeOrg, orgContext } = useOrgDashboard();
   const copy = libraryUsageCopy[kind];
   const people = useLibraryUsageBreakdown(kind, days, "member", { itemId: item.id });
@@ -133,26 +141,26 @@ export function ItemUsageDetail({ kind, days, item, now, usageHref }: {
   const lastUsed = lastUsedLabel(item.lastUsedAt, now);
 
   return <section className="grid gap-6" data-testid="library-usage-item" data-item={item.name}>
-    <DetailHeading testId="library-usage-item-heading" backHref={usageHref({ item: null, member: null })} backLabel={`All ${copy.plural}`} title={item.name}
-      action={manageHref ? <LinkButton href={manageHref} size="sm">{kind === "connectors" ? "Open connector" : "Open in Library"}</LinkButton> : undefined} />
+    <DetailHeading testId="library-usage-item-heading" backHref={usageHref({ item: null, member: null })} backLabel={t("denLibraryUsage.action.allItems", { items: copy.plural })} title={item.name}
+      action={manageHref ? <LinkButton href={manageHref} size="sm">{kind === "connectors" ? t("denLibraryUsage.action.openConnector") : t("denLibraryUsage.action.openInLibrary")}</LinkButton> : undefined} />
 
     <div className={`grid gap-3.5 sm:grid-cols-2 ${tracksFailures ? "lg:grid-cols-4" : "lg:grid-cols-3"}`} data-testid="library-usage-item-summary">
-      <StatCard title="Uses" value={item.uses.toLocaleString()} />
-      <StatCard title="People" value={item.people.toLocaleString()} />
-      {tracksFailures ? <StatCard attention={(item.failures ?? 0) > 0} title="Failed" value={(item.failures ?? 0).toLocaleString()} /> : null}
-      <StatCard title="Last used" value={lastUsed ?? "Not used"} />
+      <StatCard title={t("denLibraryUsage.column.uses")} value={item.uses.toLocaleString()} />
+      <StatCard title={t("denLibraryUsage.column.people")} value={item.people.toLocaleString()} />
+      {tracksFailures ? <StatCard attention={(item.failures ?? 0) > 0} title={t("denLibraryUsage.column.failed")} value={(item.failures ?? 0).toLocaleString()} /> : null}
+      <StatCard title={t("denLibraryUsage.column.lastUsed")} value={lastUsed ?? t("denLibraryUsage.state.unused")} />
     </div>
 
     {item.uses === 0 ? (
-      <div className={analyticsSurfaceClass}><AnalyticsEmptyState title={`Nobody used this ${copy.noun} in the last ${days} days`} /></div>
+      <div className={analyticsSurfaceClass}><AnalyticsEmptyState title={t("denLibraryUsage.empty.nobodyUsed", { item: copy.noun, days })} /></div>
     ) : <>
-      {people.isError && !people.data ? <AnalyticsErrorState title="Couldn't load who uses it" onRetry={() => void people.refetch()} retrying={people.isFetching} />
-        : !people.data ? <><ListLoading label="Loading who uses it" /><ChartLoading /></>
+      {people.isError && !people.data ? <AnalyticsErrorState title={t("denLibraryUsage.error.peopleLoad")} onRetry={() => void people.refetch()} retrying={people.isFetching} />
+        : !people.data ? <><ListLoading label={t("denLibraryUsage.state.peopleLoading")} /><ChartLoading /></>
         : <>
           {people.isError ? <RefreshFailed onRetry={() => void people.refetch()} /> : null}
           <div className={`${analyticsSurfaceClass} min-w-0 overflow-x-auto`} data-testid="library-usage-people">
             <div className={tracksFailures ? "min-w-[600px]" : "min-w-[520px]"}>
-              <UsageColumns first="Person" tracksFailures={tracksFailures} />
+              <UsageColumns first={t("denInference.editor.personFallback")} tracksFailures={tracksFailures} />
               <ul className="divide-y divide-[#e3e7ee] border-t border-[#e3e7ee]">
                 {people.data.rows.map((row) => {
                   const person = libraryUsageMember(members, row.memberId);
@@ -178,6 +186,7 @@ export function ItemUsageDetail({ kind, days, item, now, usageHref }: {
 export function PersonUsageDetail({ kind, days, memberId, report, now, usageHref }: {
   kind: LibraryUsageKind; days: LibraryUsageWindow; memberId: string; report: LibraryUsageReport; now: number; usageHref: UsageHref;
 }) {
+  const t = useDenT();
   const { orgContext } = useOrgDashboard();
   const copy = libraryUsageCopy[kind];
   const person = libraryUsageMember(orgContext?.members ?? [], memberId);
@@ -189,19 +198,19 @@ export function PersonUsageDetail({ kind, days, memberId, report, now, usageHref
   const failures = rows.reduce((sum, row) => sum + (row.failures ?? 0), 0);
 
   return <section className="grid gap-6" data-testid="library-usage-member" data-person={person.name}>
-    <DetailHeading testId="library-usage-member-heading" backHref={usageHref({ member: null, item: null })} backLabel={`All ${copy.plural}`} title={person.name} />
+    <DetailHeading testId="library-usage-member-heading" backHref={usageHref({ member: null, item: null })} backLabel={t("denLibraryUsage.action.allItems", { items: copy.plural })} title={person.name} />
 
-    {items.isError && !items.data ? <AnalyticsErrorState title={`Couldn't load ${person.name}'s usage`} onRetry={() => void items.refetch()} retrying={items.isFetching} />
-      : !items.data ? <><StatsLoading cards={tracksFailures ? 3 : 2} /><ListLoading label={`Loading ${person.name}'s usage`} /><ChartLoading /></>
+    {items.isError && !items.data ? <AnalyticsErrorState title={t("denLibraryUsage.error.personUsageLoad", { name: person.name })} onRetry={() => void items.refetch()} retrying={items.isFetching} />
+      : !items.data ? <><StatsLoading cards={tracksFailures ? 3 : 2} /><ListLoading label={t("denLibraryUsage.state.personUsageLoading", { name: person.name })} /><ChartLoading /></>
       : <>
         {items.isError ? <RefreshFailed onRetry={() => void items.refetch()} /> : null}
         <div className={`grid gap-3.5 sm:grid-cols-2 ${tracksFailures ? "lg:grid-cols-3" : "lg:grid-cols-2"}`} data-testid="library-usage-member-summary">
-          <StatCard title={`${copy.label} used`} value={`${rows.length} of ${report.items.length}`} />
-          <StatCard title="Uses" value={uses.toLocaleString()} />
-          {tracksFailures ? <StatCard attention={failures > 0} title="Failed" value={failures.toLocaleString()} /> : null}
+          <StatCard title={t("denLibraryUsage.stat.itemsUsed", { items: copy.label })} value={t("denLibraryUsage.stat.ofTotal", { used: rows.length, total: report.items.length })} />
+          <StatCard title={t("denLibraryUsage.column.uses")} value={uses.toLocaleString()} />
+          {tracksFailures ? <StatCard attention={failures > 0} title={t("denLibraryUsage.column.failed")} value={failures.toLocaleString()} /> : null}
         </div>
         {rows.length === 0 ? (
-          <div className={analyticsSurfaceClass}><AnalyticsEmptyState title={`${person.name} used no ${copy.plural} in the last ${days} days`} /></div>
+          <div className={analyticsSurfaceClass}><AnalyticsEmptyState title={t("denLibraryUsage.empty.personNone", { name: person.name, items: copy.plural, days })} /></div>
         ) : <>
           <div className={`${analyticsSurfaceClass} min-w-0 overflow-x-auto`} data-testid="library-usage-member-items">
             <div className={tracksFailures ? "min-w-[600px]" : "min-w-[520px]"}>
@@ -209,7 +218,7 @@ export function PersonUsageDetail({ kind, days, memberId, report, now, usageHref
               <ul className="divide-y divide-[#e3e7ee] border-t border-[#e3e7ee]">
                 {rows.map((row) => {
                   const item = row.itemId ? names.get(row.itemId) : undefined;
-                  const name = item?.name ?? `Removed ${copy.noun}`;
+                  const name = item?.name ?? t("denLibraryUsage.removed.item", { item: copy.noun });
                   return <li key={row.itemId ?? "removed"} data-testid="library-usage-member-item" data-item={name}>
                     <div className={tracksFailures ? "max-w-[732px]" : "max-w-[644px]"}>
                       <ItemRow logo={<LetterTile name={name} />} title={name} description={item?.detail ?? undefined}

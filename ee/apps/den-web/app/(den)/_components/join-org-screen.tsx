@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useDenT } from "../../_lib/i18n/client";
+import type { DenTranslate } from "../../_lib/i18n/messages";
 import { getErrorMessage, requestJson } from "../_lib/den-flow";
 import {
   PENDING_ORG_INVITATION_STORAGE_KEY,
@@ -55,20 +57,22 @@ function InvitationDetails({
   account: AccountSummary;
   roleLabel: string;
 }) {
+  const t = useDenT();
   return (
     <dl className="divide-y divide-slate-200/80 border-y border-slate-200/80" data-testid="join-org-invitation-details">
-      <DetailRow label="Organization">{preview.organization.name}</DetailRow>
-      <DetailRow label="Invited email">{preview.invitation.email}</DetailRow>
-      <DetailRow label="Role">{roleLabel}</DetailRow>
-      <DetailRow label="Account">{account ? account.email : "Not signed in"}</DetailRow>
+      <DetailRow label={t("denSetup.join.detailOrganization")}>{preview.organization.name}</DetailRow>
+      <DetailRow label={t("denSetup.join.detailInvitedEmail")}>{preview.invitation.email}</DetailRow>
+      <DetailRow label={t("denTeam.column.role")}>{roleLabel}</DetailRow>
+      <DetailRow label={t("denAuth.panel.eyebrowAccount")}>{account ? account.email : t("denSetup.join.notSignedIn")}</DetailRow>
     </dl>
   );
 }
 
 function InvitationSummary({ preview }: { preview: DenInvitationPreview }) {
+  const t = useDenT();
   return (
     <span data-testid="join-org-invitation-summary">
-      You&apos;ve been invited as <span className="font-medium text-slate-950">{preview.invitation.email}</span>
+      {t("denSetup.join.summaryInvitedAs")}<span className="font-medium text-slate-950">{preview.invitation.email}</span>
     </span>
   );
 }
@@ -97,13 +101,14 @@ function ActionGroup({ children }: { children: ReactNode }) {
 }
 
 function NotNowButton({ onClick }: { onClick: () => void }) {
+  const t = useDenT();
   return (
     <button
       type="button"
       className="inline-flex min-h-12 w-full items-center justify-center rounded-full px-3 text-sm font-medium text-slate-500 transition hover:text-slate-950 focus:outline-hidden focus:ring-4 focus:ring-slate-950/10"
       onClick={onClick}
     >
-      Not now
+      {t("denSetup.join.actionNotNow")}
     </button>
   );
 }
@@ -129,18 +134,19 @@ function getCardOrganization(preview: DenInvitationPreview | null) {
 
 function LoadingState({
   preview = null,
-  title = "Loading invite.",
-  copy = "Checking the invite details and your account state...",
+  title,
+  copy,
 }: {
   preview?: DenInvitationPreview | null;
   title?: string;
   copy?: string;
 }) {
+  const t = useDenT();
   return (
     <OnboardingShell state="loading" width="wide" background="surface">
       <OnboardingCard organization={getCardOrganization(preview)}>
         <div className="grid gap-5" aria-busy="true">
-          <InvitationHeading title={title} copy={copy} />
+          <InvitationHeading title={title ?? t("denSetup.join.loadingTitle")} copy={copy ?? t("denSetup.join.loadingBody")} />
           <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.18)]">
             <div className="h-full w-1/3 animate-pulse rounded-full bg-slate-900" />
           </div>
@@ -150,22 +156,22 @@ function LoadingState({
   );
 }
 
-function statusMessage(preview: DenInvitationPreview | null) {
+function statusMessage(t: DenTranslate, preview: DenInvitationPreview | null) {
   switch (preview?.invitation.status) {
     case "accepted":
-      return "This invite has already been used.";
+      return t("denSetup.join.statusAccepted");
     case "canceled":
-      return "This invite was canceled.";
+      return t("denSetup.join.statusCanceled");
     case "expired":
-      return "This invite expired.";
+      return t("denSetup.join.statusExpired");
     default:
-      return "This invite is no longer available.";
+      return t("denSetup.join.statusUnavailable");
   }
 }
 
-function formatAllowedDomains(allowedEmailDomains: readonly string[] | null | undefined) {
+function formatAllowedDomains(t: DenTranslate, allowedEmailDomains: readonly string[] | null | undefined) {
   if (!allowedEmailDomains || allowedEmailDomains.length === 0) {
-    return "any invited email address";
+    return t("denSetup.join.anyInvitedEmail");
   }
 
   return allowedEmailDomains.length === 1
@@ -205,6 +211,7 @@ function InviteAuthPanel({
   preview: DenInvitationPreview;
   initialMode: "sign-in" | "sign-up";
 }) {
+  const t = useDenT();
   return (
     <div data-testid="join-org-auth">
       <AuthPanel
@@ -221,19 +228,19 @@ function InviteAuthPanel({
         emailFirstInvitationId={preview.invitation.id}
         resolveEmailFirstOnPrefill
         signUpContent={{
-          submitLabel: "Create account",
+          submitLabel: t("denSetup.join.submitCreateAccount"),
         }}
         signInContent={{
-          title: "Sign in to continue.",
+          title: t("denSetup.join.signInTitle"),
           copy: initialMode === "sign-in"
-            ? `Sign in as ${preview.invitation.email} to open your workspace.`
-            : "Use the invited account to accept this invite.",
-          submitLabel: initialMode === "sign-in" ? "Sign in to open workspace" : "Sign in to join",
+            ? t("denSetup.join.signInAsBody", { email: preview.invitation.email })
+            : t("denSetup.join.useInvitedAccountBody"),
+          submitLabel: initialMode === "sign-in" ? t("denSetup.join.signInOpenWorkspaceAction") : t("denSetup.join.signInJoinAction"),
         }}
         verificationContent={{
-          title: "Check your inbox.",
-          copy: `Enter the six-digit code sent to ${preview.invitation.email}.`,
-          submitLabel: "Verify and join",
+          title: t("denSetup.join.verifyTitle"),
+          copy: t("denSetup.join.verifyBody", { email: preview.invitation.email }),
+          submitLabel: t("denSetup.join.verifyJoinAction"),
         }}
       />
     </div>
@@ -241,6 +248,7 @@ function InviteAuthPanel({
 }
 
 export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
+  const t = useDenT();
   const router = useRouter();
   const { user, sessionHydrated, signOut, revalidateSession, desktopAuthRequested, desktopAuthScheme } = useDenFlow();
   const [preview, setPreview] = useState<DenInvitationPreview | null>(null);
@@ -263,7 +271,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     ? isEmailAllowedForOrganization(preview.organization.allowedEmailDomains, user.email)
     : true;
   const roleLabel = preview ? formatRoleLabel(preview.invitation.role) : "";
-  const allowedDomainsLabel = preview ? formatAllowedDomains(preview.organization.allowedEmailDomains) : "";
+  const allowedDomainsLabel = preview ? formatAllowedDomains(t, preview.organization.allowedEmailDomains) : "";
 
   const clearPendingInvitation = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -277,7 +285,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     async function loadPreview() {
       if (!invitationId) {
         setPreview(null);
-        setPreviewError("Missing invitation link.");
+        setPreviewError(t("denSetup.join.missingLink"));
         setPreviewBusy(false);
         return;
       }
@@ -302,14 +310,14 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           }
 
           setPreview(null);
-          setPreviewError(getErrorMessage(payload, response.status === 404 ? "This invite is no longer available." : `Could not load the invite (${response.status}).`));
+          setPreviewError(getErrorMessage(payload, response.status === 404 ? t("denSetup.join.statusUnavailable") : t("denSetup.join.loadFailedStatus", { status: response.status })));
           return;
         }
 
         const nextPreview = parseInvitationPreviewPayload(payload);
         if (!nextPreview) {
           setPreview(null);
-          setPreviewError("The invitation details were incomplete.");
+          setPreviewError(t("denSetup.join.detailsIncomplete"));
           return;
         }
 
@@ -317,7 +325,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
       } catch (error) {
         if (!cancelled) {
           setPreview(null);
-          setPreviewError(error instanceof Error ? error.message : "Could not load the invite.");
+          setPreviewError(error instanceof Error ? error.message : t("denSetup.join.loadFailed"));
         }
       } finally {
         if (!cancelled) {
@@ -331,7 +339,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [invitationId]);
+  }, [invitationId, t]);
 
   useEffect(() => {
     if (
@@ -406,11 +414,11 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
 
   async function handleAcceptInvitation() {
     if (!invitationId) {
-      setJoinError("Missing invitation link.");
+      setJoinError(t("denSetup.join.missingLink"));
       return;
     }
     if (!preview) {
-      setJoinError("The invitation details are still loading.");
+      setJoinError(t("denSetup.join.detailsStillLoading"));
       return;
     }
 
@@ -435,12 +443,12 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
           setSessionEnded(true);
           return;
         }
-        setJoinError("Could not join the organization. Try again.");
+        setJoinError(t("denSetup.join.joinRetryFailed"));
         return;
       }
 
       if (!response.ok) {
-        setJoinError(getErrorMessage(payload, response.status === 404 ? "This invite could not be accepted." : `Could not join the organization (${response.status}).`));
+        setJoinError(getErrorMessage(payload, response.status === 404 ? t("denSetup.join.acceptFailed") : t("denSetup.join.joinFailedStatus", { status: response.status })));
         return;
       }
 
@@ -452,7 +460,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
         router.replace("/install");
       }
     } catch (error) {
-      setJoinError(error instanceof Error ? error.message : "Could not join the organization.");
+      setJoinError(error instanceof Error ? error.message : t("denSetup.join.joinFailed"));
     } finally {
       setJoinBusy(false);
     }
@@ -487,10 +495,10 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     return (
       <OnboardingShell state="invalid" width="wide" background="surface">
         <OnboardingCard organization={getCardOrganization(preview)}>
-          <InvitationHeading title="This invite can't be opened." copy={previewError ?? "This invite could not be loaded."} />
+          <InvitationHeading title={t("denSetup.join.cannotOpenTitle")} copy={previewError ?? t("denSetup.join.cannotLoadBody")} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              {t("denSetup.join.backToCloud")}
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -509,8 +517,8 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     return (
       <LoadingState
         preview={preview}
-        title="Opening your workspace."
-        copy={`Confirming your membership in ${preview.organization.name}...`}
+        title={t("denSetup.join.openingTitle")}
+        copy={t("denSetup.join.confirmMembershipBody", { organizationName: preview.organization.name })}
       />
     );
   }
@@ -520,12 +528,12 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
       <OnboardingShell state="membership-removed" width="wide" background="surface">
         <OnboardingCard organization={getCardOrganization(preview)}>
           <InvitationHeading
-            title="Your access was removed."
-            copy={`Your access to ${preview.organization.name} was removed. Ask a workspace admin for a new invite.`}
+            title={t("denSetup.join.accessRemovedTitle")}
+            copy={t("denSetup.join.accessRemovedBody", { organizationName: preview.organization.name })}
           />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              {t("denSetup.join.backToCloud")}
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -539,8 +547,8 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
         <OnboardingCard organization={getCardOrganization(preview)}>
           <div className="grid gap-4">
             <InvitationHeading
-              title={`You've already joined ${preview.organization.name}.`}
-              copy={`This invite was already accepted. Sign in as ${preview.invitation.email} to open your workspace.`}
+              title={t("denSetup.join.alreadyJoinedTitle", { organizationName: preview.organization.name })}
+              copy={t("denSetup.join.alreadyJoinedBody", { email: preview.invitation.email })}
             />
             <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           </div>
@@ -560,8 +568,8 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
       <OnboardingShell state="accepted-wrong-account" width="wide" background="surface">
         <OnboardingCard organization={getCardOrganization(preview)}>
           <InvitationHeading
-            title="Use the invited account."
-            copy={`This invite belongs to ${preview.invitation.email}. You are signed in as ${user.email}, so switch accounts to open this workspace.`}
+            title={t("denSetup.join.useInvitedAccountTitle")}
+            copy={t("denSetup.join.wrongAccountBody", { email: preview.invitation.email, signedInEmail: user.email })}
           />
           <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           <ActionGroup>
@@ -571,7 +579,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
               onClick={() => void handleSwitchAccount()}
               disabled={joinBusy}
             >
-              Use a different account
+              {t("denSetup.join.useDifferentAccount")}
             </button>
             <NotNowButton onClick={handleNotNow} />
           </ActionGroup>
@@ -584,11 +592,11 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
     return (
       <OnboardingShell state="unavailable" width="wide" background="surface">
         <OnboardingCard organization={getCardOrganization(preview)}>
-          <InvitationHeading title="This invite can't be used." copy={statusMessage(preview)} />
+          <InvitationHeading title={t("denSetup.join.cannotUseTitle")} copy={statusMessage(t, preview)} />
           <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              {t("denSetup.join.backToCloud")}
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -601,13 +609,13 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
       <OnboardingShell state="domain-blocked" width="wide" background="surface">
         <OnboardingCard organization={getCardOrganization(preview)}>
           <InvitationHeading
-            title="This invite needs a different email domain."
-            copy={`${preview.organization.name} now only accepts accounts from ${allowedDomainsLabel}. Ask a workspace owner to update the allowlist or send a new invite.`}
+            title={t("denSetup.join.domainBlockedTitle")}
+            copy={t("denSetup.join.domainBlockedBody", { organizationName: preview.organization.name, domains: allowedDomainsLabel })}
           />
           <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
           <ActionGroup>
             <button type="button" className={primaryActionClassName} onClick={handleNotNow}>
-              Back to OpenWork Cloud
+              {t("denSetup.join.backToCloud")}
             </button>
           </ActionGroup>
         </OnboardingCard>
@@ -621,17 +629,17 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
         <OnboardingCard organization={getCardOrganization(preview)}>
           <div className="grid gap-4">
             <InvitationHeading
-              title={`Join ${preview.organization.name}`}
+              title={t("denSetup.join.joinOrgTitle", { organizationName: preview.organization.name })}
               copy={<InvitationSummary preview={preview} />}
             />
             {preview.organization.allowedEmailDomains?.length ? (
               <p className="m-0 text-[15px] leading-[23px] text-slate-600">
-                This workspace only accepts {allowedDomainsLabel} accounts.
+                {t("denSetup.join.workspaceAcceptsOnly", { allowedDomains: allowedDomainsLabel })}
               </p>
             ) : null}
           </div>
 
-          {sessionEnded ? <InlineAlert>Your session ended. Sign in again to join.</InlineAlert> : null}
+          {sessionEnded ? <InlineAlert>{t("denSetup.join.sessionEnded")}</InlineAlert> : null}
 
           <InviteAuthPanel preview={preview} initialMode="sign-up" />
 
@@ -646,16 +654,16 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
   return (
     <OnboardingShell state="signed-in" width="wide" background="surface">
       <OnboardingCard organization={getCardOrganization(preview)}>
-        <InvitationHeading title={`Join ${preview.organization.name}.`} copy="Review the invitation and continue with the right account." />
+        <InvitationHeading title={t("denSetup.join.joinOrgTitleWithPeriod", { organizationName: preview.organization.name })} copy={t("denSetup.join.reviewBody")} />
         <InvitationDetails preview={preview} account={account} roleLabel={roleLabel} />
 
         {user && !signedInEmailAllowed ? (
           <div className="grid gap-4">
             <p className="m-0 text-[15px] leading-[23px] text-slate-600">
-              {preview.organization.name} only accepts accounts from <span className="font-medium text-slate-950">{allowedDomainsLabel}</span>. You are signed in as <span className="font-medium text-slate-950">{user.email}</span>, so this account cannot join.
+              {t("denSetup.join.domainMismatchOnlyAccepts", { organizationName: preview.organization.name })}<span className="font-medium text-slate-950">{allowedDomainsLabel}</span>{t("denSetup.join.domainMismatchSignedInAs")}<span className="font-medium text-slate-950">{user.email}</span>{t("denSetup.join.domainMismatchCannotJoin")}
             </p>
             <p className="m-0 text-[15px] leading-[23px] text-slate-500">
-              Log out, then create a new account or sign in with an allowed email address.
+              {t("denSetup.join.logOutHelp")}
             </p>
             <ActionGroup>
               <button
@@ -664,7 +672,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
                 onClick={() => void handleSwitchAccount()}
                 disabled={joinBusy}
               >
-                Log out
+                {t("denSetup.join.logOut")}
               </button>
               <NotNowButton onClick={handleNotNow} />
             </ActionGroup>
@@ -672,7 +680,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
         ) : !invitedEmailMatches ? (
           <div className="grid gap-4">
             <p className="m-0 text-[15px] leading-[23px] text-slate-600">
-              This invite is for <span className="font-medium text-slate-950">{preview.invitation.email}</span>. Switch accounts to continue.
+              {t("denSetup.join.inviteIsFor")}<span className="font-medium text-slate-950">{preview.invitation.email}</span>{t("denSetup.join.switchToContinue")}
             </p>
             <ActionGroup>
               <button
@@ -681,14 +689,14 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
                 onClick={() => void handleSwitchAccount()}
                 disabled={joinBusy}
               >
-                Use a different account
+                {t("denSetup.join.useDifferentAccount")}
               </button>
               <NotNowButton onClick={handleNotNow} />
             </ActionGroup>
           </div>
         ) : (
           <div className="grid gap-4">
-            <p className="m-0 text-[15px] leading-[23px] text-slate-600">You're one click away from the team workspace.</p>
+            <p className="m-0 text-[15px] leading-[23px] text-slate-600">{t("denSetup.join.oneClickAway")}</p>
             <ActionGroup>
               <button
                 type="button"
@@ -696,7 +704,7 @@ export function JoinOrgScreen({ invitationId }: { invitationId: string }) {
                 onClick={() => void handleAcceptInvitation()}
                 disabled={!showAcceptAction || joinBusy}
               >
-                {joinBusy ? "Joining..." : `Join ${preview.organization.name}`}
+                {joinBusy ? t("denSetup.join.joining") : t("denSetup.join.joinOrgTitle", { organizationName: preview.organization.name })}
               </button>
               <NotNowButton onClick={handleNotNow} />
             </ActionGroup>

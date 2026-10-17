@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, Flag, Folder, Terminal } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useDenT } from "../../_lib/i18n/client";
 import { getErrorMessage, requestJson } from "../_lib/den-flow";
 import { getOrgDashboardRoute } from "../_lib/den-org";
 import { useDenFlow } from "../_providers/den-flow-provider";
@@ -52,6 +53,7 @@ function formatUserCode(value: string): string {
  * person its owner and ends the agent's temporary access.
  */
 export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode: string }) {
+  const t = useDenT();
   const { user, sessionHydrated, signOut } = useDenFlow();
   const [userCode, setUserCode] = useState(formatUserCode(initialUserCode));
   const [draftCode, setDraftCode] = useState("");
@@ -67,15 +69,15 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
       const { response, payload } = await requestJson(`/v1/bootstrap/claim-codes/${encodeURIComponent(userCode.replace(/-/g, ""))}`, { method: "GET" }, 12000);
       if (cancelled) return;
       if (!response.ok) {
-        setCodeState({ kind: "invalid", message: "This code is invalid or has expired. Ask your agent for a new one." });
+        setCodeState({ kind: "invalid", message: t("denSetup.claim.codeInvalid") });
         return;
       }
-      setCodeState({ kind: "pending", organizationName: readOrganizationName(payload) ?? "this workspace" });
+      setCodeState({ kind: "pending", organizationName: readOrganizationName(payload) ?? t("denSetup.claim.thisWorkspace") });
     })();
     return () => {
       cancelled = true;
     };
-  }, [user?.id, userCode]);
+  }, [t, user?.id, userCode]);
 
   async function claim() {
     if (codeState.kind !== "pending") return;
@@ -88,7 +90,7 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
     );
     setBusy(false);
     if (!response.ok) {
-      setError(getErrorMessage(payload, "Could not claim this workspace. Ask your agent for a new code."));
+      setError(getErrorMessage(payload, t("denSetup.claim.claimFailed")));
       return;
     }
     setCodeState({ kind: "claimed", organizationName: readOrganizationName(payload) ?? codeState.organizationName });
@@ -98,16 +100,16 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
 
   const frame = (children: ReactNode) => (
     <SetupFrame
-      title="Claim your workspace."
-      description={workspaceName ? `Your agent set up ${workspaceName} for you.` : "Your agent set up a workspace for you."}
+      title={t("denSetup.claim.frameTitle")}
+      description={workspaceName ? t("denSetup.claim.frameDescriptionNamed", { workspaceName }) : t("denSetup.claim.frameDescription")}
       panelVisual={<OnboardingTexture />}
       aside={(
         <SetupStoryTiles
           linked={codeState.kind === "claimed"}
-          from={{ label: "Your agent", mark: <SetupStoryTile><Terminal className="size-6 text-[var(--dls-text-primary)]" strokeWidth={1.5} /></SetupStoryTile> }}
+          from={{ label: t("denSetup.claim.storyAgent"), mark: <SetupStoryTile><Terminal className="size-6 text-[var(--dls-text-primary)]" strokeWidth={1.5} /></SetupStoryTile> }}
           to={workspaceName
             ? { label: workspaceName, mark: <SetupLetterTile name={workspaceName} size="lg" /> }
-            : { label: "Your workspace", mark: <SetupStoryTile><Folder className="size-5 text-[var(--dls-text-secondary)]" strokeWidth={1.5} /></SetupStoryTile> }}
+            : { label: t("denSetup.claim.storyWorkspace"), mark: <SetupStoryTile><Folder className="size-5 text-[var(--dls-text-secondary)]" strokeWidth={1.5} /></SetupStoryTile> }}
         />
       )}
     >
@@ -118,7 +120,7 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
   if (!sessionHydrated) {
     return frame(
       <SetupPanelBody>
-        <SetupPanelTitle>Claim your workspace</SetupPanelTitle>
+        <SetupPanelTitle>{t("denSetup.claim.panelTitle")}</SetupPanelTitle>
         <SetupSkeletonRows count={1} />
       </SetupPanelBody>,
     );
@@ -127,14 +129,14 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
   if (!user) {
     return frame(
       <SetupPanelBody>
-        {userCode ? <SetupFacts rows={[{ label: "Code", value: <SetupCode code={userCode} testId="claim-user-code" /> }]} /> : null}
+        {userCode ? <SetupFacts rows={[{ label: t("denSetup.claim.factCode"), value: <SetupCode code={userCode} testId="claim-user-code" /> }]} /> : null}
         <AuthPanel
           bare
           emailFirstFlow
           socialFirst
           socialProviders={["google"]}
           prefillKey={userCode}
-          emailStepContent={{ title: "Sign in to OpenWork" }}
+          emailStepContent={{ title: t("denSetup.claim.signInToOpenWork") }}
         />
       </SetupPanelBody>,
     );
@@ -149,9 +151,9 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
           if (draftCode.trim()) setUserCode(formatUserCode(draftCode));
         }}
       >
-        <SetupPanelTitle>Enter the code from your agent</SetupPanelTitle>
+        <SetupPanelTitle>{t("denSetup.claim.enterCodeTitle")}</SetupPanelTitle>
         <label className="flex flex-col gap-2">
-          <span className="den-label">Code</span>
+          <span className="den-label">{t("denSetup.claim.factCode")}</span>
           <input
             className="den-input font-mono uppercase tracking-[0.12em]"
             value={draftCode}
@@ -161,16 +163,16 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
             autoFocus
           />
         </label>
-        <SetupFacts rows={[{ label: "Account", value: user.email }]} />
-        <button type="submit" className="den-button-primary w-full" disabled={!draftCode.trim()}>Continue</button>
+        <SetupFacts rows={[{ label: t("denAuth.panel.eyebrowAccount"), value: user.email }]} />
+        <button type="submit" className="den-button-primary w-full" disabled={!draftCode.trim()}>{t("denConnector.action.continue")}</button>
       </form>,
     );
   }
 
   if (codeState.kind === "claimed") {
     return frame(
-      <SetupStatus icon={<Check className="size-5" strokeWidth={1.5} />} title={`${codeState.organizationName} is yours`}>
-        <Link href={getOrgDashboardRoute()} className="den-button-primary px-6">Open workspace</Link>
+      <SetupStatus icon={<Check className="size-5" strokeWidth={1.5} />} title={t("denSetup.claim.isYours", { organizationName: codeState.organizationName })}>
+        <Link href={getOrgDashboardRoute()} className="den-button-primary px-6">{t("denSetup.claim.openWorkspace")}</Link>
       </SetupStatus>,
     );
   }
@@ -178,10 +180,10 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
   if (codeState.kind === "invalid") {
     return frame(
       <SetupPanelBody gap="md">
-        <SetupPanelTitle>This code can’t be used</SetupPanelTitle>
+        <SetupPanelTitle>{t("denSetup.claim.codeUnusableTitle")}</SetupPanelTitle>
         <SetupLine>{codeState.message}</SetupLine>
         <button type="button" className="den-button-secondary self-start" onClick={() => { setUserCode(""); setCodeState({ kind: "idle" }); }}>
-          Enter a different code
+          {t("denSetup.claim.enterDifferentCode")}
         </button>
       </SetupPanelBody>,
     );
@@ -195,24 +197,24 @@ export function WorkspaceClaimCodeScreen({ initialUserCode }: { initialUserCode:
       <span className="flex size-10 items-center justify-center rounded-full bg-[var(--dls-hover)] text-[var(--dls-text-primary)]" aria-hidden="true">
         <Flag className="size-5" strokeWidth={1.5} />
       </span>
-      <SetupPanelTitle>{`Claim ${organizationName}?`}</SetupPanelTitle>
+      <SetupPanelTitle>{t("denSetup.claim.confirmTitle", { organizationName })}</SetupPanelTitle>
       <SetupFacts
         rows={[
-          { label: "Code", value: <SetupCode code={userCode} testId="claim-user-code" /> },
-          { label: "Owner", value: user.email },
-          { label: "Keep as", value: "A new organization" },
+          { label: t("denSetup.claim.factCode"), value: <SetupCode code={userCode} testId="claim-user-code" /> },
+          { label: t("denSetup.claim.factOwner"), value: user.email },
+          { label: t("denSetup.claim.factKeepAs"), value: t("denSetup.claim.factKeepAsValue") },
         ]}
       />
       <p className="m-0 text-[13px] leading-5 text-[var(--setup-ink-soft)]" data-testid="claim-consent-line">
-        You become the owner of {organizationName} and everything your agent added to it. The agent’s temporary access ends now.
+        {t("denSetup.claim.consentLine", { organizationName })}
       </p>
       <div className="flex flex-col gap-3.5">
         {error ? <SetupErrorLine>{error}</SetupErrorLine> : null}
         <button type="button" className="den-button-primary w-full" onClick={() => void claim()} disabled={checking || busy}>
-          {busy ? "Claiming…" : "Claim workspace"}
+          {busy ? t("denSetup.claim.claiming") : t("denSetup.claim.claimWorkspace")}
         </button>
         <SetupQuietButton className="self-start" onClick={() => void signOut()} disabled={busy}>
-          Use a different account
+          {t("denSetup.join.useDifferentAccount")}
         </SetupQuietButton>
       </div>
     </SetupPanelBody>,

@@ -1,5 +1,8 @@
 import { ImageResponse } from "next/og";
 
+import { createDenT } from "./_lib/i18n/messages";
+import { resolveDenLocale } from "./_lib/i18n/server";
+
 export const alt = "OpenWork Cloud";
 export const size = {
   width: 1200,
@@ -21,7 +24,8 @@ function StatusDot(props: { color: string }) {
   );
 }
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  const t = createDenT(await resolveDenLocale());
   return new ImageResponse(
     (
       <div
@@ -81,20 +85,20 @@ export default function OpenGraphImage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 64, fontWeight: 600, letterSpacing: -2.8, lineHeight: 0.98 }}>
-              <div>Share your setup</div>
-              <div>with your team.</div>
+              <div>{t("denRoot.og.headlineLead")}</div>
+              <div>{t("denRoot.og.headlineTail")}</div>
             </div>
 
             <div style={{ fontSize: 24, lineHeight: 1.45, color: "#475569", display: "flex", maxWidth: 520 }}>
-              Share setups across your org, keep selected workflows available, and manage OpenWork Cloud from app.openworklabs.com.
+              {t("denRoot.og.body")}
             </div>
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {[
-                "Open source",
-                "50+ integrations and LLMs",
-                "Free first worker",
-                "Organization billing for scale"
+                t("denRoot.og.chipOpenSource"),
+                t("denRoot.og.chipIntegrations"),
+                t("denRoot.og.chipFreeWorker"),
+                t("denRoot.og.chipBilling")
               ].map((label) => (
                 <div
                   key={label}
