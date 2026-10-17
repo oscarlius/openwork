@@ -21,7 +21,7 @@ OpenWork 私有的主力云形态，是用已发布的 Helm chart、一个托管
 
 默认关闭的 **Deployments** 功能，让工作区所有者批准一个 AWS 安装器跑在自己的账号里，并跟踪它的健康状况和已批准的更新。GCP 的实现还额外依赖默认关闭的 `managedDeploymentsGcp` 功能和经客户批准的 Google Cloud Shell。它要求一个专门的、已开通计费的项目、公开的 Cloud DNS，以及由运维人员发布的不可变安装器版本。本地测试不等于一次真实部署的凭据；在拿到真实版本并验证过一次经批准的安装之前，GCP 这条功能必须保持关闭。托管安装器目前不支持 Azure。
 
-安装器被锁定后提示的信息，属于服务端发布/配置环节，而不是向你要云账号密钥。在你的 Mac 上登录 AWS 或 Google Cloud，没法发布安装器。运维人员按[托管部署 runbook](https://github.com/different-ai/openwork/blob/dev/docs/managed-deployments.md)操作；下文书写的手工部署与这条功能无关。
+安装器锁定后提示的信息，属于服务端发布/配置环节，而不是向你要云账号密钥。在你的 Mac 上登录 AWS 或 Google Cloud，没法发布安装器。运维人员按[托管部署 runbook](https://github.com/different-ai/openwork/blob/dev/docs/managed-deployments.md)操作；下文书写的手工部署与这条功能无关。
 
 ## 通用架构
 

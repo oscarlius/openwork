@@ -113,7 +113,7 @@ chart 不会自动创建 Gateway 的 ingress。请通过你自己的 ingress、�
 | `OPENROUTER_UPSTREAM_URL` | 可选；默认为 `https://openrouter.ai/api/v1`。接入之后，生产环境要求非本地 HTTPS，且不含凭据/查询/片段；允许带提供商 API 路径。 | 这是现有的 Models 上游设置，不是改名后的 Gateway 目标。 |
 | `OPENAI_REALTIME_API_KEY` | 对现有的 realtime 集成可选；会回退到非空的 `OPENAI_API_KEY`。 | 属于现有集成的配置，Gateway 基本接入并不需要。请通过密钥管理注入。 |
 
-规范别名的优先级看变量有没有被设置，空字符串也算设置。空的 token 值会关掉那项凭据；空的出网允许清单是移除继承来的例外，而不是和它们合并。无效或为空的规范数值会让启动失败，不会回退。启用状态下，空的规范代理 URL 会校验失败；旧值在关闭状态下的行为不是受支持的接入捷径。请保持 `OPENWORK_INFERENCE_BASE_URL`、`STRIPE_INFERENCE_PRICE_ID` 和 `config.inference.*` 这些 Models 约定不变。
+规范别名的优先级看变量到底设了没有，空字符串也算设置。空的 token 值会关掉那项凭据；空的出网允许清单是移除继承来的例外，而不是和它们合并。无效或为空的规范数值会让启动失败，不会回退。启用状态下，空的规范代理 URL 会校验失败；旧值在关闭状态下的行为不是受支持的接入捷径。请保持 `OPENWORK_INFERENCE_BASE_URL`、`STRIPE_INFERENCE_PRICE_ID` 和 `config.inference.*` 这些 Models 约定不变。
 
 这些超时的名字对应不同的处理逻辑，不是可以互换的两个产品。在 `gateway.ts` 里，`/api/v1/providers/:inferenceProviderId/*` 用 `env.upstreamTimeoutMs` 管上游的整个生命周期，包括响应中继。在 `proxy.ts` 里，保留下来的 `/api/v1/chat/completions` API 用 `env.managedUpstreamTimeoutMs` 服务托管的 OpenWork Models：响应头和非流式响应体各有独立的计时器，流式成功时改用 `env.streamIdleMs`。共享的那个超时覆盖会同时设置两个超时字段，但不会让它们的时间行为变得一致。
 
@@ -177,7 +177,7 @@ curl -fsS -X POST -H "Authorization: Bearer $GATEWAY_ADMIN_TOKEN" \
 
 ## 稀疏 values 的 Helm 兼容性
 
-默认的 `gateway: {}` 是有意不设任何规范默认值的。`gateway` 根节点缺失——包括用 `--reuse-values` 升级的旧 release——是支持的，会按 `{}` 处理；显式给出一个非映射的值会被拒绝。根节点是空映射，意思是没有规范覆盖，而不是删除旧组件。旧的 `inference.*` 值仍然会配置这个组件，但只有显式的 `gateway.enabled: true` 才接入能力版本 `1`。
+默认的 `gateway: {}` 是有意不设任何规范默认值的。`gateway` 根节点缺失——包括用 `--reuse-values` 升级的旧 release——是支持的，会按 `{}` 处理；显式给出一个非映射的值一律拒绝。根节点是空映射，意思是没有规范覆盖，而不是删除旧组件。旧的 `inference.*` 值仍然会配置这个组件，但只有显式的 `gateway.enabled: true` 才接入能力版本 `1`。
 
 | 最终 values | 组件 | 能力意图 |
 | --- | --- | --- |
@@ -198,7 +198,7 @@ curl -fsS -X POST -H "Authorization: Bearer $GATEWAY_ADMIN_TOKEN" \
 
 为了给旧客户端兼容，组织和后台能力响应里的 `capabilities.gatewayDashboard` 恒为 `true`。它只是废弃的线上兼容值，**不是真正的功能开关**，不是部署就绪信号，也不是鉴权结论。管理能力的 API 仍接受 `gatewayDashboard` 的布尔/null 输入，但那是废弃的空操作；传 `true`、`false` 或 `null` 都改不了 Gateway 访问。其他能力保留它们原有的控制方式。
 
-已存下的 `organization.metadata.capabilities.gatewayDashboard` 值会被忽略，包括显式的 `false`。这次退役不需要数据库迁移或回填。本版本必需的 schema 迁移仍然照常适用。不要新增替代的组织标记，也不要用写元数据的变通办法。
+已存下的 `organization.metadata.capabilities.gatewayDashboard` 值一律不作数，包括显式的 `false`。这次退役不需要数据库迁移或回填。本版本必需的 schema 迁移仍然照常适用。不要新增替代的组织标记，也不要用写元数据的变通办法。
 
 ## Google Vertex AI：每位成员各自登录
 
@@ -213,7 +213,7 @@ Google 现在把这个产品叫 **Gemini Enterprise Agent Platform（原 Vertex 
 3. 配置你所在组织的 Google OAuth 同意屏，并创建一个应用类型为 **Web application** 的 OAuth 客户端，不要用 Desktop app。符合条件时用 Internal 受众；否则配置合适的外部受众/测试用户，并完成 Google 的生产与验证要求。你的组织要满足 Google 对回调所在部署的授权域名政策，包括使用一个并非你自有的托管回调时。
 4. 在 Den 的 **AI Gateway > AI Providers > Add provider** 里选择对应的 Vertex 提供商。在 **Key** 里选择 **Each member signs in**，填入目标项目和位置，并提供网页端 OAuth 客户端 ID 和客户端密钥。保存前核对 **Models** 和 **Who can use it**；这个表单会一并创建上游凭据集合和所选的访问规则。打开已保存提供商那一行，可查看它的回调或编辑 **Key**。密钥只写不回读；普通编辑时留空。项目和位置在提供商上是固定的：要改目标地址就另建一个提供商。
 5. 把 **Den 显示的那个确切回调 URL** 复制到 Google 的 **Authorized redirect URIs** 里。这个值是给当前部署生成的，结尾是 `/v1/inference-providers/oauth/callback`；提供商详情里它叫 `oauthCallbackUrl`。不要换成 Gateway 的推理源地址、`/gateway/connect`、桌面端回环 URL，或者别的部署的主机名。确认 Den 的规范公网 API URL（显式配置过的 `DEN_API_PUBLIC_URL`）、HTTPS 反向代理和浏览器会话 cookie 都与显示的 URL 一致。要比对完整的 URI，包括部署自带的路径前缀，并且不要添加结尾斜杠。
-6. 确认 **Who can use it** 只包含目标成员、团队或组织。表单默认是 **Everyone in the organization**；关掉它，用 **Add person** 或 **Add team** 收紧访问。保存时会通过访问规则把选定的模型和凭据集合关联起来。只通过 API 建一个集合、成为它的创建者、或者身为管理员，都不会自动授予推理访问权。每位被授权的成员仍要自己连接 Google 账户。
+6. 确认 **Who can use it** 只包含目标成员、团队或组织。表单默认是 **Everyone in the organization**；关掉它，用 **Add person** 或 **Add team** 收紧访问。保存时会通过访问规则把选定的模型和凭据集合关联起来。只通过 API 建一个集合、成为它的创建者、或者身为管理员，都不会自动授予推理访问权。每位获得授权的成员仍要自己连接 Google 账户。
 
 授权请求使用的 scope 恰好是这几项：
 
@@ -224,7 +224,7 @@ Google 现在把这个产品叫 **Gemini Enterprise Agent Platform（原 Vertex 
 它会带上同意和 PKCE 申请离线访问。cloud-platform 的同意本身不授予 IAM 权限。OAuth 客户端所在项目和推理项目可以不同；两者都不会自动成为单独配置的配额项目。
 
 <Warning>
-  目前没有可由管理员配置的配额项目设置，Gateway 也不会注入 `x-goog-user-project`。调用方自带的配额项目请求头和 Vertex 的配额查询参数都会被剥除。如果你的 Google 配置确实需要显式的配额项目，那是一个暂不支持的缺口，不能靠加一个客户端请求头或本地 ADC 来补。将来受支持的实现要从管理员掌控的配置里选取该项目，并核实该项目上的 `serviceusage.services.use`。
+  目前没有可由管理员配置的配额项目设置，Gateway 也不会注入 `x-goog-user-project`。调用方自带的配额项目请求头和 Vertex 的配额查询参数都会剥掉。如果你的 Google 配置确实需要显式的配额项目，那是一个暂不支持的缺口，不能靠加一个客户端请求头或本地 ADC 来补。将来受支持的实现要从管理员掌控的配置里选取该项目，并核实该项目上的 `serviceusage.services.use`。
 </Warning>
 
 参考 Google 的[网页服务端 OAuth 指南](https://developers.google.com/identity/protocols/oauth2/web-server)、[OAuth 政策](https://developers.google.com/identity/protocols/oauth2/policies)和 [Vertex 访问控制指引](https://cloud.google.com/vertex-ai/generative-ai/docs/access-control)。
@@ -244,7 +244,7 @@ Google 现在把这个产品叫 **Gemini Enterprise Agent Platform（原 Vertex 
 - Google Cloud 的会话控制策略可能要求交互式重新认证（`invalid_grant`，包括 `invalid_rapt`）。吊销和 token 过期也会导致同样的情况。需要时用 **Reconnect**；成员 OAuth 无法保证无限期无人值守运行，也不能绕过组织策略。不能暂停等待用户登录的工作负载，请改用另行批准的工作负载认证模式；Gateway 不会悄悄回退过去。
 - 处于 **Testing** 状态的外部 OAuth 应用，对这套 scope 一般签发的 refresh token **七天**后过期。因为请求了 cloud-platform，只涉身份的那条例外不适用。请走相应的 Google 生产流程，而不是放松会话策略。参考 Google 的 [token 过期指引](https://developers.google.com/identity/protocols/oauth2)和[生产就绪指南](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)。
 - 在一个凭据集合里轮换 OAuth 客户端 ID 或客户端密钥，会取消它待处理的登录，并吊销/清除它受影响的本地 Google 凭据。请先协调 Google 侧的改动和 Den 的更新，再让受影响的成员重新连接。通过 API 编辑时不传密钥，会保留原密钥；只改名不会吊销凭据。改动凭据模式、或者禁用这个**凭据集合**，同样会吊销它的凭据。重新启用也不会恢复已清除的 token。
-- 禁用**提供商**会拦住推理并取消待处理的登录，但保留已存的凭据；移除一条访问授权只是拦住那部分访问，不等于在 Google 侧断开连接。这些操作都不等同于吊销 Google 的授权。组织成员在失去授权或提供商被禁用之后，仍能为自己保留的凭据执行断开；成员离开的清理由流程负责处理。
+- 禁用**提供商**会拦住推理并取消待处理的登录，但保留已存的凭据；移除一条访问授权只是拦住那部分访问，不等于在 Google 侧断开连接。这些操作都不等同于吊销 Google 的授权。组织成员在失去授权或提供商禁用之后，仍能为自己保留的凭据执行断开；成员离开的清理由流程负责处理。
 - **Disconnect** 会立刻把选中的那条本地成员凭据标记为已吊销，清除它的 token 内容，并取消待处理的登录。远端 Google 侧的吊销只是尽力而为；本地断开成功不能证明 Google 已完成吊销，token 也不会为后续重试而保留。必要时直接在 Google 账户里移除该应用的访问权。在已打开的桌面端/Web 会话里刷新模型；Gateway 的实时授权仍然会拦住使用已吊销凭据的新请求。
 - Google 可能吊销共用同一份 Google 授权许可的其他连接，包括另一个本地集合，或者使用同一个 OAuth 客户端的另一个 Vertex 提供商。不要以为本地分行存着就是彼此独立的 Google 授权。断开连接不会删除你的 Google OAuth 应用。Gateway 客户端密钥和 `DEN_DB_ENCRYPTION_KEY` 是两种不同的凭据：轮换它们替代不了在 Google 侧断开，替换数据库加密密钥也不是 OAuth 的轮换流程。
 
@@ -313,6 +313,6 @@ Google 现在把这个产品叫 **Gemini Enterprise Agent Platform（原 Vertex 
 
 认证、角色和全新会话的失败仍然各自区分。成员的 usable/connect/sign-in/revoke 路径和 OAuth 回调不受部署管理层级的拦截；退役组织标记不会改变它们的鉴权。
 
-`/health` 证明进程活着。Gateway 的 `/ready` 执行 `select 1` 来检查数据库连通性；它**不能**证明 Gateway 的 schema 或迁移已经存在。能力响应也证明不了 schema 健康。请单独核对迁移的执行凭据和真实 schema，然后用批准过的、不含敏感的数据测一条被授权的提供商路径，之后再放开流量。
+`/health` 证明进程活着。Gateway 的 `/ready` 执行 `select 1` 来检查数据库连通性；它**不能**证明 Gateway 的 schema 或迁移已经存在。能力响应也证明不了 schema 健康。请单独核对迁移的执行凭据和真实 schema，然后用批准过的、不含敏感的数据测一条有权限的提供商路径，之后再放开流量。
 
 对组织管理员来说，导航入口是 **AI Gateway**，下面有 **AI Providers** 和 **OpenWork Models** 两个标签页。创建和编辑提供商都留在 **AI Providers** 标签页里。Gateway 的提供商管理保留它的部署和管理员两道防护；加载期间会暂缓访问判定。组织授权那道防护已经不再保留。OpenWork Models 标签页沿用它自己的可用性规则。这处导航不会改动订阅、计费、Models 密钥或提供商数据。在关掉任何东西之前，请看[关闭与恢复的几种选择](/zh/self-host/gateway-upgrade)。

@@ -42,7 +42,7 @@ migrations:
 
 ## 维护窗口之前的准备
 
-1. 清点共享数据库的所有读方/写方、已安装的镜像、当前的 values、数据库版本/模式、迁移台账和真实 schema。要包括 Den API、Gateway/旧的 inference、OAuth 回调和刷新工作进程、管理脚本以及保留调用方。确认切换期间没有旧副本或旧控制器能被重新拉起。
+1. 清点共享数据库的所有读方/写方、已安装的镜像、当前的 values、数据库版本/模式、迁移台账和真实 schema。要包括 Den API、Gateway/旧的 inference、OAuth 回调和刷新工作进程、管理脚本以及保留调用方。确认切换期间不会有旧副本或旧控制器重新拉起。
 2. 备份数据库，并安全地保留**现有**的加密密钥。验证一次恢复到隔离环境。保留行数、schema/台账证据以及加密的凭据/用量历史，同时不暴露密钥列。
 3. 在一个隔离的恢复副本上演练迁移，使用完全相同的版本 SQL 和经批准的执行器。迁移脚本本身存在、或台账里登记过，都不算生产数据通过了预检。
 4. 审阅完整的 `0096` 前置 schema 和已登记的迁移 `0097`、`0098`、`0099`，以及所选版本随带的任何更新迁移。只有做过完整 schema 校验之后，schema-push 的数据库才可以打基线；绝不靠表是否存在来猜。
@@ -60,28 +60,28 @@ migrations:
 4. 校验真实 schema、保留下来的数据和执行凭据。每条迁移都要在它的全部 SQL 成功之后才登记。检查规范的 Gateway 表和选定列、`gateway_providers.model_ids`、`gateway_credential_sets.created_by_org_membership_id`，而不是只看 `select 1` 或台账时间戳。
 5. 流量仍保持关闭，发布配套的 Den API、Den Web 和 Gateway 镜像。这次由外部完成迁移的发布要保持 `migrations.enabled: false`。稀疏 values 和必需的 Secret 引用按[部署配置指南](/zh/self-host/gateway)审阅。
 6. 校验存活/就绪状态，然后跨所有 API 副本校验经过认证的 `GET /v1/org` 顶层 `deploymentCapabilities` 约定。配置了 Gateway 的部署应当返回 `{ "version": 1, "aiGateway": true }`。确认组织管理员能以全新会话访问；所有组织都有 Gateway 权限，不需要平台管理员授权。就绪状态和能力响应都不是 schema 证明。
-7. 用不含敏感信息的测试数据走一遍被允许的提供商流程，验证面向桌面的公网路由和内网路由，并检查用量归属。这些检查都通过后才重新放开流量；最后恢复经批准的保留和后台工作。
+7. 用不含敏感信息的测试数据走一遍有权限的提供商流程，验证面向桌面的公网路由和内网路由，并检查用量归属。这些检查都通过后才重新放开流量；最后恢复经批准的保留和后台工作。
 
-如果内嵌预检在第一条持久化 DDL 之前就失败了，关闭这条连接以丢弃它的临时表，调查那个被点名的检查，并按经批准的保留方案解决它。如果执行在**第一次重命名之后**失败，停止启动并检查残留的中间状态。MySQL 的 DDL 是自动提交的：Job 失败或进程重启都撤不回它。不要盲目重试、schema-push、打基线，也不要带着不完整的表启动任何一个不兼容的运行时。
+如果内嵌预检在第一条持久化 DDL 之前就失败了，关闭这条连接以丢弃它的临时表，调查它点名的那项检查，并按经批准的保留方案解决它。如果执行在**第一次重命名之后**失败，停止启动并检查残留的中间状态。MySQL 的 DDL 是自动提交的：Job 失败或进程重启都撤不回它。不要盲目重试、schema-push、打基线，也不要带着不完整的表启动任何一个不兼容的运行时。
 
 ### 预期保留下来的状态
 
 - 已有的提供商、凭据身份、加密的凭据值、授权和用量历史，都由迁移显式的回填/重命名保留下来。`DEN_DB_ENCRYPTION_KEY` 保持不变。
 - 已有的提供商授权会拿到迁移的默认分组/集合映射；历史用量的选定字段仍保持未知/null，而不是归到凭空编造的选项上。
-- 未使用的旧 OAuth 状态因为缺少新的集合/客户端绑定，会被标记为已使用。成员要重新发起那些登录流程；已有的凭据不会因此被删除或吊销。
+- 未使用的旧 OAuth 状态因为缺少新的集合/客户端绑定，会统一标记为已使用。成员要重新发起那些登录流程；这一步不会删除或吊销已有凭据。
 - Gateway 的 `gateway_keys` 起始为空。成员通过正常的连接/开通流程各自拿到 `ow_gw_` 密钥；已有的 Models `ow_inf_` 密钥不会复制进去。
 - Models 密钥、订阅计费、限额、用量桶和台账仍然各自独立。`OPENWORK_INFERENCE_BASE_URL`、`STRIPE_INFERENCE_PRICE_ID` 和 `config.inference.*` 这些旧约定保持完整。
 
 ## 关闭管理功能而不降级 schema
 
-组织级的 `gatewayDashboard` 开关已经退役：部署配置好之后，Gateway 对每个组织的管理员都正式可用。管理 API 上那个废弃的输入项是个空操作，而响应字段对旧客户端恒为 `true`，它不是真正的功能开关。已保存的值——包括 `false`——都会被忽略；退役这件事不需要数据库迁移或回填。但这并不免除上文那一步版本 schema 的切换。没有按组织的管理页开关。
+组织级的 `gatewayDashboard` 开关已经退役：部署配置好之后，Gateway 对每个组织的管理员都正式可用。管理 API 上那个废弃的输入项是个空操作，而响应字段对旧客户端恒为 `true`，它不是真正的功能开关。已保存的值——包括 `false`——都会一概不认；退役这件事不需要数据库迁移或回填。但这并不免除上文那一步版本 schema 的切换。没有按组织的管理页开关。
 
 按你的意图选择操作。下面这些开关都会保留已持久化的 Gateway 数据；它们既不是吊销凭据的控制项，也不是 schema 回滚。
 
 | 意图 | 操作 | 后果 |
 | --- | --- | --- |
-| 保留组件，但不再接纳新的 Gateway 管理请求 | 原生部署：在 Den API 和 Gateway 上设置 `GATEWAY_ENABLED=false`，然后重启配套版本。Helm：保留 `inference.enabled: true`，并从生效的 values 里**省略** `gateway.enabled`，如下文所示。 | 能力变为 false；管理的读取/写入被拦住。这个开关不会关掉已授权成员 usable/connect/OAuth/revoke 路径和运行时路由。 |
-| 移除由 Helm 管理的组件 | 设置 `gateway.enabled: false`。 | 规范值 false 覆盖旧值 true：升级时 Gateway 的 Deployment、Service 和 chart 的保留任务会被省略/删除。依赖那个 Service 的流量随之中断。 |
+| 保留组件，但不再接纳新的 Gateway 管理请求 | 原生部署：在 Den API 和 Gateway 上设置 `GATEWAY_ENABLED=false`，然后重启配套版本。Helm：保留 `inference.enabled: true`，并从生效的 values 里**省略** `gateway.enabled`，如下文所示。 | 能力变为 false；拦住管理的读取/写入。这个开关不会关掉已授权成员 usable/connect/OAuth/revoke 路径和运行时路由。 |
+| 移除由 Helm 管理的组件 | 设置 `gateway.enabled: false`。 | 规范值 false 覆盖旧值 true：升级时 Gateway 的 Deployment、Service 和 chart 的保留任务一并省略/删除。依赖那个 Service 的流量随之中断。 |
 
 Helm 保留组件的那种情况，相关的最终 values 是：
 
@@ -95,11 +95,11 @@ migrations:
 
 这段片段只演示启用状态，不能替代你完整的生产 values。请保留经批准的 Gateway 镜像/设置、公网/内网目标地址、数据库和加密引用，以及任何有意保留的 token/保留任务配置。`gateway` 根节点缺失这种情况，对旧的复用 values 也是支持的，含义是没有规范覆盖。可是 `gateway.enabled` 或其他规范条目一旦保存过，Helm 保存的 values 或更早的输入文件就可能把空的根节点或嵌套映射重新填上。请使用 `--reset-values`，配合一份完整、经过审阅、省略了 `gateway.enabled` 和不需要的规范条目、并显式写入所需空映射的 values 文件，同时保留部署的其余部分。一个空的最终覆盖文件或 `--reset-then-reuse-values` 都替代不了它。渲染出完整的期望 values，确认 `*-inference` 组件仍然存在，并且两个服务都拿到了 `GATEWAY_ENABLED=false`。
 
-不要用 `gateway.enabled: false` 搭配 `inference.enabled: true` 来试图保留组件：规范值的存在优先，所以组件会被移除。不要把 `GATEWAY_ENABLED` 从 `denApi.env`、`gateway.env` 或 `inference.env` 注入，chart 会拒绝这种覆盖。保留其他规范键、只省略 `enabled`，是支持的。
+不要用 `gateway.enabled: false` 搭配 `inference.enabled: true` 来试图保留组件：规范值的存在优先，所以组件不会保留。不要把 `GATEWAY_ENABLED` 从 `denApi.env`、`gateway.env` 或 `inference.env` 注入，chart 会拒绝这种覆盖。保留其他规范键、只省略 `enabled`，是支持的。
 
 在这种只保留旧服务的模式下，环境差异还有几处。要校验渲染出来的 Pod 环境，而不只是保留下来的 values：
 
-- 保留 `config.public.gatewayPublicBaseUrl`，并把旧的 Models 公网来源留在 `config.internal.inferenceProxyBaseUrl` 里。关闭管理功能时 chart 会保留这些目标地址；运行时选择不依赖那个管理开关，而是先看有效的旧 Models 公网来源，再看有效的 Gateway 公网来源。已有关闭模式下按应用设置的 `GATEWAY_PUBLIC_BASE_URL` 覆盖仍会被采纳，也不会产生重复的 env 条目，但重新启用之前要移除它们，改用共享的公网配置。两个公网目标都不可用时，历史的 Models 兜底仍可能是私网或回环地址；格式有误的可选配置在关闭模式下不会变成新的启动前置条件。成员已有的 Gateway 配置载荷仍保留它配置的公网 URL。切换这个开关不会自动修复此前保存的提供商 URL。
+- 保留 `config.public.gatewayPublicBaseUrl`，并把旧的 Models 公网来源留在 `config.internal.inferenceProxyBaseUrl` 里。关闭管理功能时 chart 会保留这些目标地址；运行时选择不依赖那个管理开关，而是先看有效的旧 Models 公网来源，再看有效的 Gateway 公网来源。已有关闭模式下按应用设置的 `GATEWAY_PUBLIC_BASE_URL` 覆盖仍然生效，也不会产生重复的 env 条目，但重新启用之前要移除它们，改用共享的公网配置。两个公网目标都不可用时，历史的 Models 兜底仍可能是私网或回环地址；格式有误的可选配置在关闭模式下不会变成新的启动前置条件。成员已有的 Gateway 配置载荷仍保留它配置的公网 URL。切换这个开关不会自动修复此前保存的提供商 URL。
 - 只在启用状态下才要求的那些数据库/加密 `secretKeyRef` 条目也会一并消失。旧 Pod 通过 `envFrom` 使用共享 Secret；要确认里面确实含有运行时的真实变量名（`DATABASE_URL`，或 PlanetScale 那几个变量，以及 `DEN_DB_ENCRYPTION_KEY`）。在只有服务的模式下，光有重映射过的数据键不再提供这些运行时变量。请通过预先创建的 Secret 解决，而不是写字面的 env 值。
 - 保留任务之外，规范的管理员/webhook token 覆盖不再输出。要重新核对共享 Secret 里实际生效的别名，以及任何旧的 env 设置。如果保留了保留任务，它仍会从自己那份专用引用中提供两个管理员 token 别名。
 
