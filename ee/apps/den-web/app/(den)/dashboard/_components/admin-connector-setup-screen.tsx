@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { getAddConnectorRoute, getMcpConnectionRoute, getMcpConnectionsRoute, getOrgAccessFlags } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { type AccessDraft, accessPeopleIds, peopleLabel } from "./access-summary";
 import { useConnectorSetup } from "./connector-setup";
@@ -27,16 +28,17 @@ function SignInChoice({ name, value, onChange, disabled, kind = "oauth", sharedD
   kind?: "oauth" | "api_key";
   sharedDescription?: string;
 }) {
+  const t = useDenT();
   const options: { value: ExternalMcpCredentialMode; title: string; description: string }[] = [
     kind === "api_key"
-      ? { value: "per_member", title: "Each person adds a key", description: `One ${name} connection; each person adds their own key.` }
-      : { value: "per_member", title: "Each person signs in", description: `Everyone uses their own ${name} account.` },
+      ? { value: "per_member", title: t("denConnector.setup.eachPersonAddsKey"), description: t("denConnector.setup.oneConnectionOwnKey", { name }) }
+      : { value: "per_member", title: t("denConnector.list.eachPersonSignsIn"), description: t("denConnector.setup.ownAccount", { name }) },
     kind === "api_key"
-      ? { value: "shared", title: "One key for everyone", description: sharedDescription ?? `Everyone uses one ${name} API key.` }
-      : { value: "shared", title: "One account for everyone", description: sharedDescription ?? `Everyone uses one ${name} account you sign in with.` },
+      ? { value: "shared", title: t("denConnector.setup.oneKeyForEveryone"), description: sharedDescription ?? t("denConnector.setup.oneApiKeyForAll", { name }) }
+      : { value: "shared", title: t("denConnector.list.oneAccountForAll"), description: sharedDescription ?? t("denConnector.setup.oneAccountYouSignIn", { name }) },
   ];
   return (
-    <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="How people connect">
+    <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t("denConnector.setup.howPeopleConnect")}>
       {options.map((option) => {
         const selected = option.value === value;
         return (
@@ -66,6 +68,7 @@ function SignInChoice({ name, value, onChange, disabled, kind = "oauth", sharedD
 
 /** C3 and C4: the checks fill in, then the admin picks how people sign in and who gets it. */
 export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) {
+  const t = useDenT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useDenToast();
@@ -96,21 +99,21 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
   });
 
   const name = target?.name ?? "";
-  const back = { href: getAddConnectorRoute(orgSlug), label: "Add a connector" };
+  const back = { href: getAddConnectorRoute(orgSlug), label: t("denConnector.action.addConnector") };
 
   if (missing || failed) {
     return (
       <ItemPage>
         <ItemHeader
           back={back}
-          title={failed ? "The list did not load" : "Connector not found"}
-          description={failed ? "Reload the page to try again." : "Pick it again from the list."}
+          title={failed ? t("denConnector.page.listNotLoaded") : t("denConnector.page.notFoundTitle")}
+          description={failed ? t("denPlugin.error.reloadToRetry") : t("denConnector.page.pickAgainFromList")}
         />
       </ItemPage>
     );
   }
   if (!target || !orgContext) {
-    return <ItemPage><ItemHeader back={back} title={loading || !orgContext ? "Loading..." : "Add a connector"} /></ItemPage>;
+    return <ItemPage><ItemHeader back={back} title={loading || !orgContext ? "Loading..." : t("denConnector.action.addConnector")} /></ItemPage>;
   }
 
   const connection = setup.connection;
@@ -123,13 +126,13 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
     : { orgWide: false, memberIds: viewerId ? [viewerId] : [], teamIds: [] });
   const reached = accessPeopleIds(access, orgContext, viewerId).length;
   const me = orgContext.members.find((member) => member.id === viewerId);
-  const viewerName = me?.user.name || me?.user.email || "You";
+  const viewerName = me?.user.name || me?.user.email || t("denPlugin.item.you");
   const switchingToShared = signsIn && chosenMode === "shared" && connection?.credentialMode === "per_member";
   const ready = setup.allDone && Boolean(connection);
 
   const checks = setup.checks.map((check) => {
     if (check.id === "sign-in" && setup.canSignIn) {
-      return { ...check, action: <DenButton size="sm" onClick={() => void setup.startSignIn()}>{`Sign in with ${name}`}</DenButton> };
+      return { ...check, action: <DenButton size="sm" onClick={() => void setup.startSignIn()}>{t("denConnector.action.signInWith", { name })}</DenButton> };
     }
     if (check.id === "sign-in-method" && setup.needsInput) {
       return {
@@ -143,7 +146,7 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
                 <ApiKeyFields name={name} saving={setup.saving} error={setup.saveError} onSave={(apiKey) => void setup.saveApiKey(apiKey, apiKeyAuthScheme)} />
               ) : (
                 <div className="flex flex-col items-start gap-2">
-                  <DenButton size="sm" loading={setup.saving} onClick={() => void setup.savePerMemberApiKeys(apiKeyAuthScheme)}>Use individual keys</DenButton>
+                  <DenButton size="sm" loading={setup.saving} onClick={() => void setup.savePerMemberApiKeys(apiKeyAuthScheme)}>{t("denConnector.action.useIndividualKeys")}</DenButton>
                   {setup.saveError ? <p className="text-[12px] text-red-600" role="alert">{setup.saveError}</p> : null}
                 </div>
               )}
@@ -187,13 +190,13 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
         ? await checkConnection.mutateAsync(connection.id) : null;
       const connectionId = connection.id;
       toast({
-        title: usesIndividualKeys ? `${name} is set up` : checked?.status === "could_not_verify" ? `${name} couldn't be verified` : `${name} is ready`,
-        description: `${reached > 0 ? `${peopleLabel(reached)} will find it in My Library.` : "Only you have it so far."}`,
+        title: usesIndividualKeys ? t("denConnector.setup.isSetUp", { name }) : checked?.status === "could_not_verify" ? t("denConnector.setup.couldNotVerify", { name }) : t("denConnector.setup.isReady", { name }),
+        description: reached > 0 ? t("denConnector.setup.willFindInLibrary", { people: peopleLabel(reached) }) : t("denConnector.setup.onlyYouHaveIt"),
         action: { label: "View", onClick: () => router.push(getMcpConnectionRoute(orgSlug, connectionId)) },
       });
       router.push(getMcpConnectionsRoute(orgSlug));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not save.");
+      setError(cause instanceof Error ? cause.message : t("denConnector.form.notSaved"));
     } finally {
       setBusy(false);
     }
@@ -205,11 +208,11 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
         <ItemHeader
           back={back}
           logo={<ConnectorLogo name={name} url={target.url} size="md" />}
-          title={`Add ${name}`}
+          title={t("denConnector.setup.addTitle", { name })}
         />
         <SetupChecks checks={checks} />
-        <StepFooter note={`Step ${setup.stepNumber} of ${checks.length}`}>
-          <DenButton variant="secondary" loading={busy} onClick={() => void cancel()}>Cancel</DenButton>
+        <StepFooter note={t("denConnector.setup.stepOf", { step: setup.stepNumber, total: checks.length })}>
+          <DenButton variant="secondary" loading={busy} onClick={() => void cancel()}>{t("denPlugin.action.cancel")}</DenButton>
         </StepFooter>
       </ItemPage>
     );
@@ -220,23 +223,23 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
       <ItemHeader
         back={back}
         logo={<ConnectorLogo name={name} url={target.url} size="md" />}
-        title={usesIndividualKeys ? `${name} is set up` : `${name} passed all ${checks.length} checks`}
+        title={usesIndividualKeys ? t("denConnector.setup.isSetUp", { name }) : t("denConnector.setup.passedChecks", { name, count: checks.length })}
       />
       {signsIn || usesKey ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="How people connect" />
+          <SectionTitle title={t("denConnector.setup.howPeopleConnect")} />
           <SignInChoice
             name={name}
             value={chosenMode}
             onChange={setMode}
             disabled={busy || usesKey}
             kind={usesKey ? "api_key" : "oauth"}
-            sharedDescription={usesKey ? `Everyone uses the ${name} API key you added.` : undefined}
+            sharedDescription={usesKey ? t("denConnector.setup.sharedKeyDescription", { name }) : undefined}
           />
         </section>
       ) : null}
       <section className="flex flex-col gap-2.5">
-        <SectionTitle title="Who can use it" />
+        <SectionTitle title={t("denPlugin.access.whoCanUseIt")} />
         <WhoCanUseIt
           value={access}
           onChange={setDraft}
@@ -244,23 +247,23 @@ export function AdminConnectorSetupScreen({ catalogId }: { catalogId: string }) 
           teams={orgContext.teams}
           owner={viewerId ? { id: viewerId, name: viewerName, isYou: true } : null}
           canShareWithEveryone={canShareWithEveryone}
-          everyoneOffDescription="Off. Only the people and teams below get it."
+          everyoneOffDescription={t("denConnector.setup.offBelowGetIt")}
           disabled={busy}
         />
       </section>
       {error ? <p className="text-[13px] text-red-600" role="alert">{error}</p> : null}
       <StepFooter note={switchingToShared
-        ? `Next, sign in with the ${name} account everyone will use.`
-        : reached > 0 ? `${peopleLabel(reached)} will find ${name} in My Library.` : `Only you will have ${name}.`}
+        ? t("denConnector.setup.nextSignInShared", { name })
+        : reached > 0 ? t("denConnector.setup.willFindInLibraryNamed", { people: peopleLabel(reached), name }) : t("denConnector.setup.onlyYouWillHave", { name })}
       >
-        <DenButton variant="secondary" disabled={busy} onClick={() => void cancel()}>Cancel</DenButton>
-        <DenButton loading={busy} onClick={() => (switchingToShared ? setConfirmSwitch(true) : void add())}>{switchingToShared ? "Continue" : `Add ${name}`}</DenButton>
+        <DenButton variant="secondary" disabled={busy} onClick={() => void cancel()}>{t("denPlugin.action.cancel")}</DenButton>
+        <DenButton loading={busy} onClick={() => (switchingToShared ? setConfirmSwitch(true) : void add())}>{switchingToShared ? t("denConnector.action.continue") : t("denConnector.setup.addTitle", { name })}</DenButton>
       </StepFooter>
       <ConfirmDialog
         confirm={confirmSwitch ? {
-          title: "Switch to one account for everyone?",
-          description: `This signs you out of ${name}. Next, you sign in with the ${name} account everyone will use.`,
-          action: "Sign out and continue",
+          title: t("denConnector.setup.switchConfirmTitle"),
+          description: t("denConnector.setup.switchConfirmDescription", { name }),
+          action: t("denConnector.setup.signOutAndContinue"),
         } : null}
         onConfirm={switchToShared}
         onClose={() => setConfirmSwitch(false)}

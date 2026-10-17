@@ -15,6 +15,7 @@ import { DenNotice } from "../../_components/ui/notice";
 import { DenStickyActionBar } from "../../_components/ui/sticky-action-bar";
 import { DenSwitch } from "../../_components/ui/switch";
 import { getAiGatewayLimitRoute, getAiGatewayLimitsRoute, orgFeatureEnabled, type DenOrgMember, type DenOrgTeam } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { DenBrandMark } from "../../_components/ui/brand-mark";
 import { useGatewayAccessProviders } from "./gateway-subject-access-data";
 import { getProviderIconSlug } from "./llm-provider-data";
@@ -71,8 +72,9 @@ function dailyResetTime() {
 }
 
 export function GatewayLimitEditorScreen({ policyId, target }: { policyId?: string; target?: GatewayLimitTarget }) {
+  const t = useDenT();
   const { orgId, orgSlug, orgContext } = useOrgDashboard();
-  if (!orgId || !orgContext) return <p role="status" className="text-sm text-gray-500">Loading…</p>;
+  if (!orgId || !orgContext) return <p role="status" className="text-sm text-gray-500">{t("denGateway.status.loading")}</p>;
   return <GatewayLimitEditor key={`${orgId}:${policyId ?? "new"}`} orgId={orgId} orgSlug={orgSlug} policyId={policyId} target={target} teams={orgContext.teams} members={orgContext.members}
     providerLimits={orgFeatureEnabled(orgContext, "gatewayProviderUsageLimits")} />;
 }
@@ -80,6 +82,7 @@ export function GatewayLimitEditorScreen({ policyId, target }: { policyId?: stri
 type EditorProps = { orgId: string; orgSlug: string | null | undefined; teams: DenOrgTeam[]; members: DenOrgMember[]; providerLimits?: boolean };
 
 export function GatewayLimitEditor({ orgId, orgSlug, policyId, target, teams, members, providerLimits = false }: EditorProps & { policyId?: string; target?: GatewayLimitTarget }) {
+  const t = useDenT();
   const policies = useGatewayPolicies(orgId);
   if (!policyId) return <GatewayLimitForm orgId={orgId} orgSlug={orgSlug} target={target} teams={teams} members={members} providerLimits={providerLimits} />;
   if (policies.isPending) return <p role="status" className="text-sm text-gray-500">Loading limit…</p>;
@@ -87,7 +90,7 @@ export function GatewayLimitEditor({ orgId, orgSlug, policyId, target, teams, me
     return (
       <div className="flex flex-col items-start gap-3" role="alert">
         <DenNotice tone="error" message={policies.error.message} />
-        <DenButton variant="secondary" onClick={() => void policies.refetch()}>Retry</DenButton>
+        <DenButton variant="secondary" onClick={() => void policies.refetch()}>{t("denGateway.action.retry")}</DenButton>
       </div>
     );
   }
@@ -99,6 +102,7 @@ export function GatewayLimitEditor({ orgId, orgSlug, policyId, target, teams, me
 const DEFAULT_PROVIDER = "default";
 
 function GatewayLimitForm({ orgId, orgSlug, policy, target, teams, members, providerLimits = false }: EditorProps & { policy?: GatewayUsageLimitPolicy; target?: GatewayLimitTarget }) {
+  const t = useDenT();
   const id = useId();
   const router = useRouter();
   const policies = useGatewayPolicies(orgId);
@@ -321,7 +325,7 @@ function GatewayLimitForm({ orgId, orgSlug, policy, target, teams, members, prov
             <Trash2 className="h-4 w-4" aria-hidden="true" />Delete limit
           </DenButton>
         ) : null}
-        <Link href={getAiGatewayLimitsRoute(orgSlug)} className={buttonVariants({ variant: "secondary" })}>Cancel</Link>
+        <Link href={getAiGatewayLimitsRoute(orgSlug)} className={buttonVariants({ variant: "secondary" })}>{t("denGateway.action.cancel")}</Link>
         <DenButton data-testid="gateway-limit-save" loading={busy} disabled={blocked} onClick={() => void save()}>{policy ? "Save changes" : "Save limit"}</DenButton>
       </DenStickyActionBar>
     </div>

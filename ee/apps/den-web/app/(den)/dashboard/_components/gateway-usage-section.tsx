@@ -10,12 +10,14 @@ import { DenCard } from "../../_components/ui/card";
 import { DenInput } from "../../_components/ui/input";
 import { DenNotice } from "../../_components/ui/notice";
 import { DenSelect } from "../../_components/ui/select";
+import { useDenT } from "../../../_lib/i18n/client";
 import { formatUsageCost, StackedDailyChart } from "../_features/analytics/stacked-daily-chart";
 import { useSeriesColors } from "../_features/analytics/use-series-colors";
 import { useGatewayUsage } from "./gateway-usage-data";
 import { GatewayUsageCoverageNotice } from "./gateway-usage-coverage-notice";
 
 export function GatewayUsageSection({ orgId }: { orgId: string }) {
+  const t = useDenT();
   const id = useId();
   const [groupBy, setGroupBy] = useState<GatewayUsageGroupBy>("model");
   const [metric, setMetric] = useState<"tokens" | "cost">("tokens");
@@ -56,13 +58,13 @@ export function GatewayUsageSection({ orgId }: { orgId: string }) {
     <section aria-labelledby={`${id}-heading`} className="mb-10 min-w-0" data-testid="gateway-usage">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 id={`${id}-heading`} className="text-lg font-semibold tracking-tight text-gray-950">Usage</h2>
-        <p className="text-xs text-gray-500">Last 31 days &middot; UTC</p>
+        <p className="text-xs text-gray-500">{t("denGateway.period.last31Days")} &middot; UTC</p>
       </div>
       <DenCard className="min-w-0">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="min-w-0">
             <p className="text-xs text-gray-500">{valueLabel}</p>
-            {usage ? <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-gray-950 tabular-nums">{noTeams ? "—" : isCost ? (unknownCost ? "Unknown" : formatUsageCost(usage.totalCostMicroUsd)) : usage.totalTokens.toLocaleString()}</p>
+            {usage ? <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-gray-950 tabular-nums">{noTeams ? "—" : isCost ? (unknownCost ? t("denGateway.state.unknownCost") : formatUsageCost(usage.totalCostMicroUsd)) : usage.totalTokens.toLocaleString()}</p>
               : <p role="status" className="mt-2 text-sm text-gray-500">{loading ? "Loading usage..." : "Usage unavailable"}</p>}
             <p className="mt-2 text-xs text-gray-500">All Gateway providers, including OpenWork Models.</p>
           </div>

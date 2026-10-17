@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Check, CircleCheck, CircleX, LockKeyhole, X } from "lucide-react";
 import { UnderlineTabs } from "../../../_components/ui/tabs";
+import { useDenT } from "../../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../../_lib/i18n/messages";
 import {
   type ExternalMcpInspectionBody,
   type ExternalMcpInspectionHeader,
@@ -51,7 +53,8 @@ export function formatBytes(bytes: number): string {
 }
 
 export function InspectionHeaders({ headers }: { headers: ExternalMcpInspectionHeader[] }) {
-  if (headers.length === 0) return <p className="text-[11px] text-gray-400">No headers captured.</p>;
+  const t = useDenT();
+  if (headers.length === 0) return <p className="text-[11px] text-gray-400">{t("denToolTester.inspector.noHeaders")}</p>;
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
       {headers.map((header, index) => (
@@ -68,30 +71,31 @@ export function InspectionHeaders({ headers }: { headers: ExternalMcpInspectionH
 }
 
 export function InspectionBody({ body }: { body: ExternalMcpInspectionBody }) {
+  const t = useDenT();
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between gap-3 text-[10px] text-gray-500">
-        <span>Raw body</span>
+        <span>{t("denToolTester.inspector.rawBody")}</span>
         <span>
           {formatBytes(body.bytes)}
-          {body.truncated ? <span className="ml-1 font-semibold text-amber-700">· capture truncated</span> : null}
+          {body.truncated ? <span className="ml-1 font-semibold text-amber-700">{t("denToolTester.inspector.truncated")}</span> : null}
         </span>
       </div>
       {body.unavailable ? (
-        <div className="rounded-lg border border-[var(--dls-border)] bg-[var(--dls-hover)] px-3 py-2 text-[11px] text-[var(--dls-text-primary)]">The transport body could not be captured.</div>
+        <div className="rounded-lg border border-[var(--dls-border)] bg-[var(--dls-hover)] px-3 py-2 text-[11px] text-[var(--dls-text-primary)]">{t("denToolTester.inspector.bodyUnavailable")}</div>
       ) : (
-        <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-3 text-[10px] leading-4 text-gray-100">{body.text || "(empty body)"}</pre>
+        <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-gray-950 p-3 text-[10px] leading-4 text-gray-100">{body.text || t("denToolTester.inspector.emptyBody")}</pre>
       )}
     </div>
   );
 }
 
-export function diagnosisLayerLabel(layer: ExternalMcpToolCallInspection["diagnosis"]["layer"]): string {
-  if (layer === "openwork") return "OpenWork before send";
-  if (layer === "network") return "Network / no response";
-  if (layer === "mcp_connection") return "MCP connection / setup";
-  if (layer === "remote_http") return "Remote MCP HTTP";
-  return "MCP tool response";
+export function diagnosisLayerLabel(layer: ExternalMcpToolCallInspection["diagnosis"]["layer"], t: DenTranslate): string {
+  if (layer === "openwork") return t("denToolTester.inspector.layerOpenwork");
+  if (layer === "network") return t("denToolTester.inspector.layerNetwork");
+  if (layer === "mcp_connection") return t("denToolTester.inspector.layerMcpConnection");
+  if (layer === "remote_http") return t("denToolTester.inspector.layerRemoteHttp");
+  return t("denToolTester.inspector.layerToolResponse");
 }
 
 export type McpToolCallOutcome = {
@@ -106,10 +110,10 @@ export type McpToolCallOutcome = {
 
 type HopState = "succeeded" | "failed" | "unreached";
 
-function transportLabel(inspection: ExternalMcpToolCallInspection | null): string {
+function transportLabel(inspection: ExternalMcpToolCallInspection | null, t: DenTranslate): string {
   if (inspection?.response) return `HTTP ${inspection.response.status}`;
-  if (inspection?.request && inspection.diagnosis.layer !== "openwork") return "No response";
-  return "Not sent";
+  if (inspection?.request && inspection.diagnosis.layer !== "openwork") return t("denToolTester.inspector.transportNoResponse");
+  return t("denToolTester.inspector.transportNotSent");
 }
 
 function traceStates(outcome: McpToolCallOutcome): [HopState, HopState, HopState] {
@@ -137,39 +141,42 @@ function TracePill({ label, state }: { label: string; state: HopState }) {
 }
 
 function DetailsUnavailable() {
+  const t = useDenT();
   return (
     <div className="rounded-xl border border-[var(--dls-border)] bg-[var(--dls-hover)] px-4 py-3 text-[12px] leading-5 text-[var(--dls-text-primary)]" role="status">
-      Request and response details were unavailable. Refresh after the dashboard and its server are running the same version.
+      {t("denToolTester.inspector.detailsUnavailable")}
     </div>
   );
 }
 
 function RedactionNotice() {
+  const t = useDenT();
   return (
     <div className="rounded-lg border border-[var(--dls-border)] bg-[var(--dls-hover)] px-3 py-2 text-[10px] leading-4 text-[var(--dls-text-primary)]">
-      Credential and session headers are redacted. Bodies may contain sensitive provider data; this inspection is returned only for this run and is not stored in OpenWork logs.
+      {t("denToolTester.inspector.redactionNotice")}
     </div>
   );
 }
 
 function RequestInspection({ inspection }: { inspection: ExternalMcpToolCallInspection | null }) {
+  const t = useDenT();
   if (!inspection) return <DetailsUnavailable />;
   return (
     <div className="space-y-4">
       <RedactionNotice />
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Outgoing request</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("denToolTester.inspector.outgoingRequest")}</p>
         {inspection.request ? (
           <div className="mt-2 rounded-lg bg-gray-950 px-3 py-2 font-mono text-[10px] leading-4 text-gray-100">
             <span className="font-semibold text-blue-300">{inspection.request.method}</span> <span className="break-all">{inspection.request.url}</span>
           </div>
         ) : (
-          <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">No tools/call request left OpenWork.</p>
+          <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">{t("denToolTester.inspector.noRequestSent")}</p>
         )}
       </div>
       {inspection.request ? (
         <>
-          <div><p className="mb-1.5 text-[11px] font-medium text-gray-700">Headers</p><InspectionHeaders headers={inspection.request.headers} /></div>
+          <div><p className="mb-1.5 text-[11px] font-medium text-gray-700">{t("denToolTester.inspector.headers")}</p><InspectionHeaders headers={inspection.request.headers} /></div>
           <InspectionBody body={inspection.request.body} />
         </>
       ) : null}
@@ -178,24 +185,25 @@ function RequestInspection({ inspection }: { inspection: ExternalMcpToolCallInsp
 }
 
 function ResponseInspection({ inspection }: { inspection: ExternalMcpToolCallInspection | null }) {
+  const t = useDenT();
   if (!inspection) return <DetailsUnavailable />;
   return (
     <div className="space-y-4">
       <RedactionNotice />
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Response received</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{t("denToolTester.inspector.responseReceived")}</p>
         {inspection.response ? (
           <div className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-gray-950 px-3 py-2 font-mono text-[10px] text-gray-100">
             <span><span className={inspection.response.status < 400 ? "text-emerald-300" : "text-red-300"}>HTTP {inspection.response.status}</span> {inspection.response.statusText}</span>
             <span className="text-gray-400">{inspection.response.durationMs} ms</span>
           </div>
         ) : (
-          <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">No HTTP response was captured.</p>
+          <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">{t("denToolTester.inspector.noResponseCaptured")}</p>
         )}
       </div>
       {inspection.response ? (
         <>
-          <div><p className="mb-1.5 text-[11px] font-medium text-gray-700">Headers</p><InspectionHeaders headers={inspection.response.headers} /></div>
+          <div><p className="mb-1.5 text-[11px] font-medium text-gray-700">{t("denToolTester.inspector.headers")}</p><InspectionHeaders headers={inspection.response.headers} /></div>
           <InspectionBody body={inspection.response.body} />
         </>
       ) : null}
@@ -204,6 +212,7 @@ function ResponseInspection({ inspection }: { inspection: ExternalMcpToolCallIns
 }
 
 export function McpToolCallInspector({ outcome }: { outcome: McpToolCallOutcome }) {
+  const t = useDenT();
   const [activeTab, setActiveTab] = useState<"result" | "request" | "response">("result");
   const succeeded = outcome.status === "completed";
   const summary = outcome.failureAttribution?.likelySource
@@ -211,13 +220,13 @@ export function McpToolCallInspector({ outcome }: { outcome: McpToolCallOutcome 
     ?? outcome.errorMessage;
   const states = traceStates(outcome);
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white" aria-label="Tool call inspection">
+    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white" aria-label={t("denToolTester.inspector.ariaLabel")}>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           {succeeded
             ? <CircleCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />
             : <CircleX className="h-4 w-4 text-red-500" aria-hidden="true" />}
-          <p className="text-[13px] font-semibold text-gray-900">{succeeded ? "Tool completed" : "Tool call failed"}</p>
+          <p className="text-[13px] font-semibold text-gray-900">{succeeded ? t("denToolTester.inspector.completed") : t("denToolTester.inspector.failed")}</p>
           {!succeeded && summary ? <p className="text-[12px] text-gray-600">· {summary}</p> : null}
           {!succeeded && outcome.failureAttribution ? (
             <span className="rounded-full border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">{outcome.failureAttribution.confidence}</span>
@@ -229,17 +238,17 @@ export function McpToolCallInspector({ outcome }: { outcome: McpToolCallOutcome 
       <div className="flex flex-wrap items-center px-4 py-3">
         <TracePill label="OpenWork" state={states[0]} />
         <span className="h-px w-6 bg-gray-200" aria-hidden="true" />
-        <TracePill label={transportLabel(outcome.inspection)} state={states[1]} />
+        <TracePill label={transportLabel(outcome.inspection, t)} state={states[1]} />
         <span className="h-px w-6 bg-gray-200" aria-hidden="true" />
-        <TracePill label="Tool result" state={states[2]} />
+        <TracePill label={t("denToolTester.inspector.toolResult")} state={states[2]} />
       </div>
 
       <UnderlineTabs
         className="px-4"
         tabs={[
-          { value: "result", label: "Result" },
-          { value: "request", label: "Request" },
-          { value: "response", label: "Response" },
+          { value: "result", label: t("denToolTester.inspector.tabResult") },
+          { value: "request", label: t("denToolTester.inspector.tabRequest") },
+          { value: "response", label: t("denToolTester.inspector.tabResponse") },
         ]}
         activeTab={activeTab}
         onChange={setActiveTab}
@@ -249,7 +258,7 @@ export function McpToolCallInspector({ outcome }: { outcome: McpToolCallOutcome 
           <div className="space-y-2">
             <pre className="max-h-80 overflow-auto rounded-xl bg-gray-950 p-3 text-[11px] leading-[18px] text-gray-100">{formatJson(outcome.result)}</pre>
             <p className="inline-flex items-center gap-1.5 text-[10px] text-gray-500">
-              <LockKeyhole className="h-3 w-3" aria-hidden="true" /> Credential headers redacted. Returned only for this run — never stored in OpenWork logs.
+              <LockKeyhole className="h-3 w-3" aria-hidden="true" /> {t("denToolTester.inspector.resultNotice")}
             </p>
           </div>
         ) : activeTab === "request" ? (

@@ -3,6 +3,7 @@
 import { AlertTriangle, Eye, Search, Trash2 } from "lucide-react";
 import { DenInput } from "../../../_components/ui/input";
 import { DenSwitch } from "../../../_components/ui/switch";
+import { useDenT } from "../../../../_lib/i18n/client";
 import type { ExternalMcpTool, ExternalMcpToolPolicyView } from "../mcp-connections-data";
 
 function toolTitle(tool: ExternalMcpTool): string {
@@ -30,6 +31,7 @@ export function ToolRail({
   onSelect: (tool: ExternalMcpTool) => void;
   onToggle: (toolName: string, enabled: boolean) => void;
 }) {
+  const t = useDenT();
   const needle = search.trim().toLowerCase();
   const filteredTools = needle
     ? tools.filter((tool) => (
@@ -42,14 +44,14 @@ export function ToolRail({
     <aside className="w-full shrink-0 space-y-3 lg:w-[300px]">
       <DenInput
         icon={Search}
-        aria-label="Search tools"
-        placeholder={`Search ${tools.length} tools`}
+        aria-label={t("denToolTester.rail.searchAriaLabel")}
+        placeholder={t("denToolTester.rail.searchPlaceholder", { count: tools.length })}
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
       />
       <div className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-100 bg-white">
         {filteredTools.length === 0 ? (
-          <p className="px-4 py-5 text-[12px] text-gray-500">No tools match “{search.trim()}”.</p>
+          <p className="px-4 py-5 text-[12px] text-gray-500">{t("denToolTester.rail.noMatch", { search: search.trim() })}</p>
         ) : filteredTools.map((tool) => {
           const disabled = policy.allDisabled || policy.disabledTools.includes(tool.name);
           const selected = tool.name === selectedToolName;

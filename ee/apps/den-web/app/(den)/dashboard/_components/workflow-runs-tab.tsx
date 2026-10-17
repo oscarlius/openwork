@@ -2,6 +2,7 @@
 
 import { CalendarClock, Trash2 } from "lucide-react";
 import type { WorkflowArtifactSnapshot, WorkflowDetail } from "@openwork/types/workflows";
+import { useDenT } from "../../../_lib/i18n/client";
 import { DenButton } from "../../_components/ui/button";
 import { DenCard } from "../../_components/ui/card";
 import { DenChip } from "../../_components/ui/chip";
@@ -50,21 +51,22 @@ export function WorkflowRunsTab({
   onDeleteRun,
   onUpdateAutomation,
 }: WorkflowRunsTabProps) {
+  const t = useDenT();
   const selectedVersion = selectedSnapshot
     ? detail.versions.find((version) => version.id === selectedSnapshot.configObjectVersionId) ?? detail.currentVersion
     : detail.currentVersion;
 
   return (
-    <div className="grid gap-6" data-tab="runs" role="tabpanel" aria-label="Runs">
+    <div className="grid gap-6" data-tab="runs" role="tabpanel" aria-label={t("denWorkflow.tabpanel.runs")}>
       <DenCard>
         <DenSectionHeader
-          title="Past runs"
-          description="Choose a run to see the steps it took and the result it saved."
+          title={t("denWorkflow.past.title")}
+          description={t("denWorkflow.past.description")}
           action={<DenChip tone="neutral" size="sm">{snapshots.length}</DenChip>}
         />
         <div className="mt-5">
           {snapshots.length === 0 ? (
-            <p className="text-[13px] text-gray-400">No runs yet.</p>
+            <p className="text-[13px] text-gray-400">{t("denWorkflow.past.empty")}</p>
           ) : (
             <DenList>
               {snapshots.map((snapshot) => (
@@ -72,19 +74,19 @@ export function WorkflowRunsTab({
                   key={snapshot.receiptId}
                   focused={snapshot.receiptId === selectedReceiptId}
                   onClick={() => onSelectRun(snapshot.receiptId)}
-                  ariaLabel={`View run from ${formatDate(snapshot.finishedAt)}`}
+                  ariaLabel={t("denWorkflow.past.viewRunAria", { date: formatDate(snapshot.finishedAt) })}
                   title={formatDate(snapshot.finishedAt)}
                   chips={
                     <>
                       <DenChip tone={snapshot.status === "failed" ? "danger" : "success"}>
                         {snapshot.status === "failed" ? "Failed" : "Succeeded"}
                       </DenChip>
-                      {snapshot.contentDeletedAt ? <DenChip tone="neutral">Result removed</DenChip> : null}
+                      {snapshot.contentDeletedAt ? <DenChip tone="neutral">{t("denWorkflow.past.resultRemoved")}</DenChip> : null}
                     </>
                   }
                   meta={
                     <span>
-                      {snapshot.source === "manual" ? "Manual" : "Scheduled"}
+                      {snapshot.source === "manual" ? t("denWorkflow.past.sourceManual") : t("denWorkflow.past.sourceScheduled")}
                       {technical ? ` · ${snapshot.receiptId}` : ""}
                     </span>
                   }
@@ -94,11 +96,11 @@ export function WorkflowRunsTab({
                         variant="ghost"
                         size="xs"
                         icon={Trash2}
-                        aria-label="Delete this run's saved result"
+                        aria-label={t("denWorkflow.past.deleteAria")}
                         disabled={pending}
                         onClick={(event) => {
                           event.stopPropagation();
-                          if (!window.confirm("Delete this run's saved input and result? Its date and status will remain.")) return;
+                          if (!window.confirm(t("denWorkflow.past.deleteConfirm"))) return;
                           onDeleteRun(snapshot.receiptId);
                         }}
                       />
@@ -113,16 +115,16 @@ export function WorkflowRunsTab({
 
       <DenCard>
         <DenSectionHeader
-          title="Selected run"
-          description={selectedSnapshot ? `${formatDate(selectedSnapshot.finishedAt)} · ${selectedSnapshot.source === "manual" ? "Manual" : "Scheduled"}` : "Choose a past run above."}
+          title={t("denWorkflow.selected.title")}
+          description={selectedSnapshot ? `${formatDate(selectedSnapshot.finishedAt)} · ${selectedSnapshot.source === "manual" ? t("denWorkflow.past.sourceManual") : t("denWorkflow.past.sourceScheduled")}` : t("denWorkflow.selected.none")}
           action={selectedSnapshot ? (
             <span className="flex items-center gap-2 text-[12px] text-gray-500">
-              Show technical details
+              {t("denWorkflow.technical.switchLabel")}
               <DenSwitch
                 checked={technical}
                 onChange={onTechnicalChange}
                 size="sm"
-                aria-label="Show selected run technical details"
+                aria-label={t("denWorkflow.selected.technicalAria")}
               />
             </span>
           ) : null}
@@ -154,19 +156,21 @@ export function WorkflowRunsTab({
 
       <DenCard>
         <DenSectionHeader
-          title="Versions"
-          description="Schedules stay on their saved version until you update them."
+          title={t("denWorkflow.version.title")}
+          description={t("denWorkflow.version.description")}
         />
         <DenList className="mt-5">
           {detail.versions.map((version, index) => (
             <DenListRow
               key={version.id}
-              title={index === 0 ? "Current" : "Earlier"}
-              chips={index === 0 ? <DenChip tone="success">Current</DenChip> : <DenChip tone="neutral">Earlier</DenChip>}
+              title={index === 0 ? t("denWorkflow.version.current") : t("denWorkflow.version.earlier")}
+              chips={index === 0 ? <DenChip tone="success">{t("denWorkflow.version.current")}</DenChip> : <DenChip tone="neutral">{t("denWorkflow.version.earlier")}</DenChip>}
               meta={
                 <span>
                   {new Date(version.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  {` · ${version.automationReferences.length} schedule${version.automationReferences.length === 1 ? "" : "s"}`}
+                  {` · ${version.automationReferences.length === 1
+                    ? t("denWorkflow.version.scheduleSingular", { count: version.automationReferences.length })
+                    : t("denWorkflow.version.schedulePlural", { count: version.automationReferences.length })}`}
                   {technical ? ` · ${version.id}` : ""}
                 </span>
               }
@@ -179,7 +183,7 @@ export function WorkflowRunsTab({
                       size="xs"
                       disabled={pending}
                       onClick={() => {
-                        if (!window.confirm(`Update ${reference.name} to the current version? Its schedule and saved input will stay the same.`)) return;
+                        if (!window.confirm(t("denWorkflow.version.updateConfirm", { name: reference.name }))) return;
                         onUpdateAutomation({
                           automationId: reference.id,
                           pluginId: detail.pluginId,
@@ -188,7 +192,7 @@ export function WorkflowRunsTab({
                         });
                       }}
                     >
-                      Update {reference.name}
+                      {t("denWorkflow.version.update", { name: reference.name })}
                     </DenButton>
                   ))}
                 </div>
@@ -200,14 +204,14 @@ export function WorkflowRunsTab({
 
       <DenCard>
         <DenSectionHeader
-          title="Schedules"
-          description={automationCount === 0 ? "No schedules yet." : `${automationCount} active schedule${automationCount === 1 ? "" : "s"}.`}
+          title={t("denWorkflow.schedule.title")}
+          description={automationCount === 0 ? t("denWorkflow.schedule.empty") : automationCount === 1 ? t("denWorkflow.schedule.activeSingular", { count: automationCount }) : t("denWorkflow.schedule.activePlural", { count: automationCount })}
           action={
             <div className="flex items-center gap-3">
               <DenChip tone="neutral" size="sm">{automationCount}</DenChip>
               {detail.canManage && automateHref ? (
                 <DenButton href={automateHref} target="_blank" rel="noopener noreferrer" icon={CalendarClock}>
-                  Automate
+                  {t("denWorkflow.schedule.automate")}
                 </DenButton>
               ) : null}
             </div>

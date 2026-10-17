@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { isSamePathname } from "../_lib/client-route";
 import { getMcpOAuthSelectOrganizationRoute } from "../_lib/mcp-oauth-route";
+import { useDenT } from "../../_lib/i18n/client";
 import { useDenFlow } from "../_providers/den-flow-provider";
 import { AuthPanel } from "./auth-panel";
 import { OnboardingTexture } from "./onboarding-texture";
@@ -15,20 +16,21 @@ import { TemporaryAuthNotice } from "./temporary-auth-notice";
 import { MemberAuthCheckError } from "./member-auth-guard";
 
 function SessionStatusPanel({ mode }: { mode: "checking" | "redirecting" }) {
+  const t = useDenT();
   const status = mode === "checking"
     ? {
-        title: "Checking account",
-        body: "If you are already signed in, we will open your workspace. Otherwise you can continue here.",
+        title: t("denAuth.screen.checkingTitle"),
+        body: t("denAuth.screen.checkingBody"),
       }
     : {
-        title: "Opening workspace",
-        body: "You are signed in. We are taking you to the right Cloud destination.",
+        title: t("denAuth.screen.openingTitle"),
+        body: t("denAuth.screen.openingBody"),
       };
 
   return (
     <div className="grid gap-6" role="status" aria-live="polite">
       <div className="grid gap-3">
-        <p className="den-eyebrow">Account</p>
+        <p className="den-eyebrow">{t("denAuth.panel.eyebrowAccount")}</p>
         <div className="rounded-[1.5rem] border border-[var(--dls-border)] bg-[var(--dls-hover)]/60 p-4">
           <div className="flex items-start gap-3">
             <span className="relative mt-1 flex h-2.5 w-2.5 shrink-0">
@@ -43,13 +45,14 @@ function SessionStatusPanel({ mode }: { mode: "checking" | "redirecting" }) {
         </div>
       </div>
       <p className="m-0 text-xs leading-5 text-[var(--dls-text-secondary)]">
-        No action needed.
+        {t("denAuth.screen.noAction")}
       </p>
     </div>
   );
 }
 
 export function AuthScreen({ agentSignIn = false }: { agentSignIn?: boolean }) {
+  const t = useDenT();
   const router = useRouter();
   const pathname = usePathname();
   const routingRef = useRef(false);
@@ -89,7 +92,7 @@ export function AuthScreen({ agentSignIn = false }: { agentSignIn?: boolean }) {
       panelVisual={<OnboardingTexture />}
       // The sign-up panel carries its own heading (P2).
       title=""
-      description="One account for your desktop, your tools, and your team."
+      description={t("denAuth.screen.landingDescription")}
     >
       <div data-testid="auth-landing-frame">
         <div data-testid="auth-landing-form">
@@ -102,7 +105,7 @@ export function AuthScreen({ agentSignIn = false }: { agentSignIn?: boolean }) {
           ) : (
             <div className="grid gap-5">
               <TemporaryAuthNotice />
-              <AuthPanel bare emailFirstFlow emailStepContent={{ title: "Start using OpenWork." }} />
+              <AuthPanel bare emailFirstFlow emailStepContent={{ title: t("denAuth.screen.emailStepTitle") }} />
             </div>
           )}
         </div>
@@ -117,6 +120,7 @@ export function AuthScreen({ agentSignIn = false }: { agentSignIn?: boolean }) {
  * loses track of why they are here.
  */
 function AgentSignInScreen({ status }: { status: "checking" | "redirecting" | "error" | null }) {
+  const t = useDenT();
   const [oauthQuery, setOauthQuery] = useState("");
   useEffect(() => {
     setOauthQuery(window.location.search.replace(/^\?/, ""));
@@ -133,7 +137,7 @@ function AgentSignInScreen({ status }: { status: "checking" | "redirecting" | "e
       <div data-testid="auth-landing-frame">
         <div data-testid="auth-landing-form">
           <SetupPanelBody>
-            <SetupFacts rows={[{ label: "Signing in for", value: <McpAppFact client={client} /> }]} />
+            <SetupFacts rows={[{ label: t("denAuth.screen.signingInFor"), value: <McpAppFact client={client} /> }]} />
             {status === "error" ? (
               <MemberAuthCheckError />
             ) : status ? (
@@ -143,7 +147,7 @@ function AgentSignInScreen({ status }: { status: "checking" | "redirecting" | "e
                 bare
                 emailFirstFlow
                 socialFirst
-                emailStepContent={{ title: "Create your account.", copy: "Already have an account? Enter your email and we\u2019ll find it." }}
+                emailStepContent={{ title: t("denAuth.panel.createAccountTitle"), copy: t("denAuth.screen.alreadyHaveAccount") }}
               />
             )}
           </SetupPanelBody>

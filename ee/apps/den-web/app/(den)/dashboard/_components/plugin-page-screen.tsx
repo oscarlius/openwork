@@ -14,6 +14,7 @@ import {
   getPluginDetailsRoute,
   getPluginsRoute,
 } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { type AccessDraft, accessAddedToast, ownedAccessStatus } from "./access-summary";
 import { useDenToast } from "./den-toast";
@@ -43,6 +44,7 @@ export function skillTitle(name: string): string {
 }
 
 export function WhatsInside({ plugin, appMcpServersEnabled = false }: { plugin: DenPlugin; appMcpServersEnabled?: boolean }) {
+  const t = useDenT();
   const rows = [
     ...plugin.authoredApps.map((app) => ({
       key: `app:${app.id}`,
@@ -76,7 +78,7 @@ export function WhatsInside({ plugin, appMcpServersEnabled = false }: { plugin: 
   ];
   return (
     <section className="flex flex-col gap-2.5" data-testid="whats-inside">
-      <SectionTitle title="What's inside" />
+      <SectionTitle title={t("denPlugin.detail.whatsInside")} />
       <ItemPanel>
         {rows.length === 0 ? <p className="px-5 py-4 text-[13px] text-gray-500">Nothing inside yet.</p> : null}
         {rows.map((row) => (
@@ -134,6 +136,7 @@ function MemberPluginPage({ pluginId }: { pluginId: string }) {
 }
 
 function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: "member" | "admin"; libraryItems: LibraryItem[] | undefined }) {
+  const t = useDenT();
   const router = useRouter();
   const toast = useDenToast();
   const { orgSlug, orgContext } = useOrgDashboard();
@@ -154,8 +157,8 @@ function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: 
       <ItemPage>
         <ItemHeader
           back={back}
-          title={plugin.error ? "It did not load" : "Not found"}
-          description={plugin.error ? "Reload the page to try again." : "It may have been removed."}
+          title={plugin.error ? t("denConnector.page.notLoaded") : "Not found"}
+          description={plugin.error ? t("denPlugin.error.reloadToRetry") : t("denConnector.page.maybeRemoved")}
         />
       </ItemPage>
     );
@@ -205,7 +208,7 @@ function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: 
 
   async function remove() {
     await archive(pluginId);
-    toast({ title: `${data.name} is removed`, description: "Nobody can use it anymore." });
+    toast({ title: t("denPlugin.item.removedTitle", { name: data.name }), description: t("denPlugin.item.removedDescription") });
     router.push(back.href);
   }
 
@@ -221,7 +224,7 @@ function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: 
             {!canManage ? <DenButton variant="secondary" icon={LockKeyhole} disabled>Manage</DenButton> : null}
             <ItemMenu
               size="md"
-              label={`More for ${data.name}`}
+              label={t("denPlugin.item.moreFor", { name: data.name })}
               entries={canManage ? [
                 ...(mode === "admin" ? [{ label: "Edit contents", href: getPluginDetailsRoute(orgSlug, pluginId) }] : []),
                 removeEntry(data.name, remove),
@@ -230,17 +233,17 @@ function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: 
             {mode === "member" && mine ? (
               <LinkButton href={getLibraryPluginShareRoute(orgSlug, pluginId)}>
                 <UserPlus className="h-4 w-4" aria-hidden />
-                Share
+                {t("denPlugin.action.share")}
               </LinkButton>
             ) : null}
-            <DenButton icon={MessageSquare} href={pluginChatDeepLink(data)}>Chat</DenButton>
+            <DenButton icon={MessageSquare} href={pluginChatDeepLink(data)}>{t("denConnector.action.chat")}</DenButton>
           </>
         )}
       />
 
       {mode === "admin" && orgContext && draft ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="Who can use it" />
+          <SectionTitle title={t("denPlugin.access.whoCanUseIt")} />
           <WhoCanUseIt
             value={draft}
             onChange={(next) => void changeAccess(next)}
@@ -263,13 +266,13 @@ function PluginPage({ pluginId, mode, libraryItems }: { pluginId: string; mode: 
       {!canManage ? <p className="flex items-center gap-2 text-[13px] text-[var(--dls-text-secondary)]" data-testid="plugin-manage-locked"><LockKeyhole className="size-4 shrink-0" aria-hidden />Only a plugin manager or organization admin can edit or remove it.</p> : null}
 
       <section className="flex flex-col gap-2.5">
-        <SectionTitle title="Details" />
+        <SectionTitle title={t("denPlugin.detail.section")} />
         <DetailRows
           rows={[
             ...(data.description ? [{ label: "About", value: data.description, wrap: true }] : []),
-            ...(mode === "member" ? [{ label: "Who can use it", value: who }] : []),
-            { label: "Made by", value: mine ? "You" : creator?.user.name || "Your organization" },
-            ...(formatAddedDate(data.createdAt) ? [{ label: "Added", value: formatAddedDate(data.createdAt) }] : []),
+            ...(mode === "member" ? [{ label: t("denPlugin.access.whoCanUseIt"), value: who }] : []),
+            { label: "Made by", value: mine ? t("denPlugin.item.you") : creator?.user.name || "Your organization" },
+            ...(formatAddedDate(data.createdAt) ? [{ label: t("denPlugin.detail.added"), value: formatAddedDate(data.createdAt) }] : []),
           ]}
         />
       </section>

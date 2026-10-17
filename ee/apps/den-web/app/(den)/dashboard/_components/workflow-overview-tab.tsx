@@ -7,6 +7,8 @@ import type {
   WorkflowDetail,
 } from "@openwork/types/workflows";
 import { DenButton } from "../../_components/ui/button";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import { DenCard } from "../../_components/ui/card";
 import { DenChip } from "../../_components/ui/chip";
 import { DenList } from "../../_components/ui/list-row";
@@ -51,9 +53,9 @@ function cspSummary(csp: {
   resourceDomains: string[];
   frameDomains: string[];
   baseUriDomains: string[];
-}) {
+}, t: DenTranslate) {
   const domains = [...csp.connectDomains, ...csp.resourceDomains, ...csp.frameDomains, ...csp.baseUriDomains];
-  return domains.length === 0 ? "CSP: no external origins" : `CSP: ${domains.join(", ")}`;
+  return domains.length === 0 ? t("denWorkflow.technical.cspNoOrigins") : t("denWorkflow.technical.cspOrigins", { domains: domains.join(", ") });
 }
 
 function replay(snapshot: WorkflowArtifactSnapshot | null) {
@@ -84,6 +86,7 @@ export function WorkflowOverviewTab({
   onActivateView,
   onRetireView,
 }: WorkflowOverviewTabProps) {
+  const t = useDenT();
   const latestReplay = detail.latestSnapshot ?? detail.latestSuccessfulSnapshot;
   const latestResult = detail.latestSnapshot ?? detail.latestSuccessfulSnapshot;
   const replayVersion = latestReplay
@@ -93,22 +96,22 @@ export function WorkflowOverviewTab({
   const flowInput = workflowDiagramInput(latestReplay, replayVersion.exampleInput);
 
   return (
-    <div className="grid gap-6" data-tab="overview" data-testid="workflow-overview" role="tabpanel" aria-label="Overview">
+    <div className="grid gap-6" data-tab="overview" data-testid="workflow-overview" role="tabpanel" aria-label={t("denWorkflow.tabpanel.overview")}>
       <DenCard>
         <form
-          aria-label="Run workflow"
+          aria-label={t("denWorkflow.run.formLabel")}
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
             if (detail.canRun && !pending) onRun();
           }}
         >
-          <DenSectionHeader title="Run workflow" description="Check the details below, then run. Your result will appear here." />
+          <DenSectionHeader title={t("denWorkflow.run.title")} description={t("denWorkflow.run.description")} />
           {detail.canRun ? (
             <fieldset disabled={pending} className="mt-5 min-w-0 space-y-5">
               {hasInputForm ? (
                 formFieldsFromSchema(parsedInputSchema)?.length === 0 ? (
-                  <p className="text-[13px] text-gray-500">No details needed. This workflow is ready to run.</p>
+                  <p className="text-[13px] text-gray-500">{t("denWorkflow.input.noneNeeded")}</p>
                 ) : (
                   <WorkflowInputForm
                     schema={parsedInputSchema}
@@ -117,16 +120,16 @@ export function WorkflowOverviewTab({
                   />
                 )
               ) : (
-                <p className="text-[13px] text-gray-500">This workflow uses structured input. Review its saved values under Advanced input before running.</p>
+                <p className="text-[13px] text-gray-500">{t("denWorkflow.input.structuredNotice")}</p>
               )}
               <div className="text-[12px] text-gray-500">
                 <DenButton type="button" variant="ghost" size="xs" aria-expanded={showJsonInput} onClick={() => onShowJsonInputChange(!showJsonInput)}>
-                  Advanced input
+                  {t("denWorkflow.input.advancedToggle")}
                 </DenButton>
                 {showJsonInput ? <label className="mt-3 block">
-                  Workflow input (JSON)
+                  {t("denWorkflow.input.jsonLabel")}
                   <DenTextarea
-                    aria-label="Run input details"
+                    aria-label={t("denWorkflow.input.runDetailsAria")}
                     className="mt-2 min-h-32 font-mono text-[11px]"
                     value={fields.input}
                     onChange={(event) => onInputChange(event.currentTarget.value)}
@@ -135,20 +138,20 @@ export function WorkflowOverviewTab({
               </div>
               <div className="border-t border-gray-100 pt-4">
                 <DenButton type="submit" icon={RefreshCw} loading={pending} className="w-full sm:w-auto">
-                  {pending ? "Running…" : "Run workflow"}
+                  {pending ? t("denWorkflow.run.running") : t("denWorkflow.run.submit")}
                 </DenButton>
               </div>
             </fieldset>
           ) : (
-            <p className="mt-5 text-[13px] text-gray-500">You do not have permission to run this workflow.</p>
+            <p className="mt-5 text-[13px] text-gray-500">{t("denWorkflow.run.noPermission")}</p>
           )}
         </form>
       </DenCard>
 
       <DenCard>
         <DenSectionHeader
-          title="Latest result"
-          description="The saved result from the most recent run."
+          title={t("denWorkflow.result.title")}
+          description={t("denWorkflow.result.description")}
         />
         <div className="mt-5">
           {latestResult ? (
@@ -159,29 +162,31 @@ export function WorkflowOverviewTab({
               technical={technical}
             />
           ) : (
-            <p className="text-[13px] text-gray-400">Run this workflow to see its first result.</p>
+            <p className="text-[13px] text-gray-400">{t("denWorkflow.result.empty")}</p>
           )}
         </div>
       </DenCard>
 
       <DenCard>
         <DenSectionHeader
-          title="How it works"
-          description={graphSummary?.sentence ?? "A picture of this workflow is not available yet."}
+          title={t("denWorkflow.how.title")}
+          description={graphSummary?.sentence ?? t("denWorkflow.how.noDiagram")}
           action={
             <div className="flex flex-wrap items-center gap-3">
               {graphSummary ? (
                 <DenChip tone="neutral" size="sm">
-                  {graphSummary.stepCount} step{graphSummary.stepCount === 1 ? "" : "s"}
+                  {graphSummary.stepCount === 1
+                    ? t("denWorkflow.how.stepSingular", { count: graphSummary.stepCount })
+                    : t("denWorkflow.how.stepPlural", { count: graphSummary.stepCount })}
                 </DenChip>
               ) : null}
               <span className="flex items-center gap-2 text-[12px] text-gray-500">
-                Show technical details
+                {t("denWorkflow.technical.switchLabel")}
                 <DenSwitch
                   checked={technical}
                   onChange={onTechnicalChange}
                   size="sm"
-                  aria-label="Show technical details"
+                  aria-label={t("denWorkflow.technical.switchLabel")}
                 />
               </span>
             </div>
@@ -200,20 +205,22 @@ export function WorkflowOverviewTab({
       </DenCard>
 
       <details className="rounded-2xl border border-gray-100 bg-white p-6">
-        <summary className="mb-5 cursor-pointer text-[13px] font-medium text-gray-600">Customize result display</summary>
+        <summary className="mb-5 cursor-pointer text-[13px] font-medium text-gray-600">{t("denWorkflow.display.customize")}</summary>
         <DenSectionHeader
-          title="Custom display"
-          description="Show results as a chart, table, or card layout designed by your agent. Until then, results use the standard view."
+          title={t("denWorkflow.display.title")}
+          description={t("denWorkflow.display.description")}
           action={
             <DenChip tone="neutral" size="sm">
-              {views.length} display{views.length === 1 ? "" : "s"}
+              {views.length === 1
+                ? t("denWorkflow.display.countSingular", { count: views.length })
+                : t("denWorkflow.display.countPlural", { count: views.length })}
             </DenChip>
           }
         />
         <div className="mt-5">
           {views.length === 0 ? (
             <p className="border-t border-dashed border-gray-200 py-8 text-center text-[13px] text-gray-400">
-              No custom display yet. In OpenWork chat, ask: “Design a display for the {detail.title} workflow.”
+              {t("denWorkflow.display.empty", { workflowName: detail.title })}
             </p>
           ) : (
             <DenList>
@@ -224,11 +231,11 @@ export function WorkflowOverviewTab({
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-[14px] font-medium text-gray-950">{view.title}</h3>
                         <DenChip tone={view.status === "active" ? "success" : "neutral"}>
-                          {view.status === "active" ? "In use" : "Not in use"}
+                          {view.status === "active" ? t("denWorkflow.display.inUse") : t("denWorkflow.display.notInUse")}
                         </DenChip>
                       </div>
                       <p className="mt-1 text-[12px] text-gray-500">
-                        {view.description || "A custom layout for this workflow's results."}
+                        {view.description || t("denWorkflow.display.fallbackDescription")}
                       </p>
                     </div>
                     {canManageDisplays && view.status === "active" ? (
@@ -238,7 +245,7 @@ export function WorkflowOverviewTab({
                         loading={viewPending}
                         onClick={() => onRetireView(view.id)}
                       >
-                        Stop using
+                        {t("denWorkflow.display.stopUsing")}
                       </DenButton>
                     ) : null}
                   </div>
@@ -252,7 +259,7 @@ export function WorkflowOverviewTab({
                               <History className="h-3.5 w-3.5" aria-hidden />
                               <span>{new Date(revision.createdAt).toLocaleString()}</span>
                               <DenChip tone={revision.buildStatus === "ready" ? active ? "success" : "neutral" : "danger"}>
-                                {active ? "In use" : revision.buildStatus === "ready" ? "Ready" : "Could not build"}
+                                {active ? t("denWorkflow.display.inUse") : revision.buildStatus === "ready" ? t("denWorkflow.revision.ready") : t("denWorkflow.revision.buildFailed")}
                               </DenChip>
                             </div>
                             {canManageDisplays && revision.buildStatus === "ready" && !active && revision.retiredAt === null ? (
@@ -262,21 +269,21 @@ export function WorkflowOverviewTab({
                                 loading={viewPending}
                                 onClick={() => onActivateView(view.id, revision.id)}
                               >
-                                Use this version
+                                {t("denWorkflow.revision.activate")}
                               </DenButton>
                             ) : null}
                           </div>
                           <details className="mt-3 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
-                            <summary className="cursor-pointer font-medium text-gray-600">Technical details</summary>
+                            <summary className="cursor-pointer font-medium text-gray-600">{t("denWorkflow.technical.details")}</summary>
                             <p className="mt-2 break-all font-mono text-[10px]">{revision.id}</p>
                             <div className="mt-2 grid gap-1 md:grid-cols-2 xl:grid-cols-4">
                               <span>{revision.compilerName} {revision.compilerVersion}</span>
                               <span>React {revision.reactVersion}</span>
-                              <span>{revision.compiledHtmlBytes === null ? "No compiled bundle" : `${revision.compiledHtmlBytes.toLocaleString()} bytes`}</span>
+                              <span>{revision.compiledHtmlBytes === null ? t("denWorkflow.technical.noBundle") : t("denWorkflow.technical.bundleSize", { size: revision.compiledHtmlBytes.toLocaleString() })}</span>
                               <span>{new Date(revision.createdAt).toLocaleString()}</span>
-                              <span className="md:col-span-2">Source {shortDigest(revision.sourceDigest)}</span>
-                              <span className="md:col-span-2">Resource {shortDigest(revision.resourceDigest)}</span>
-                              <span className="md:col-span-2 xl:col-span-4">{cspSummary(revision.csp)}</span>
+                              <span className="md:col-span-2">{t("denWorkflow.technical.source", { digest: shortDigest(revision.sourceDigest) })}</span>
+                              <span className="md:col-span-2">{t("denWorkflow.technical.resource", { digest: shortDigest(revision.resourceDigest) })}</span>
+                              <span className="md:col-span-2 xl:col-span-4">{cspSummary(revision.csp, t)}</span>
                             </div>
                             <p className="mt-2 break-all font-mono text-[10px] text-gray-400">{revision.resourceUri}</p>
                             {revision.diagnostics.length ? (

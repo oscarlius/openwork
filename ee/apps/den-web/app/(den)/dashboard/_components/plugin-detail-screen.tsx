@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { getNewPluginSkillRoute, getOrgAccessFlags, getPluginSkillRoute, getPluginsRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { DenButton } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
 import { DenTextarea } from "../../_components/ui/textarea";
@@ -168,6 +169,7 @@ function EditPluginDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useDenT();
   const updatePlugin = useUpdatePlugin();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
@@ -204,7 +206,7 @@ function EditPluginDialog({
           Update the name and description shown throughout Den.
         </p>
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">Name</span>
+          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">{t("denPlugin.form.name")}</span>
           <DenInput
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -230,7 +232,7 @@ function EditPluginDialog({
         ) : null}
         <div className="mt-5 flex items-center justify-end gap-2">
           <DenButton variant="secondary" onClick={onClose} disabled={updatePlugin.isPending}>
-            Cancel
+            {t("denPlugin.action.cancel")}
           </DenButton>
           <DenButton
             loading={updatePlugin.isPending}

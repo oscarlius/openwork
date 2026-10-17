@@ -10,6 +10,8 @@ import { DenPageHeader } from "../../_components/ui/page-header";
 import { type TabItem, UnderlineTabs } from "../../_components/ui/tabs";
 import { useDenFlow } from "../../_providers/den-flow-provider";
 import { getOrgAccessFlags } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
+import { type DenTranslate } from "../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { usePluginAccess } from "./plugin-access-data";
 import { PluginAccessSection } from "./plugin-access-section";
@@ -22,17 +24,17 @@ import { WorkflowSharingTab } from "./workflow-sharing-tab";
 
 type WorkflowDetailTab = "overview" | "runs" | "edit" | "sharing";
 
-function freshnessLabel(state: "never_run" | "fresh" | "stale" | "needs_attention"): string {
-  if (state === "fresh") return "Up to date";
-  if (state === "stale") return "Last run was a while ago";
-  if (state === "needs_attention") return "Needs attention";
-  return "Not run yet";
+function freshnessLabel(state: "never_run" | "fresh" | "stale" | "needs_attention", t: DenTranslate): string {
+  if (state === "fresh") return t("denWorkflow.freshness.upToDate");
+  if (state === "stale") return t("denWorkflow.freshness.stale");
+  if (state === "needs_attention") return t("denWorkflow.freshness.needsAttention");
+  return t("denWorkflow.freshness.notRunYet");
 }
 
-function stateLabel(state: "ready" | "needs_signin" | "needs_admin_setup") {
-  if (state === "needs_signin") return "Needs your sign-in";
-  if (state === "needs_admin_setup") return "Needs admin setup";
-  return "Ready";
+function stateLabel(state: "ready" | "needs_signin" | "needs_admin_setup", t: DenTranslate) {
+  if (state === "needs_signin") return t("denWorkflow.state.needsSignin");
+  if (state === "needs_admin_setup") return t("denWorkflow.state.needsAdminSetup");
+  return t("denWorkflow.state.ready");
 }
 
 function stateTone(state: "ready" | "needs_signin" | "needs_admin_setup"): DenChipTone {
@@ -52,6 +54,7 @@ function readTab(value: string | null, manager: boolean): WorkflowDetailTab {
 }
 
 export function WorkflowDetailScreen({ workflowId }: { workflowId: string }) {
+  const t = useDenT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -70,7 +73,7 @@ export function WorkflowDetailScreen({ workflowId }: { workflowId: string }) {
   if (state.loading || !state.libraryDetail || !state.detail || !state.fields) {
     return (
       <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8" data-testid="den-workflow-detail">
-        <DenCard>{state.error ?? "Loading workflow…"}</DenCard>
+        <DenCard>{state.error ?? t("denWorkflow.detail.loading")}</DenCard>
       </div>
     );
   }
@@ -81,15 +84,15 @@ export function WorkflowDetailScreen({ workflowId }: { workflowId: string }) {
   const activeTab = readTab(searchParams.get("tab"), manager);
   const tabs: readonly TabItem<WorkflowDetailTab>[] = manager
     ? [
-        { value: "overview", label: "Overview" },
-        { value: "runs", label: "Runs", count: state.snapshots.length },
-        { value: "edit", label: "Edit" },
-        { value: "sharing", label: "Sharing" },
+        { value: "overview", label: t("denWorkflow.tab.overview") },
+        { value: "runs", label: t("denWorkflow.tab.runs"), count: state.snapshots.length },
+        { value: "edit", label: t("denWorkflow.tab.edit") },
+        { value: "sharing", label: t("denWorkflow.tab.sharing") },
       ]
     : [
-        { value: "overview", label: "Overview" },
-        { value: "runs", label: "Runs", count: state.snapshots.length },
-        { value: "sharing", label: "Sharing" },
+        { value: "overview", label: t("denWorkflow.tab.overview") },
+        { value: "runs", label: t("denWorkflow.tab.runs"), count: state.snapshots.length },
+        { value: "sharing", label: t("denWorkflow.tab.sharing") },
       ];
   const automateHref = `${runtimeConfig.openworkWebUrl.replace(/\/$/, "")}/automations?create=1&workflow=${encodeURIComponent(workflowId)}&version=${encodeURIComponent(state.detail.currentVersion.id)}`;
 
@@ -118,36 +121,39 @@ export function WorkflowDetailScreen({ workflowId }: { workflowId: string }) {
         className="justify-self-start"
         href="/dashboard/library"
       >
-        Back to Library
+        {t("denWorkflow.detail.backToLibrary")}
       </DenButton>
 
       <DenPageHeader
         title={
           <span className="flex flex-wrap items-center gap-2">
             <span>{workflow.name}</span>
-            <DenChip tone="teal">Workflow</DenChip>
-            <DenChip tone={stateTone(workflow.state)}>{stateLabel(workflow.state)}</DenChip>
+            <DenChip tone="teal">{t("denWorkflow.detail.workflowChip")}</DenChip>
+            <DenChip tone={stateTone(workflow.state)}>{stateLabel(workflow.state, t)}</DenChip>
           </span>
         }
         description={
           <span>
-            {workflow.description || "A saved, repeatable workflow you can run, schedule, and share."}
-            {workflow.plugin ? <span className="mt-1 block text-[12px] text-gray-400">Shared through {workflow.plugin.name}.</span> : null}
+            {workflow.description || t("denWorkflow.detail.defaultDescription")}
+            {workflow.plugin ? <span className="mt-1 block text-[12px] text-gray-400">{t("denWorkflow.detail.sharedThrough", { plugin: workflow.plugin.name })}</span> : null}
           </span>
         }
         action={manager ? (
           <DenButton href={automateHref} target="_blank" rel="noopener noreferrer" icon={CalendarClock}>
-            Automate
+            {t("denWorkflow.detail.automate")}
           </DenButton>
         ) : null}
-        caption={`${freshnessLabel(workflow.resultState)} · Updated ${updatedDate(state.detail.currentVersion.createdAt)}`}
+        caption={t("denWorkflow.detail.caption", {
+          freshness: freshnessLabel(workflow.resultState, t),
+          date: updatedDate(state.detail.currentVersion.createdAt),
+        })}
       />
 
       {state.error ? <DenNotice tone="error" message={state.error} /> : null}
       {state.detail.freshness.state === "needs_attention" ? (
         <DenNotice
           tone="warning"
-          message={`${state.detail.freshness.reason} You can still open the last successful result.`}
+          message={t("denWorkflow.detail.freshnessWarning", { reason: state.detail.freshness.reason })}
         />
       ) : null}
 

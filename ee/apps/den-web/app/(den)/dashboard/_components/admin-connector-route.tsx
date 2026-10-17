@@ -1,6 +1,7 @@
 "use client";
 
 import { getAddConnectorRoute, getMcpConnectionsRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { AdminConnectorPageScreen } from "./admin-connector-page-screen";
 import { ItemHeader, ItemPage } from "./item-header";
@@ -9,6 +10,7 @@ import { useMcpConnections } from "./mcp-connections-data";
 
 /** A configured connector's Manage page, Google Workspace and Microsoft 365 included. */
 export function AdminConnectorRoute({ connectorId }: { connectorId: string }) {
+  const t = useDenT();
   const { orgSlug } = useOrgDashboard();
   const connections = useMcpConnections("manageable");
   const usable = useMcpConnections("usable");
@@ -21,9 +23,9 @@ export function AdminConnectorRoute({ connectorId }: { connectorId: string }) {
     <ItemPage testId="connector-not-found">
       <ItemHeader
         back={back}
-        title="Connector not found"
-        description="It may have been removed."
-        actions={<LinkButton variant="primary" href={getAddConnectorRoute(orgSlug)}>Add a connector</LinkButton>}
+        title={t("denConnector.page.notFoundTitle")}
+        description={t("denConnector.page.maybeRemoved")}
+        actions={<LinkButton variant="primary" href={getAddConnectorRoute(orgSlug)}>{t("denConnector.action.addConnector")}</LinkButton>}
       />
     </ItemPage>
   );

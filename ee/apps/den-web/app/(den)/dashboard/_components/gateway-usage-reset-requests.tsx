@@ -8,6 +8,7 @@ import { DenCard } from "../../_components/ui/card";
 import { DenNotice } from "../../_components/ui/notice";
 import { DenTable, type DenTableColumn } from "../../_components/ui/table";
 import type { DenOrgMember } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { formatLimitMoney, useGatewayLimitsMutation, useGatewayPolicies, useGatewayResetHistoryAvailable, useGatewayResetRequests } from "./gateway-usage-limits-data";
 import { GatewayLimitsQueryFeedback, GatewayLimitTimestamp } from "./gateway-usage-limits-section";
 import { timeframeLabels } from "./gateway-usage-limits-data";
@@ -23,11 +24,12 @@ function RequestTimestamp({ value }: { value: string }) {
 }
 
 function RequestBucketContext({ request }: { request: GatewayUsageResetRequest }) {
+  const t = useDenT();
   const preview = extensionPreview(request);
   return <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-[var(--ow-muted)]">
     <span>{request.policyName} - {timeframeLabels[request.timeframe]}</span>
-    {request.providerId ? <span data-testid="gateway-reset-provider">Only {request.providerName ?? "a removed provider"}</span> : null}
-    <span>{formatLimitMoney(request.usedMicroUsd)} used / {formatLimitMoney(request.allowanceMicroUsd)} allowance</span>
+    {request.providerId ? <span data-testid="gateway-reset-provider">{t("denGateway.person.onlyProvider", { provider: request.providerName ?? "a removed provider" })}</span> : null}
+    <span>{t("denGateway.limitRow.usedSuffix", { used: formatLimitMoney(request.usedMicroUsd) })} / {formatLimitMoney(request.allowanceMicroUsd)} allowance</span>
     <span>Base: {formatLimitMoney(request.baseAllowanceMicroUsd)}</span>
     <span>Reset: <GatewayLimitTimestamp value={request.resetAt} /></span>
     {request.status === "expired" ? <span>Expired / ineligible</span> : null}

@@ -5,6 +5,7 @@ import { ChevronDown, MessageSquare, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DenButton } from "../../_components/ui/button";
+import { useDenT } from "../../../_lib/i18n/client";
 import { getLibraryConnectorShareRoute, getLibraryRoute } from "../../_lib/den-org";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { ownedAccessStatus } from "./access-summary";
@@ -36,16 +37,17 @@ export function WhatYourAiCanDo({ tools, loading, signedIn, error }: {
   signedIn: boolean;
   error: boolean;
 }) {
+  const t = useDenT();
   const [expanded, setExpanded] = useState(false);
   const visible = expanded ? tools : tools.slice(0, TOOLS_PREVIEW);
-  const count = tools.length === 1 ? "1 thing" : `${tools.length} things`;
+  const count = tools.length === 1 ? t("denConnector.toolCount.one") : t("denConnector.toolCount.other", { count: tools.length });
   return (
     <section className="flex flex-col gap-2.5" data-testid="what-your-ai-can-do">
-      <SectionTitle title="What your AI can do" meta={tools.length > 0 ? count : undefined} />
+      <SectionTitle title={t("denConnector.capabilities.title")} meta={tools.length > 0 ? count : undefined} />
       <ItemPanel>
-        {!signedIn ? <p className="px-5 py-4 text-[13px] text-gray-500">They show up after you sign in.</p> : null}
-        {signedIn && loading ? <p className="px-5 py-4 text-[13px] text-gray-500">Reading them now...</p> : null}
-        {signedIn && error ? <p className="px-5 py-4 text-[13px] text-gray-500">OpenWork could not read them right now.</p> : null}
+        {!signedIn ? <p className="px-5 py-4 text-[13px] text-gray-500">{t("denConnector.capabilities.afterSignIn")}</p> : null}
+        {signedIn && loading ? <p className="px-5 py-4 text-[13px] text-gray-500">{t("denConnector.capabilities.reading")}</p> : null}
+        {signedIn && error ? <p className="px-5 py-4 text-[13px] text-gray-500">{t("denConnector.capabilities.readFailed")}</p> : null}
         {visible.map((tool) => (
           <div key={tool.name} className="px-5 py-3" data-testid="connector-tool">
             <p className="text-[14px] font-medium leading-5 text-gray-900">{toolTitle(tool)}</p>
@@ -58,7 +60,7 @@ export function WhatYourAiCanDo({ tools, loading, signedIn, error }: {
             onClick={() => setExpanded((value) => !value)}
             className="flex items-center gap-1.5 px-5 py-3 text-left text-[13px] font-medium text-gray-700 hover:text-gray-900"
           >
-            {expanded ? "Show less" : `Show all ${tools.length}`}
+            {expanded ? t("denConnector.capabilities.showLess") : t("denConnector.capabilities.showAll", { count: tools.length })}
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden />
           </button>
         ) : null}
@@ -68,15 +70,17 @@ export function WhatYourAiCanDo({ tools, loading, signedIn, error }: {
 }
 
 export function ChatButton({ name }: { name: string }) {
+  const t = useDenT();
   return (
     <DenButton icon={MessageSquare} href={connectorChatDeepLink({ connector: name, prompt: connectorChatPrompt(name) })}>
-      Chat
+      {t("denConnector.action.chat")}
     </DenButton>
   );
 }
 
 /** A6: a connector in My Library. */
 export function LibraryConnectorScreen({ connectionId }: { connectionId: string }) {
+  const t = useDenT();
   const router = useRouter();
   const queryClient = useQueryClient();
   const toast = useDenToast();
@@ -99,10 +103,10 @@ export function LibraryConnectorScreen({ connectionId }: { connectionId: string 
     return <ItemPage><ItemHeader back={back} title="Loading..." /></ItemPage>;
   }
   if (!connection && (usable.error || library.error)) {
-    return <ItemPage><ItemHeader back={back} title="It did not load" description="Reload the page to try again." /></ItemPage>;
+    return <ItemPage><ItemHeader back={back} title={t("denConnector.page.notLoaded")} description={t("denPlugin.error.reloadToRetry")} /></ItemPage>;
   }
   if (!connection) {
-    return <ItemPage><ItemHeader back={back} title="Not in your Library" description="It may have been removed, or it is no longer shared with you." /></ItemPage>;
+    return <ItemPage><ItemHeader back={back} title={t("denConnector.page.notInLibrary")} description={t("denConnector.page.notInLibraryHint")} /></ItemPage>;
   }
 
   const name = connection.name;
@@ -115,7 +119,7 @@ export function LibraryConnectorScreen({ connectionId }: { connectionId: string 
   async function remove() {
     await deleteConnection.mutateAsync(connectionId);
     await queryClient.invalidateQueries({ queryKey: libraryQueryKeys.items });
-    toast({ title: `${name} is removed`, description: "Nobody can use it anymore." });
+    toast({ title: t("denPlugin.item.removedTitle", { name }), description: t("denPlugin.item.removedDescription") });
     router.push(getLibraryRoute(orgSlug));
   }
 
@@ -136,16 +140,16 @@ export function LibraryConnectorScreen({ connectionId }: { connectionId: string 
           <>
             <ItemMenu
               size="md"
-              label={`More for ${name}`}
+              label={t("denPlugin.item.moreFor", { name })}
               entries={[
-                ...(connection.connectedForMe && connection.credentialMode === "per_member" ? [{ label: apiKeyStatus ? "Remove key" : "Sign out", onSelect: () => void signOut() }] : []),
+                ...(connection.connectedForMe && connection.credentialMode === "per_member" ? [{ label: apiKeyStatus ? t("denConnector.action.removeKey") : "Sign out", onSelect: () => void signOut() }] : []),
                 ...(mine ? [removeEntry(name, remove)] : []),
               ]}
             />
             {mine ? (
               <LinkButton href={getLibraryConnectorShareRoute(orgSlug, connectionId)}>
                 <UserPlus className="h-4 w-4" aria-hidden />
-                Share
+                {t("denPlugin.action.share")}
               </LinkButton>
             ) : null}
             <ChatButton name={name} />
@@ -154,23 +158,23 @@ export function LibraryConnectorScreen({ connectionId }: { connectionId: string 
       />
       <WhatYourAiCanDo tools={tools.data?.tools ?? []} loading={tools.isLoading} signedIn={signedIn} error={Boolean(tools.error)} />
       <section className="flex flex-col gap-2.5">
-        <SectionTitle title="Details" />
+        <SectionTitle title={t("denPlugin.detail.section")} />
         <DetailRows
           rows={[
-            { label: "Who can use it", value: who },
+            { label: t("denPlugin.access.whoCanUseIt"), value: who },
             ...(connection.authType === "none" ? [] : [{
-              label: connection.authType === "apikey" ? "Key" : "Signed in as",
+              label: connection.authType === "apikey" ? t("denConnector.detail.key") : t("denConnector.detail.signedInAs"),
               value: apiKeyStatus === "saved_unverified" || apiKeyStatus === "ready"
                 ? personalApiKeyStatusLabel(apiKeyStatus)
                 : apiKeyStatus === "missing" || apiKeyStatus === "reconnect_required"
-                  ? <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>{apiKeyStatus === "reconnect_required" ? "Replace key" : "Add key"}</DenButton>
+                  ? <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>{apiKeyStatus === "reconnect_required" ? t("denConnector.action.replaceKey") : t("denConnector.action.addKey")}</DenButton>
                   : signedIn
-                    ? connection.authType === "apikey" ? "Organization key ready" : connection.externalAccountId ?? "You"
+                    ? connection.authType === "apikey" ? t("denConnector.detail.orgKeyReady") : connection.externalAccountId ?? t("denPlugin.item.you")
                     : connection.authType === "apikey"
-                      ? "Ask an admin to replace the organization key"
-                      : <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>Sign in</DenButton>,
+                      ? t("denConnector.detail.askAdminReplaceKey")
+                      : <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>{t("denConnector.action.signIn")}</DenButton>,
             }]),
-            ...(added ? [{ label: "Added", value: added }] : []),
+            ...(added ? [{ label: t("denPlugin.detail.added"), value: added }] : []),
           ]}
         />
       </section>

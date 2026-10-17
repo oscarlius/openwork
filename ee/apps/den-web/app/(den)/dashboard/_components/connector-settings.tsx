@@ -5,6 +5,7 @@ import { type ReactNode, useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { DenSelect } from "../../_components/ui/select";
 import { DenInput } from "../../_components/ui/input";
+import { useDenT } from "../../../_lib/i18n/client";
 import { ApiKeySchemeAdvanced } from "./connector-setup-fields";
 import { ConfirmDialog } from "./item-list";
 import { credentialModeForAuth } from "./member-api-key";
@@ -23,6 +24,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 /** Rename a connector, move its address, rotate its key, or replace its OAuth app, in place on its page. */
 /** `lockedReason` shows the settings read-only with why (DESIGN.md P4), e.g. the caller can't edit this connection. */
 export function ConnectorSettingsForm({ connection, onSaved, lockedReason = null }: { connection: ExternalMcpConnection; onSaved: (message: string) => void; lockedReason?: string | null }) {
+  const t = useDenT();
   const updateConnection = useUpdateMcpConnection();
   const [name, setName] = useState(connection.name);
   const [url, setUrl] = useState(connection.url);
@@ -79,12 +81,12 @@ export function ConnectorSettingsForm({ connection, onSaved, lockedReason = null
       setApiKey("");
       setClientSecret("");
       onSaved(usesPersonalKey
-        ? `${updated.name} is ready. Each person can now add their own key in My Library.`
-        : updated.reconnectionRequired ? `${updated.name} is saved. Sign in again to use it.` : `${updated.name} is saved.`);
+        ? t("denConnector.settings.savedPersonalKey", { name: updated.name })
+        : updated.reconnectionRequired ? t("denConnector.settings.savedReconnect", { name: updated.name }) : t("denConnector.settings.saved", { name: updated.name }));
     } catch (cause) {
       setError(usesPersonalKey
-        ? "The connection did not save. Check the settings and try again."
-        : cause instanceof Error ? cause.message : "That did not save.");
+        ? t("denConnector.settings.errorPersonalKey")
+        : cause instanceof Error ? cause.message : t("denConnector.settings.errorNotSaved"));
     }
   }
 
@@ -100,60 +102,60 @@ export function ConnectorSettingsForm({ connection, onSaved, lockedReason = null
       }}
     >
       <fieldset disabled={lockedReason !== null} className="flex min-w-0 flex-col gap-3">
-      <Field label="Name">
+      <Field label={t("denConnector.settings.nameLabel")}>
         <DenInput value={name} onChange={(event) => setName(event.target.value)} data-testid="connector-settings-name" />
       </Field>
-      <Field label="Address">
+      <Field label={t("denConnector.settings.addressLabel")}>
         <DenInput value={url} onChange={(event) => setUrl(event.target.value)} disabled={managedByPlugin} data-testid="connector-settings-url" />
       </Field>
-      {managedByPlugin ? <p className="text-[12px] text-gray-500">Server and sign-in settings are managed by the plugin owner.</p> : null}
-      <Field label="Sign-in method">
+      {managedByPlugin ? <p className="text-[12px] text-gray-500">{t("denConnector.settings.managedByPluginHint")}</p> : null}
+      <Field label={t("denConnector.settings.signInMethodLabel")}>
         <DenSelect value={authType} disabled={managedByPlugin} onChange={(event) => {
           const value = event.target.value;
           if (value === "oauth" || value === "apikey" || value === "none") setAuthType(value);
         }}>
-          <option value="oauth">Sign in with an account</option>
-          <option value="apikey">API key</option>
-          <option value="none">No sign-in</option>
+          <option value="oauth">{t("denConnector.settings.optionOAuthAccount")}</option>
+          <option value="apikey">{t("denConnector.settings.optionApiKey")}</option>
+          <option value="none">{t("denConnector.settings.optionNone")}</option>
         </DenSelect>
       </Field>
-      <Field label="How people sign in">
+      <Field label={t("denConnector.settings.credentialModeLabel")}>
         <DenSelect value={chosenMode} disabled={managedByPlugin || authType === "none"} onChange={(event) => {
           const value = event.target.value;
           if (value === "per_member" || value === "shared") setCredentialMode(value);
         }}>
-          <option value="per_member">{usesKey ? "Each person adds a key" : "Each person signs in"}</option>
-          <option value="shared">{usesKey ? "One key for everyone" : "One account for everyone"}</option>
+          <option value="per_member">{usesKey ? t("denConnector.settings.optionPersonalKey") : t("denConnector.settings.optionPersonalSignIn")}</option>
+          <option value="shared">{usesKey ? t("denConnector.settings.optionSharedKey") : t("denConnector.settings.optionSharedAccount")}</option>
         </DenSelect>
       </Field>
-      {authType === "none" ? <p className="text-[12px] text-gray-500">This connection is shared; nobody signs in individually.</p> : null}
+      {authType === "none" ? <p className="text-[12px] text-gray-500">{t("denConnector.settings.sharedConnectionHint")}</p> : null}
       {usesKey ? (
         <ApiKeySchemeAdvanced value={apiKeyAuthScheme} onChange={setApiKeyAuthScheme} disabled={managedByPlugin} testId="connector-settings-api-key-auth-scheme" />
       ) : null}
-      {authType === "oauth" && !showOAuthApp ? <DenButton type="button" variant="secondary" size="sm" onClick={() => setShowOAuthApp(true)}>Add OAuth app</DenButton> : null}
+      {authType === "oauth" && !showOAuthApp ? <DenButton type="button" variant="secondary" size="sm" onClick={() => setShowOAuthApp(true)}>{t("denConnector.settings.addOAuthApp")}</DenButton> : null}
       {usesSharedKey && !managedByPlugin ? (
-        <Field label={keyRequired ? "New API key" : "New API key (optional)"}>
-          <McpCredentialInput kind="secret" name="connector-settings-api-key" autoComplete="off" data-ph-no-capture value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder="Leave empty to keep the saved key" data-testid="connector-settings-api-key" />
+        <Field label={keyRequired ? t("denConnector.settings.newApiKeyLabel") : t("denConnector.settings.newApiKeyOptionalLabel")}>
+          <McpCredentialInput kind="secret" name="connector-settings-api-key" autoComplete="off" data-ph-no-capture value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={t("denConnector.settings.apiKeyKeepPlaceholder")} data-testid="connector-settings-api-key" />
         </Field>
       ) : null}
       {usesOAuthApp ? (
         <>
-          <Field label="OAuth client ID">
-            <McpCredentialInput kind="identifier" name="connector-settings-client-id" value={clientId} onChange={(event) => setClientId(event.target.value)} placeholder="Client ID" />
+          <Field label={t("denConnector.settings.oauthClientIdLabel")}>
+            <McpCredentialInput kind="identifier" name="connector-settings-client-id" value={clientId} onChange={(event) => setClientId(event.target.value)} placeholder={t("denConnector.settings.clientIdPlaceholder")} />
           </Field>
-          <Field label="New client secret (optional)">
-            <McpCredentialInput kind="secret" name="connector-settings-client-secret" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} placeholder="Leave empty to keep the saved secret" />
+          <Field label={t("denConnector.settings.newClientSecretLabel")}>
+            <McpCredentialInput kind="secret" name="connector-settings-client-secret" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} placeholder={t("denConnector.settings.clientSecretKeepPlaceholder")} />
           </Field>
         </>
       ) : null}
       {authType === "oauth" ? (
-        <Field label="Requested OAuth scopes">
+        <Field label={t("denConnector.settings.oauthScopesLabel")}>
           <DenInput value={scopes} disabled={managedByPlugin} onChange={(event) => setScopes(event.target.value)} placeholder="records.read records.write" data-testid="connector-settings-scopes" />
         </Field>
       ) : null}
       <label className="flex items-center gap-2 text-[13px] text-gray-700">
         <input type="checkbox" checked={exposeDirectly} onChange={(event) => setExposeDirectly(event.target.checked)} />
-        Available in other MCP apps
+        {t("denConnector.settings.exposeDirectlyLabel")}
       </label>
       </fieldset>
       {error ? <p className="text-[13px] text-red-600" role="alert">{error}</p> : null}
@@ -164,15 +166,15 @@ export function ConnectorSettingsForm({ connection, onSaved, lockedReason = null
             {lockedReason}
           </p>
         ) : null}
-        <DenButton type="submit" size="sm" loading={updateConnection.isPending} disabled={disabled || lockedReason !== null}>Save changes</DenButton>
+        <DenButton type="submit" size="sm" loading={updateConnection.isPending} disabled={disabled || lockedReason !== null}>{t("denConnector.settings.saveChanges")}</DenButton>
       </div>
     </form>
     {connection.authType === "oauth" ? <ConnectorIssuerReview connection={connection} onSaved={onSaved} /> : null}
     <ConfirmDialog
         confirm={confirming ? {
-          title: `Change how ${connection.name} connects?`,
-          description: "Saved sign-ins and API keys are cleared. Everyone reconnects.",
-          action: "Save and sign everyone out",
+          title: t("denConnector.settings.confirmTitle", { name: connection.name }),
+          description: t("denConnector.settings.confirmDescription"),
+          action: t("denConnector.settings.confirmAction"),
         } : null}
         onConfirm={save}
         onClose={() => setConfirming(false)}
@@ -183,6 +185,7 @@ export function ConnectorSettingsForm({ connection, onSaved, lockedReason = null
 
 /** Review changed authorization servers before allowing a fresh sign-in. */
 function ConnectorIssuerReview({ connection, onSaved }: { connection: ExternalMcpConnection; onSaved: (message: string) => void }) {
+  const t = useDenT();
   const review = useReviewMcpIssuer();
   const [preview, setPreview] = useState<McpIssuerReview | null>(null);
   const [issuer, setIssuer] = useState("");
@@ -196,7 +199,7 @@ function ConnectorIssuerReview({ connection, onSaved }: { connection: ExternalMc
       setPreview(result);
       setIssuer(result.advertisedIssuers.includes(result.currentIssuer ?? "") ? result.currentIssuer ?? "" : result.advertisedIssuers[0] ?? "");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The sign-in servers did not load. Try again.");
+      setError(cause instanceof Error ? cause.message : t("denConnector.settings.issuerLoadFailed"));
     }
   }
 
@@ -204,25 +207,25 @@ function ConnectorIssuerReview({ connection, onSaved }: { connection: ExternalMc
     if (!issuer || !connection.updatedAt) return;
     const result = await review.mutateAsync({ connectionId: connection.id, action: "confirm", expectedUpdatedAt: connection.updatedAt, authorizationServerIssuer: issuer });
     setPreview(null);
-    onSaved(result.reconnectionRequired ? "Sign-in server saved. Sign in again to use it." : "The current sign-in server is confirmed.");
+    onSaved(result.reconnectionRequired ? t("denConnector.settings.issuerSavedReconnect") : t("denConnector.settings.issuerConfirmed"));
   }
 
   return (
     <div className="flex flex-col gap-3 border-t border-gray-100 px-5 py-4">
-      {connection.issuerReviewRequired ? <p className="text-[13px] text-gray-600">The sign-in server changed. An admin must review it.</p> : null}
-      <DenButton type="button" variant="secondary" size="sm" loading={review.isPending} onClick={() => void inspect()}>Review sign-in server</DenButton>
+      {connection.issuerReviewRequired ? <p className="text-[13px] text-gray-600">{t("denConnector.settings.issuerChangedNotice")}</p> : null}
+      <DenButton type="button" variant="secondary" size="sm" loading={review.isPending} onClick={() => void inspect()}>{t("denConnector.settings.reviewIssuerAction")}</DenButton>
       {preview ? <>
-        <p className="text-[12px] text-gray-500">Saved server: {preview.currentIssuer ?? "None"}</p>
-        <Field label="Sign-in server">
+        <p className="text-[12px] text-gray-500">{t("denConnector.settings.savedIssuer", { issuer: preview.currentIssuer ?? t("denConnector.settings.issuerNone") })}</p>
+        <Field label={t("denConnector.settings.issuerLabel")}>
           <DenSelect value={issuer} onChange={(event) => setIssuer(event.target.value)}>
             {preview.advertisedIssuers.map((value) => <option key={value} value={value}>{value}</option>)}
           </DenSelect>
         </Field>
-        {preview.advertisedIssuers.length === 0 ? <p className="text-[12px] text-gray-500">No sign-in server was found. Check the address and try again.</p> : null}
-        <DenButton type="button" size="sm" disabled={!issuer || !connection.updatedAt || review.isPending} onClick={() => setConfirming(true)}>Save sign-in server</DenButton>
+        {preview.advertisedIssuers.length === 0 ? <p className="text-[12px] text-gray-500">{t("denConnector.settings.issuerNotFound")}</p> : null}
+        <DenButton type="button" size="sm" disabled={!issuer || !connection.updatedAt || review.isPending} onClick={() => setConfirming(true)}>{t("denConnector.settings.saveIssuerAction")}</DenButton>
       </> : null}
       {error ? <p className="text-[12px] text-red-600" role="alert">{error}</p> : null}
-      <ConfirmDialog confirm={confirming ? { title: `Use this sign-in server for ${connection.name}?`, description: `${issuer}. Everyone signs in again; saved sign-ins and OAuth app credentials are cleared if the server changes.`, action: "Save sign-in server" } : null} onConfirm={confirm} onClose={() => setConfirming(false)} />
+      <ConfirmDialog confirm={confirming ? { title: t("denConnector.settings.confirmIssuerTitle", { name: connection.name }), description: t("denConnector.settings.confirmIssuerDescription", { issuer }), action: t("denConnector.settings.saveIssuerAction") } : null} onConfirm={confirm} onClose={() => setConfirming(false)} />
     </div>
   );
 }

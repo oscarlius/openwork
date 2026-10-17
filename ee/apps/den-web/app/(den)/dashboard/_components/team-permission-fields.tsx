@@ -2,6 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import { ChevronDown, type LucideIcon } from "lucide-react";
+import { useDenT } from "../../../_lib/i18n/client";
 
 export function TeamPermissionGroup({ title, description, status, icon: Icon, children, defaultOpen = false }: {
   title: string;
@@ -22,11 +23,12 @@ export function TeamPermissionGroup({ title, description, status, icon: Icon, ch
 }
 
 export function TeamPermissionSelect({ label, allowed, onChange }: { label: string; allowed: boolean; onChange: (allowed: boolean) => void }) {
+  const t = useDenT();
   const id = useId();
   return <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 py-3">
     <label htmlFor={id} className="text-sm text-gray-800">{label}</label>
     <select id={id} value={allowed ? "allow" : "deny"} onChange={(event) => onChange(event.target.value === "allow")} className="max-w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800">
-      <option value="allow">Allowed</option><option value="deny">Blocked</option>
+      <option value="allow">{t("denTeam.execution.statusAllowed")}</option><option value="deny">{t("denTeam.execution.modeBlocked")}</option>
     </select>
   </div>;
 }

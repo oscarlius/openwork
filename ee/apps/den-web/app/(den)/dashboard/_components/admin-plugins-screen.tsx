@@ -8,6 +8,7 @@ import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
 import { DenPageHeader } from "../../_components/ui/page-header";
 import { DenButton } from "../../_components/ui/button";
 import { getNewPluginRoute, getPluginRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { managedAccessStatus } from "./access-summary";
 import { useDenToast } from "./den-toast";
@@ -19,19 +20,21 @@ import { usePluginAccess } from "./plugin-access-data";
 import { type DenPluginSummary, pluginDetailQueryOptions, useArchivePlugin, usePluginDirectory } from "./plugin-data";
 
 function PluginsEmpty({ orgSlug }: { orgSlug: string | null }) {
+  const t = useDenT();
   return (
     <ItemPanel>
       <div className="flex flex-col items-center gap-3 px-5 py-8 text-center" data-testid="plugins-empty">
-        <h2 className="text-sm font-medium text-[var(--dls-text-primary)]">No plugins yet</h2>
-        <p className="text-[13px] text-[var(--dls-text-secondary)]">Create a plugin to share skills with your team.</p>
-        <DenButton icon={Plus} href={getNewPluginRoute(orgSlug)}>Create a plugin</DenButton>
-        <p className="text-xs text-[var(--dls-text-secondary)]">Only you can use it until you choose who gets access.</p>
+        <h2 className="text-sm font-medium text-[var(--dls-text-primary)]">{t("denPlugin.empty.title")}</h2>
+        <p className="text-[13px] text-[var(--dls-text-secondary)]">{t("denPlugin.empty.description")}</p>
+        <DenButton icon={Plus} href={getNewPluginRoute(orgSlug)}>{t("denPlugin.editor.createTitle")}</DenButton>
+        <p className="text-xs text-[var(--dls-text-secondary)]">{t("denPlugin.empty.accessNote")}</p>
       </div>
     </ItemPanel>
   );
 }
 
 function PluginRow({ plugin }: { plugin: DenPluginSummary }) {
+  const t = useDenT();
   const toast = useDenToast();
   const queryClient = useQueryClient();
   const { orgSlug, orgContext } = useOrgDashboard();
@@ -47,7 +50,7 @@ function PluginRow({ plugin }: { plugin: DenPluginSummary }) {
 
   async function remove() {
     await archive.mutateAsync(plugin.id);
-    toast({ title: `${plugin.name} is removed`, description: "Nobody can use it anymore." });
+    toast({ title: t("denPlugin.item.removedTitle", { name: plugin.name }), description: t("denPlugin.item.removedDescription") });
   }
 
   function prefetch() {
@@ -56,9 +59,9 @@ function PluginRow({ plugin }: { plugin: DenPluginSummary }) {
 
   return (
     <div data-plugin-row={plugin.name} data-plugin-access={sharing} onPointerEnter={prefetch} onFocus={prefetch}>
-      <ItemRow compact href={href} logo={<PluginLogo name={plugin.name} />} title={plugin.name} description={plugin.description || "Plugin"} status={status ? status === "Only you" ? "Private" : "Shared" : "Unknown"} action={<ItemMenu label={`More for ${plugin.name}`} entries={[
-        { label: "Open", href },
-        ...(status === "Only you" ? [{ label: "Share", href }] : []),
+      <ItemRow compact href={href} logo={<PluginLogo name={plugin.name} />} title={plugin.name} description={plugin.description || "Plugin"} status={status ? status === "Only you" ? t("denPlugin.row.statusPrivate") : t("denPlugin.row.statusShared") : t("denPlugin.row.statusUnknown")} action={<ItemMenu label={t("denPlugin.item.moreFor", { name: plugin.name })} entries={[
+        { label: t("denConnector.action.open"), href },
+        ...(status === "Only you" ? [{ label: t("denPlugin.action.share"), href }] : []),
         removeEntry(plugin.name, remove),
       ]} />} />
     </div>
@@ -73,6 +76,7 @@ function DirectoryFilter({ label, title, value, options, counts, onChange }: {
   options: { id: string; name: string }[];
   onChange: (value: string | null) => void;
 }) {
+  const t = useDenT();
   const [search, setSearch] = useState("");
   const selected = options.find((option) => option.id === value);
   const matches = options.filter((option) => option.name.toLowerCase().includes(search.trim().toLowerCase()));
@@ -88,16 +92,16 @@ function DirectoryFilter({ label, title, value, options, counts, onChange }: {
             <Popover.Title className="px-2 pb-2 pt-1 text-[12px] font-medium text-gray-700">{title}</Popover.Title>
             <label className="flex h-9 items-center gap-2 rounded-lg border border-gray-200 px-2 focus-within:ring-2 focus-within:ring-gray-300">
               <Search className="h-4 w-4 text-gray-400" aria-hidden />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={label === "Owner" ? "Find an owner" : "Find a team"} className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={label === "Owner" ? t("denPlugin.directory.findOwner") : t("denPlugin.directory.findTeam")} className="min-w-0 flex-1 bg-transparent text-[13px] outline-none" />
             </label>
             <div className="mt-1 max-h-60 overflow-y-auto">
               <Popover.Close render={<button type="button" onClick={() => onChange(null)} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-[13px] hover:bg-gray-50" />}>All {label.toLowerCase()}s</Popover.Close>
               {matches.map((option) => (
                 <Popover.Close key={option.id} render={<button type="button" aria-label={option.name} onClick={() => onChange(option.id)} className="flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-[13px] hover:bg-gray-50" />}>
-                  <span className="min-w-0 flex-1 truncate">{option.name}</span>{counts ? <span className="text-[12px] tabular-nums text-gray-400" aria-label={`${counts[option.id] ?? 0} plugins`}>{counts[option.id] ?? 0}</span> : null}{value === option.id ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
+                  <span className="min-w-0 flex-1 truncate">{option.name}</span>{counts ? <span className="text-[12px] tabular-nums text-gray-400" aria-label={t("denPlugin.directory.pluginCountAria", { count: counts[option.id] ?? 0 })}>{counts[option.id] ?? 0}</span> : null}{value === option.id ? <Check className="h-4 w-4 shrink-0" aria-hidden /> : null}
                 </Popover.Close>
               ))}
-              {matches.length === 0 ? <p className="px-3 py-3 text-[13px] text-gray-500">No matches.</p> : null}
+              {matches.length === 0 ? <p className="px-3 py-3 text-[13px] text-gray-500">{t("denPlugin.directory.noMatches")}</p> : null}
             </div>
           </Popover.Popup>
         </Popover.Positioner>
@@ -114,6 +118,7 @@ export function pluginDirectoryRange(scrollTop: number, viewportHeight: number, 
 }
 
 function DirectoryResults({ plugins, filtered }: { plugins: ReturnType<typeof usePluginDirectory>; filtered: boolean }) {
+  const t = useDenT();
   const { orgSlug } = useOrgDashboard();
   const [scrollTop, setScrollTop] = useState(0);
   const rows = plugins.data?.pages.flatMap((page) => page.items) ?? [];
@@ -121,9 +126,9 @@ function DirectoryResults({ plugins, filtered }: { plugins: ReturnType<typeof us
   const viewportHeight = 544;
   const { start, end } = pluginDirectoryRange(scrollTop, viewportHeight, rowHeight, rows.length);
 
-  if (plugins.isPending) return <ItemPanel><ItemRowsSkeleton label="Loading plugins" rows={6} /></ItemPanel>;
-  if (plugins.isError && rows.length === 0) return <div role="alert" className="rounded-xl border border-gray-200 bg-white p-5 text-[13px] text-gray-700">The list did not load. <button type="button" onClick={() => void plugins.refetch()} className="font-medium underline">Try again</button></div>;
-  if (rows.length === 0) return filtered ? <div className="rounded-xl border border-gray-200 bg-white p-6 text-[13px] text-gray-600">No plugins match. Try another name, team, or owner.</div> : <PluginsEmpty orgSlug={orgSlug} />;
+  if (plugins.isPending) return <ItemPanel><ItemRowsSkeleton label={t("denPlugin.directory.loading")} rows={6} /></ItemPanel>;
+  if (plugins.isError && rows.length === 0) return <div role="alert" className="rounded-xl border border-gray-200 bg-white p-5 text-[13px] text-gray-700">{t("denPlugin.directory.loadFailed")}{" "}<button type="button" onClick={() => void plugins.refetch()} className="font-medium underline">{t("denPlugin.action.tryAgain")}</button></div>;
+  if (rows.length === 0) return filtered ? <div className="rounded-xl border border-gray-200 bg-white p-6 text-[13px] text-gray-600">{t("denPlugin.directory.noMatch")}</div> : <PluginsEmpty orgSlug={orgSlug} />;
 
   return (
     <ItemPanel className="overflow-hidden"><div className="min-w-0">
@@ -139,10 +144,10 @@ function DirectoryResults({ plugins, filtered }: { plugins: ReturnType<typeof us
             </div>
           ))}
         </div>
-        {plugins.hasNextPage ? <button type="button" onClick={() => void plugins.fetchNextPage()} disabled={plugins.isFetchingNextPage} className="h-12 w-full text-[13px] text-gray-600 hover:bg-gray-50 disabled:opacity-50">{plugins.isFetchingNextPage ? "Loading more…" : "Load more plugins"}</button> : null}
+        {plugins.hasNextPage ? <button type="button" onClick={() => void plugins.fetchNextPage()} disabled={plugins.isFetchingNextPage} className="h-12 w-full text-[13px] text-gray-600 hover:bg-gray-50 disabled:opacity-50">{plugins.isFetchingNextPage ? t("denPlugin.directory.loadingMore") : t("denPlugin.directory.loadMore")}</button> : null}
       </div>
       </div>
-      {plugins.isFetchNextPageError ? <div role="alert" className="border-t border-gray-100 px-5 py-3 text-[13px] text-red-600">More plugins did not load. Use Load more to try again.</div> : null}
+      {plugins.isFetchNextPageError ? <div role="alert" className="border-t border-gray-100 px-5 py-3 text-[13px] text-red-600">{t("denPlugin.directory.loadMoreFailed")}</div> : null}
     </ItemPanel>
   );
 }
@@ -157,6 +162,7 @@ export function pluginDirectoryUrlParams(current: string, filters: { name: strin
 }
 
 export function AdminPluginsScreen() {
+  const t = useDenT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { orgSlug, orgId, orgContext } = useOrgDashboard();
@@ -173,7 +179,7 @@ export function AdminPluginsScreen() {
   const firstPage = plugins.data?.pages[0];
   const legacyMember = orgContext?.members.find((member) => member.id === memberId);
   const empty = firstPage?.total === 0 && !q && !teamId && !memberId && !ownerId;
-  const createAction = <LinkButton variant="primary" size="sm" href={getNewPluginRoute(orgSlug)}><Plus className="h-4 w-4" aria-hidden />Create a plugin</LinkButton>;
+  const createAction = <LinkButton variant="primary" size="sm" href={getNewPluginRoute(orgSlug)}><Plus className="h-4 w-4" aria-hidden />{t("denPlugin.editor.createTitle")}</LinkButton>;
 
   function setFilters(next: { name: string; teamId: string | null; memberId: string | null; ownerId?: string | null }) {
     if (searchTimer.current) clearTimeout(searchTimer.current);
@@ -197,12 +203,12 @@ export function AdminPluginsScreen() {
       <DenPageHeader size="compact" title="Plugins" />
       {!empty ? <div className="flex flex-wrap items-center gap-2" data-testid="plugin-directory-toolbar">
         <FilterInput value={search} onChange={setSearch} className="w-[200px] max-w-full" />
-        <DirectoryFilter label="Team" title="Plugins available to a team" counts={firstPage?.teamCounts} value={teamId} options={orgContext?.teams ?? []} onChange={(id) => setFilters({ name: search.trim(), teamId: id, memberId: null, ownerId })} />
-        <DirectoryFilter label="Owner" title="Plugins created by" counts={firstPage?.ownerCounts} value={ownerId} options={(orgContext?.members ?? []).map((member) => ({ id: member.id, name: member.user.name || member.user.email }))} onChange={(id) => setFilters({ name: search.trim(), teamId, memberId: null, ownerId: id })} />
+        <DirectoryFilter label="Team" title={t("denPlugin.directory.filterTeamTitle")} counts={firstPage?.teamCounts} value={teamId} options={orgContext?.teams ?? []} onChange={(id) => setFilters({ name: search.trim(), teamId: id, memberId: null, ownerId })} />
+        <DirectoryFilter label="Owner" title={t("denPlugin.directory.filterOwnerTitle")} counts={firstPage?.ownerCounts} value={ownerId} options={(orgContext?.members ?? []).map((member) => ({ id: member.id, name: member.user.name || member.user.email }))} onChange={(id) => setFilters({ name: search.trim(), teamId, memberId: null, ownerId: id })} />
         <span className="sm:ml-auto">{createAction}</span>
       </div> : null}
-      {search || teamId || memberId || ownerId ? <button type="button" onClick={() => { setSearch(""); setFilters({ name: "", teamId: null, memberId: null, ownerId: null }); }} className="-mt-2 inline-flex w-fit items-center gap-1 text-[12px] text-gray-600 hover:text-gray-900"><X className="h-3.5 w-3.5" aria-hidden />Clear filters</button> : null}
-      {legacyMember ? <p className="text-[13px] text-gray-600">Available to {legacyMember.user.name || legacyMember.user.email}</p> : null}
+      {search || teamId || memberId || ownerId ? <button type="button" onClick={() => { setSearch(""); setFilters({ name: "", teamId: null, memberId: null, ownerId: null }); }} className="-mt-2 inline-flex w-fit items-center gap-1 text-[12px] text-gray-600 hover:text-gray-900"><X className="h-3.5 w-3.5" aria-hidden />{t("denPlugin.directory.clearFilters")}</button> : null}
+      {legacyMember ? <p className="text-[13px] text-gray-600">{t("denPlugin.directory.availableTo", { name: legacyMember.user.name || legacyMember.user.email })}</p> : null}
       <DirectoryResults key={`${orgId}:${q}:${teamId}:${memberId}:${ownerId}`} plugins={plugins} filtered={Boolean(q || teamId || memberId || ownerId)} />
     </ItemPage>
   );

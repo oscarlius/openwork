@@ -19,6 +19,7 @@ import {
   type DenOrgTeam,
 } from "../../_lib/den-org";
 import { formatUsageCost } from "../_features/analytics/stacked-daily-chart";
+import { useDenT } from "../../../_lib/i18n/client";
 import { directoryAccess, directoryLimit, limitSourceLabel, limitSummary, memberSubject, type DirectorySubject } from "./gateway-directory-data";
 import { initials } from "./gateway-spend-breakdown";
 import { useGatewayAccessProviders, type GatewayAccessProvider } from "./gateway-subject-access-data";
@@ -68,13 +69,14 @@ function LimitCell({ summary, source }: { summary: string; source: string }) {
 }
 
 function Columns({ first }: { first: string }) {
+  const t = useDenT();
   return (
     <div aria-hidden="true" className={`${ROW} h-9 border-b border-gray-100 text-[11px] font-medium text-gray-500`}>
       <span />
       <span>{first}</span>
       <span>Can use</span>
       <span>Limit</span>
-      <span className="text-right">Last 31 days</span>
+      <span className="text-right">{t("denGateway.period.last31Days")}</span>
       <span />
     </div>
   );
@@ -89,6 +91,7 @@ function Directory({ children, testId }: { children: ReactNode; testId: string }
 }
 
 export function GatewayUsersTeamsSection({ orgId, orgSlug, orgContext }: { orgId: string; orgSlug: string | null | undefined; orgContext: DenOrgContext }) {
+  const t = useDenT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const providers = useGatewayAccessProviders(orgId);
@@ -114,7 +117,7 @@ export function GatewayUsersTeamsSection({ orgId, orgSlug, orgContext }: { orgId
     return (
       <section aria-label="Users and teams" data-testid="gateway-users-teams" className="flex flex-col items-start gap-3">
         <DenNotice tone="error" message={dataError ?? "Could not load people and teams."} />
-        <DenButton size="sm" variant="secondary" onClick={() => { void providers.refetch(); void policies.refetch(); }}>Retry</DenButton>
+        <DenButton size="sm" variant="secondary" onClick={() => { void providers.refetch(); void policies.refetch(); }}>{t("denGateway.action.retry")}</DenButton>
       </section>
     );
   }

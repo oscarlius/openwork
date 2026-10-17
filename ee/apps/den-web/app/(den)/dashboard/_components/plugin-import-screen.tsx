@@ -9,6 +9,8 @@ import { DenInput } from "../../_components/ui/input";
 import { DenSelect } from "../../_components/ui/select";
 import { getRequestError, requestJson } from "../../_lib/den-flow";
 import { getNewPluginRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
+import { type DenTranslate } from "../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import {
   normalizePublicGitHubPluginUrl,
@@ -29,18 +31,19 @@ type PreviewItem = {
   supported: boolean;
 };
 
-function serverStatus(preview: PluginImportPreview["servers"][number]): string {
-  if (preview.reuseConnectionName) return `Uses your existing ${preview.reuseConnectionName} connection`;
-  if (preview.supported) return "Ready";
-  if (preview.skippedReason === "native_connector") return `Connect ${preview.mapsToName ?? "this provider"} in OpenWork instead`;
-  if (preview.skippedReason === "local_unsupported") return "Desktop-only servers cannot be imported";
-  if (preview.skippedReason === "missing_url") return "No remote URL found";
-  if (preview.skippedReason === "headers_unsupported") return "Static headers are not supported yet";
-  if (preview.skippedReason === "invalid_config") return "Invalid Agent Plugin MCP configuration";
-  return "Unsupported";
+function serverStatus(t: DenTranslate, preview: PluginImportPreview["servers"][number]): string {
+  if (preview.reuseConnectionName) return t("denPlugin.import.usesExistingConnection", { name: preview.reuseConnectionName });
+  if (preview.supported) return t("denPlugin.import.statusReady");
+  if (preview.skippedReason === "native_connector") return t("denPlugin.import.connectInOpenWorkInstead", { name: preview.mapsToName ?? t("denPlugin.import.thisProvider") });
+  if (preview.skippedReason === "local_unsupported") return t("denPlugin.import.desktopOnlyUnsupported");
+  if (preview.skippedReason === "missing_url") return t("denPlugin.import.noRemoteUrl");
+  if (preview.skippedReason === "headers_unsupported") return t("denPlugin.import.staticHeadersUnsupported");
+  if (preview.skippedReason === "invalid_config") return t("denPlugin.import.invalidConfig");
+  return t("denPlugin.import.statusUnsupported");
 }
 
 export function PluginImportScreen() {
+  const t = useDenT();
   const router = useRouter();
   const { orgSlug, runReauthableAction } = useOrgDashboard();
   const [githubUrl, setGithubUrl] = useState("");
@@ -54,7 +57,7 @@ export function PluginImportScreen() {
 
   async function previewImport() {
     if (!githubUrl.trim()) {
-      setError("Paste a GitHub plugin URL.");
+      setError(t("denPlugin.import.urlRequired"));
       return;
     }
 
@@ -62,7 +65,7 @@ export function PluginImportScreen() {
     try {
       normalizedGithubUrl = normalizePublicGitHubPluginUrl(githubUrl);
     } catch (urlError) {
-      setError(urlError instanceof Error ? urlError.message : "Enter a valid public GitHub plugin URL.");
+      setError(urlError instanceof Error ? urlError.message : t("denPlugin.import.urlInvalid"));
       return;
     }
 
@@ -77,7 +80,7 @@ export function PluginImportScreen() {
           20000,
         );
         if (!result.response.ok) {
-          throw getRequestError(result.payload, result.response, "Failed to preview GitHub plugin components.");
+          throw getRequestError(result.payload, result.response, t("denPlugin.import.previewFailed"));
         }
         payload = result.payload;
       });
@@ -87,7 +90,7 @@ export function PluginImportScreen() {
       setSelectedServerKeys(nextPreview.servers.filter((server) => server.supported).map((server) => server.serverKey));
       setSelectedSkillKeys(nextPreview.skills.filter((skill) => skill.supported).map((skill) => skill.skillKey));
     } catch (previewError) {
-      setError(previewError instanceof Error ? previewError.message : "Failed to preview GitHub plugin components.");
+      setError(previewError instanceof Error ? previewError.message : t("denPlugin.import.previewFailed"));
     } finally {
       setBusy(false);
     }
@@ -95,7 +98,7 @@ export function PluginImportScreen() {
 
   function continueToCreate() {
     if (!preview || (selectedServerKeys.length === 0 && selectedSkillKeys.length === 0)) {
-      setError("Select at least one supported MCP server or skill.");
+      setError(t("denPlugin.import.selectAtLeastOne"));
       return;
     }
     try {
@@ -109,7 +112,7 @@ export function PluginImportScreen() {
         selectedSkillKeys,
       });
     } catch (draftError) {
-      setError(draftError instanceof Error ? draftError.message : "This plugin import cannot be saved safely.");
+      setError(draftError instanceof Error ? draftError.message : t("denPlugin.import.draftUnsafe"));
       return;
     }
     router.push(getNewPluginRoute(orgSlug));
@@ -125,15 +128,15 @@ export function PluginImportScreen() {
           name: skill.name,
           detail: skill.description ?? skill.sourcePath,
           supported: skill.supported,
-          status: skill.supported ? "Ready" : "Unsupported skill",
+          status: skill.supported ? t("denPlugin.import.statusReady") : t("denPlugin.import.unsupportedSkill"),
         })),
         ...preview.servers.map((server): PreviewItem => ({
           key: server.serverKey,
           kind: "mcp",
           name: server.name,
-          detail: server.url ?? "No remote URL",
+          detail: server.url ?? t("denPlugin.import.noRemoteUrlShort"),
           supported: server.supported,
-          status: serverStatus(server),
+          status: serverStatus(t, server),
         })),
       ]
     : [];
@@ -145,7 +148,7 @@ export function PluginImportScreen() {
         className="mb-6 inline-flex items-center gap-2 text-[14px] text-gray-500 hover:text-gray-900"
       >
         <ArrowLeft size={15} />
-        Back to create
+        {t("denPlugin.import.backToCreate")}
       </Link>
 
       <div className="flex items-start gap-4">
@@ -153,9 +156,9 @@ export function PluginImportScreen() {
           <Github size={20} />
         </div>
         <div>
-          <h1 className="text-[28px] font-semibold text-gray-900">Import from GitHub</h1>
+          <h1 className="text-[28px] font-semibold text-gray-900">{t("denPlugin.import.title")}</h1>
           <p className="mt-1 text-[15px] text-gray-500">
-            Preview a public plugin, choose what to bring in, then finish creating it in OpenWork.
+            {t("denPlugin.import.subtitle")}
           </p>
         </div>
       </div>
@@ -163,7 +166,7 @@ export function PluginImportScreen() {
       <div className="mt-8 rounded-[24px] border border-gray-200 bg-white p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="min-w-0 flex-1">
-            <span className="mb-1.5 block text-[13px] font-medium text-gray-700">GitHub plugin URL</span>
+            <span className="mb-1.5 block text-[13px] font-medium text-gray-700">{t("denPlugin.import.urlLabel")}</span>
             <DenInput
               value={githubUrl}
               onChange={(event) => {
@@ -178,22 +181,22 @@ export function PluginImportScreen() {
             />
           </label>
           <DenButton onClick={() => void previewImport()} disabled={busy || !githubUrl.trim()}>
-            {busy ? "Previewing..." : "Preview"}
+            {busy ? t("denPlugin.import.previewing") : t("denPlugin.import.preview")}
           </DenButton>
         </div>
-        <p className="mt-2 text-[12px] text-gray-500">Only public GitHub repositories are supported.</p>
+        <p className="mt-2 text-[12px] text-gray-500">{t("denPlugin.import.publicOnly")}</p>
       </div>
 
       {preview ? (
         <div className="mt-6 rounded-[24px] border border-gray-200 bg-white p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">Preview</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-400">{t("denPlugin.import.preview")}</p>
               <h2 className="mt-1 text-[18px] font-semibold text-gray-900">{pluginImportSourceLabel(preview)}</h2>
-              <p className="mt-1 text-[13px] text-gray-500">Choose the components to include in your plugin.</p>
+              <p className="mt-1 text-[13px] text-gray-500">{t("denPlugin.import.chooseComponents")}</p>
             </div>
             <span className="rounded-full bg-gray-100 px-3 py-1 text-[12px] font-medium text-gray-600">
-              {selectedCount} selected
+              {t("denPlugin.import.selectedCount", { count: selectedCount })}
             </span>
           </div>
 
@@ -234,21 +237,21 @@ export function PluginImportScreen() {
           {selectedMcpCount > 0 ? (
             <div className="mt-5 grid gap-3 rounded-2xl bg-gray-50 p-4 sm:grid-cols-2">
               <label>
-                <span className="mb-1.5 block text-[13px] font-medium text-gray-700">MCP authentication</span>
+                <span className="mb-1.5 block text-[13px] font-medium text-gray-700">{t("denPlugin.import.mcpAuth")}</span>
                 <DenSelect value={authType} onChange={(event) => setAuthType(event.target.value === "none" ? "none" : "oauth")}>
                   <option value="oauth">OAuth</option>
-                  <option value="none">No authentication</option>
+                  <option value="none">{t("denPlugin.import.noAuth")}</option>
                 </DenSelect>
               </label>
               <label>
-                <span className="mb-1.5 block text-[13px] font-medium text-gray-700">Account type</span>
+                <span className="mb-1.5 block text-[13px] font-medium text-gray-700">{t("denPlugin.import.accountType")}</span>
                 <DenSelect
                   value={credentialMode}
                   disabled={authType === "none"}
                   onChange={(event) => setCredentialMode(event.target.value === "shared" ? "shared" : "per_member")}
                 >
-                  <option value="per_member">Individual accounts</option>
-                  <option value="shared">One organization account</option>
+                  <option value="per_member">{t("denPlugin.import.individualAccounts")}</option>
+                  <option value="shared">{t("denPlugin.import.sharedOrgAccount")}</option>
                 </DenSelect>
               </label>
             </div>
@@ -270,10 +273,10 @@ export function PluginImportScreen() {
 
       <div className="mt-6 flex items-center justify-end gap-3">
         <Link href={getNewPluginRoute(orgSlug)} className="text-[14px] text-gray-500 hover:text-gray-900">
-          Cancel
+          {t("denPlugin.action.cancel")}
         </Link>
         <DenButton onClick={continueToCreate} disabled={!preview || selectedCount === 0 || busy}>
-          Continue to create
+          {t("denPlugin.import.continueToCreate")}
           <ArrowRight size={15} />
         </DenButton>
       </div>

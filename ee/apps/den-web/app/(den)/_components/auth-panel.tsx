@@ -9,6 +9,7 @@ import { getDesktopGrant } from "../_lib/desktop-handoff";
 import { getErrorMessage, getSocialCallbackUrl, requestJson, type AuthMode } from "../_lib/den-flow";
 import { signsInInPlace } from "../_lib/auth-resume";
 import { getMcpOAuthSelectOrganizationRoute } from "../_lib/mcp-oauth-route";
+import { useDenT } from "../../_lib/i18n/client";
 import { useDesktopHandoffStatus } from "../_lib/use-desktop-handoff-status";
 import { useDenFlow } from "../_providers/den-flow-provider";
 
@@ -220,7 +221,7 @@ export function AuthPanel({
   emailFirstFlow = false,
   emailFirstInvitationId,
   resolveEmailFirstOnPrefill = false,
-  eyebrow = "Account",
+  eyebrow,
   hideIntro = false,
   bare = false,
   signUpContent,
@@ -260,6 +261,7 @@ export function AuthPanel({
   /** Which providers a social-first panel offers. */
   socialProviders?: readonly ("google" | "github")[];
 }) {
+  const t = useDenT();
   const router = useRouter();
   const pathname = usePathname();
   const prefillRef = useRef<string | null>(null);
@@ -310,6 +312,7 @@ export function AuthPanel({
   const singleOrgName = runtimeConfig.singleOrgName || "OpenWork";
   const singleOrgSlug = runtimeConfig.singleOrgSlug.trim();
   const emailFirstInvite = emailFirstInvitationId?.trim() ?? "";
+  const eyebrowLabel = eyebrow ?? t("denAuth.panel.eyebrowAccount");
 
   function getLoginOptionsPath(targetEmail: string) {
     const params = new URLSearchParams({ email: targetEmail });
@@ -334,7 +337,7 @@ export function AuthPanel({
   }, [isSingleOrgSsoMode, pathname, router]);
 
   const resolvedSignUpContent: PanelContent = {
-    title: isSingleOrgMode ? "Create your account." : "Get started.",
+    title: isSingleOrgMode ? t("denAuth.panel.createAccountTitle") : "Get started.",
     copy: isSingleOrgMode
       ? `Join ${singleOrgName}. The organization is managed by this deployment.`
       : "Free to try. Team plans from $10 per seat.",
@@ -406,7 +409,7 @@ export function AuthPanel({
           submitLabel: "Sign in",
         }
       : {
-          title: "Create your account.",
+          title: t("denAuth.panel.createAccountTitle"),
           copy: "Set up your OpenWork Cloud account.",
           submitLabel: "Sign up",
           ...signUpContent,
@@ -652,7 +655,7 @@ export function AuthPanel({
     return (
       <div className={shellClass("gap-6", "p-6 md:p-7")} data-testid="desktop-signed-in-handoff">
         <div className="grid gap-3">
-          <p className="den-eyebrow">{eyebrow}</p>
+          <p className="den-eyebrow">{eyebrowLabel}</p>
           <div className="grid gap-2">
             <h2 className={titleClass}>You&apos;re signed in.</h2>
             <p className="den-copy">
@@ -706,7 +709,7 @@ export function AuthPanel({
       <div className={shellClass("gap-4 sm:gap-5", "p-5 sm:p-6 md:p-7")}>
         {!hideIntro ? (
           <div className="grid gap-3">
-            <p className="den-eyebrow">{eyebrow}</p>
+            <p className="den-eyebrow">{eyebrowLabel}</p>
             <div className="grid gap-2">
               <h2 className={titleClass}>{activeContent.title}</h2>
               {socialFirst && emailFirstStep === "email" ? null : <p className="den-copy">{activeContent.copy}</p>}
@@ -939,7 +942,7 @@ export function AuthPanel({
     <div className={shellClass("gap-4 sm:gap-5", "p-5 sm:p-6 md:p-7")}>
       {!hideIntro ? (
         <div className="grid gap-3">
-          <p className="den-eyebrow">{eyebrow}</p>
+          <p className="den-eyebrow">{eyebrowLabel}</p>
           <div className="grid gap-2">
             <h2 className={titleClass}>{activeContent.title}</h2>
             <p className="den-copy">{activeContent.copy}</p>

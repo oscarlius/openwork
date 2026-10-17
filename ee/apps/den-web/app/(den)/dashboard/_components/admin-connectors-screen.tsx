@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 import { DenPageHeader } from "../../_components/ui/page-header";
 import { getAddConnectorRoute, getMcpConnectionRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { managedAccessStatus } from "./access-summary";
 import { usePrefetchConnectorCatalog } from "./connector-catalog-screen";
@@ -22,27 +23,29 @@ import { connectorSetupUnfinished, finishSetupHref } from "./admin-connectors";
 import { type ExternalMcpConnection, isNativeProviderConnectionId, useDeleteMcpConnection, useMcpConnections } from "./mcp-connections-data";
 
 function ConnectorsEmpty({ orgSlug }: { orgSlug: string | null }) {
+  const t = useDenT();
   const prefetchCatalog = usePrefetchConnectorCatalog();
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="flex w-full flex-col items-center gap-5 rounded-2xl border border-gray-100 bg-white px-6 pb-14 pt-16 text-center" data-testid="connectors-empty">
         <ConnectorLogoStrip size="md" />
         <div className="flex flex-col gap-1.5">
-          <p className="text-[15px] font-semibold leading-5 text-gray-900">No connectors yet</p>
-          <p className="text-[13px] leading-[18px] text-gray-500">Apps your organization&apos;s AI can use. You choose who gets each one.</p>
+          <p className="text-[15px] font-semibold leading-5 text-gray-900">{t("denConnector.empty.title")}</p>
+          <p className="text-[13px] leading-[18px] text-gray-500">{t("denConnector.empty.description")}</p>
         </div>
         <LinkButton variant="primary" href={getAddConnectorRoute(orgSlug)} onPointerEnter={prefetchCatalog} onFocus={prefetchCatalog}>
           <Plus className="h-4 w-4" aria-hidden />
-          Add connector
+          {t("denConnector.action.addNew")}
         </LinkButton>
       </div>
-      <p className="text-[12px] leading-4 text-gray-400">Members can still add apps for themselves in My Library.</p>
+      <p className="text-[12px] leading-4 text-gray-400">{t("denConnector.empty.membersNote")}</p>
     </div>
   );
 }
 
 /** C1 and C5: every connector the organization manages, and who has each one. */
 export function AdminConnectorsScreen() {
+  const t = useDenT();
   const toast = useDenToast();
   const { orgSlug, orgContext } = useOrgDashboard();
   const connections = useMcpConnections("manageable");
@@ -60,7 +63,7 @@ export function AdminConnectorsScreen() {
 
   async function remove(connection: ExternalMcpConnection) {
     await deleteConnection.mutateAsync(connection.id);
-    toast({ title: `${connection.name} is removed`, description: "Nobody can use it anymore." });
+    toast({ title: t("denPlugin.item.removedTitle", { name: connection.name }), description: t("denPlugin.item.removedDescription") });
   }
 
   return (
@@ -68,18 +71,18 @@ export function AdminConnectorsScreen() {
       <DenPageHeader
         title="Connectors"
         className={all.some((connection) => connection.readiness !== undefined) ? "[&>div:first-child]:basis-full sm:[&>div:first-child]:basis-0" : undefined}
-        description="Apps your organization's AI can use."
+        description={t("denConnector.list.description")}
         action={empty ? undefined : (
           <LinkButton variant="primary" href={getAddConnectorRoute(orgSlug)} onPointerEnter={prefetchCatalog} onFocus={prefetchCatalog}>
             <Plus className="h-4 w-4" aria-hidden />
-            Add connector
+            {t("denConnector.action.addNew")}
           </LinkButton>
         )}
       />
 
       {connections.error ? (
         <p className="rounded-2xl border border-gray-100 bg-white px-5 py-4 text-[13px] text-red-600">
-          {connections.error instanceof Error ? connections.error.message : "Connectors did not load."}
+          {connections.error instanceof Error ? connections.error.message : t("denConnector.list.loadFailed")}
         </p>
       ) : null}
 
@@ -90,7 +93,7 @@ export function AdminConnectorsScreen() {
           <div className="-mt-1 flex justify-end">
             <FilterInput value={query} onChange={setQuery} className="w-[240px]" />
           </div>
-          {connections.isLoading ? <ItemPanel><ItemRowsSkeleton label="Loading connectors" /></ItemPanel> : null}
+          {connections.isLoading ? <ItemPanel><ItemRowsSkeleton label={t("denConnector.picker.loading")} /></ItemPanel> : null}
           {visible.length > 0 ? (
             <ItemPanel>
               {visible.map((connection) => {
@@ -98,13 +101,13 @@ export function AdminConnectorsScreen() {
                 const readinessState = connectorReadinessState(connection);
                 const unfinished = connectorSetupUnfinished(connection);
                 const status = unfinished
-                  ? "Setup not finished"
+                  ? t("denConnector.list.setupUnfinished")
                   : !connection.access && isNativeProviderConnectionId(connection.id, connection.nativeProviderKey)
-                    ? "Everyone"
+                    ? t("denConnector.list.accessEveryone")
                     : orgContext ? managedAccessStatus(connection.access, orgContext, viewerId) : "";
                 const signInNote = connection.credentialMode === "per_member" && connection.authType === "oauth"
-                  ? "Each person signs in"
-                  : connection.authType === "none" ? "No sign-in needed" : connectorAccountReady(connection) ? "One account for everyone" : undefined;
+                  ? t("denConnector.list.eachPersonSignsIn")
+                  : connection.authType === "none" ? t("denConnector.list.noSignInNeeded") : connectorAccountReady(connection) ? t("denConnector.list.oneAccountForAll") : undefined;
                 return (
                   <div key={connection.id} data-connector-row={connection.name}>
                     <ItemRow
@@ -117,16 +120,16 @@ export function AdminConnectorsScreen() {
                       wideAction={readinessState !== null}
                       wrapDescription={readinessState === "Couldn't verify"}
                       action={readinessState === "Couldn't verify" ? (
-                        <DenButton size="xs" variant="secondary" disabled={!canCheck || checkConnection.isPending} title={!canCheck ? "An admin can check this connection." : undefined}
-                          onClick={() => void checkConnection.mutateAsync(connection.id).catch(() => toast({ title: "Could not check this connection", description: "Try again." }))}>Check again</DenButton>
+                        <DenButton size="xs" variant="secondary" disabled={!canCheck || checkConnection.isPending} title={!canCheck ? t("denConnector.list.checkAdminOnly") : undefined}
+                          onClick={() => void checkConnection.mutateAsync(connection.id).catch(() => toast({ title: t("denConnector.list.checkFailed"), description: "Try again." }))}>{t("denConnector.action.checkAgain")}</DenButton>
                       ) : unfinished ? (
-                        <LinkButton size="xs" href={finishSetupHref(orgSlug, connection)}>Finish</LinkButton>
+                        <LinkButton size="xs" href={finishSetupHref(orgSlug, connection)}>{t("denConnector.action.finish")}</LinkButton>
                       ) : (
                         <ItemMenu
-                          label={`More for ${connection.name}`}
+                          label={t("denPlugin.item.moreFor", { name: connection.name })}
                           entries={[
-                            { label: "Open", href },
-                            ...(readinessState && canCheck ? [{ label: "Check again", onSelect: () => void checkConnection.mutateAsync(connection.id).catch(() => toast({ title: "Could not check this connection", description: "Try again." })) }] : []),
+                            { label: t("denConnector.action.open"), href },
+                            ...(readinessState && canCheck ? [{ label: t("denConnector.action.checkAgain"), onSelect: () => void checkConnection.mutateAsync(connection.id).catch(() => toast({ title: t("denConnector.list.checkFailed"), description: "Try again." })) }] : []),
                             ...(connection.id === GOOGLE_WORKSPACE_QUICK_ADD_ID || connection.id === MICROSOFT_365_QUICK_ADD_ID
                               ? []
                               : [removeEntry(connection.name, () => remove(connection))]),
@@ -140,7 +143,7 @@ export function AdminConnectorsScreen() {
             </ItemPanel>
           ) : null}
           {!connections.isLoading && visible.length === 0 ? (
-            <p className="rounded-2xl border border-gray-100 bg-white px-5 py-6 text-center text-[13px] text-gray-500">Nothing matches.</p>
+            <p className="rounded-2xl border border-gray-100 bg-white px-5 py-6 text-center text-[13px] text-gray-500">{t("denConnector.list.nothingMatches")}</p>
           ) : null}
         </>
       ) : null}

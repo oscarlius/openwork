@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useDenT } from "../../../_lib/i18n/client";
+import { type DenTranslate } from "../../../_lib/i18n/messages";
 import { humanizeIdentifier } from "./workflow-plain-language";
 
 const CARD_TITLE_KEYS = ["title", "name", "subject", "label", "id"];
@@ -57,21 +59,23 @@ function formatCardTime(value: Date): string {
 }
 
 function LongText({ value }: { value: string }) {
+  const t = useDenT();
   const [expanded, setExpanded] = useState(false);
   if (value.length <= 240) return <>{value}</>;
   return (
     <span>
       {expanded ? value : `${value.slice(0, 240).trimEnd()}…`}{" "}
       <button type="button" className="font-medium text-blue-700 hover:text-blue-800" onClick={() => setExpanded(!expanded)}>
-        {expanded ? "Show less" : "Show more"}
+        {expanded ? t("denWorkflow.friendlyValue.showLess") : t("denWorkflow.friendlyValue.showMore")}
       </button>
     </span>
   );
 }
 
 function ScalarValue({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === "") return <span className="text-gray-400">None</span>;
-  if (typeof value === "boolean") return <>{value ? "Yes" : "No"}</>;
+  const t = useDenT();
+  if (value === null || value === undefined || value === "") return <span className="text-gray-400">{t("denWorkflow.friendlyValue.none")}</span>;
+  if (typeof value === "boolean") return <>{value ? t("denWorkflow.friendlyValue.yes") : t("denWorkflow.friendlyValue.no")}</>;
   if (typeof value === "number") return <>{value.toLocaleString()}</>;
   if (typeof value === "string") {
     const date = isoDate(value);
@@ -112,9 +116,9 @@ function ObjectValue({ value }: { value: Record<string, unknown> }) {
   );
 }
 
-function cardTitle(item: Record<string, unknown>, index: number): { key: string | null; text: string } {
+function cardTitle(item: Record<string, unknown>, index: number, t: DenTranslate): { key: string | null; text: string } {
   const key = CARD_TITLE_KEYS.find((candidate) => candidate in item && !isCollection(item[candidate]) && item[candidate] !== null);
-  if (!key) return { key: null, text: `Item ${index + 1}` };
+  if (!key) return { key: null, text: t("denWorkflow.friendlyValue.itemFallback", { number: index + 1 }) };
   const value = item[key];
   return { key, text: typeof value === "string" ? decodeHtmlEntities(value) : String(value) };
 }
@@ -139,12 +143,13 @@ function cardDate(item: Record<string, unknown>): { keys: string[]; text: string
 }
 
 function NestedCardValue({ label, value }: { label: string; value: unknown }) {
+  const t = useDenT();
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return (
         <div className="border-t border-gray-100 pt-3">
           <p className="text-[11px] font-medium text-gray-500">{humanizeIdentifier(label)}</p>
-          <p className="mt-1 text-[12px] text-gray-400">None</p>
+          <p className="mt-1 text-[12px] text-gray-400">{t("denWorkflow.friendlyValue.none")}</p>
         </div>
       );
     }
@@ -152,7 +157,7 @@ function NestedCardValue({ label, value }: { label: string; value: unknown }) {
       <details className="border-t border-gray-100 pt-3">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-medium text-gray-600">
           <span>{humanizeIdentifier(label)}</span>
-          <span className="text-gray-400">{value.length} {value.length === 1 ? "item" : "items"}</span>
+          <span className="text-gray-400">{t(value.length === 1 ? "denWorkflow.friendlyValue.itemSingular" : "denWorkflow.friendlyValue.itemPlural", { count: value.length })}</span>
         </summary>
         <div className="mt-3"><FriendlyValueContent value={value} /></div>
       </details>
@@ -167,7 +172,8 @@ function NestedCardValue({ label, value }: { label: string; value: unknown }) {
 }
 
 function CardItem({ item, index }: { item: Record<string, unknown>; index: number }) {
-  const title = cardTitle(item, index);
+  const t = useDenT();
+  const title = cardTitle(item, index, t);
   const date = cardDate(item);
   const entries = Object.entries(item);
   const scalars = entries.filter(([key, value]) => (
@@ -209,6 +215,7 @@ function ObjectTable({ items }: { items: Record<string, unknown>[] }) {
 }
 
 function ObjectArray({ value }: { value: Record<string, unknown>[] }) {
+  const t = useDenT();
   const [showAll, setShowAll] = useState(false);
   const shown = showAll ? value : value.slice(0, 10);
   const useCards = value.some((item) => Object.keys(item).length > 5 || Object.values(item).some(isCollection));
@@ -221,7 +228,7 @@ function ObjectArray({ value }: { value: Record<string, unknown>[] }) {
       ) : <ObjectTable items={shown} />}
       {value.length > 10 ? (
         <button type="button" className="text-[12px] font-medium text-blue-700 hover:text-blue-800" onClick={() => setShowAll(!showAll)}>
-          {showAll ? "Show first 10" : `Show all ${value.length}`}
+          {showAll ? t("denWorkflow.friendlyValue.showFirstTen") : t("denWorkflow.friendlyValue.showAll", { total: value.length })}
         </button>
       ) : null}
     </div>
@@ -229,6 +236,7 @@ function ObjectArray({ value }: { value: Record<string, unknown>[] }) {
 }
 
 function ScalarArray({ value }: { value: unknown[] }) {
+  const t = useDenT();
   const shown = value.slice(0, 20);
   return (
     <div className="flex flex-wrap gap-2">
@@ -237,13 +245,14 @@ function ScalarArray({ value }: { value: unknown[] }) {
           <ScalarValue value={item} />
         </span>
       ))}
-      {value.length > 20 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-500">+{value.length - 20} more</span> : null}
+      {value.length > 20 ? <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-500">{t("denWorkflow.friendlyValue.moreItems", { hidden: value.length - 20 })}</span> : null}
     </div>
   );
 }
 
 function ArrayValue({ value }: { value: unknown[] }) {
-  if (value.length === 0) return <span className="text-[13px] text-gray-400">None</span>;
+  const t = useDenT();
+  if (value.length === 0) return <span className="text-[13px] text-gray-400">{t("denWorkflow.friendlyValue.none")}</span>;
   if (isObjectArray(value)) return <ObjectArray value={value} />;
   if (value.every((item) => !isCollection(item))) return <ScalarArray value={value} />;
   return (
@@ -254,7 +263,8 @@ function ArrayValue({ value }: { value: unknown[] }) {
 }
 
 function EmptyValue() {
-  return <p className="text-[13px] text-gray-400">This run didn&apos;t return anything to show.</p>;
+  const t = useDenT();
+  return <p className="text-[13px] text-gray-400">{t("denWorkflow.friendlyValue.emptyResult")}</p>;
 }
 
 function FriendlyValueContent({ value }: { value: unknown }) {

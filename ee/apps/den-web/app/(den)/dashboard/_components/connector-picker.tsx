@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
+import { useDenT } from "../../../_lib/i18n/client";
 import { FilterInput, ItemPanel, ItemRow, ItemRowsSkeleton, LinkButton } from "./item-list";
 import { ConnectorLogo } from "./item-logo";
 import type { ExternalMcpPreset } from "./mcp-connections-data";
@@ -49,6 +50,7 @@ function AddMcpForm({ title, initialName, onCancel, onContinue }: {
   onCancel: () => void;
   onContinue: (input: { name: string; url: string }) => void;
 }) {
+  const t = useDenT();
   const [name, setName] = useState(initialName);
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ function AddMcpForm({ title, initialName, onCancel, onContinue }: {
       const parsed = new URL(trimmedUrl);
       if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("bad protocol");
     } catch {
-      setError("Paste the full address, starting with https://");
+      setError(t("denConnector.form.addressRequired"));
       return;
     }
     const fallbackName = (() => {
@@ -79,7 +81,7 @@ function AddMcpForm({ title, initialName, onCancel, onContinue }: {
         <ServerTile />
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-medium leading-5 text-gray-900">{title}</p>
-          <p className="text-[13px] leading-[18px] text-gray-500">Paste the address your vendor or IT team gave you.</p>
+          <p className="text-[13px] leading-[18px] text-gray-500">{t("denConnector.picker.customHint")}</p>
         </div>
       </div>
       <form
@@ -89,12 +91,12 @@ function AddMcpForm({ title, initialName, onCancel, onContinue }: {
           submit();
         }}
       >
-        <DenInput value={url} onChange={(event) => { setUrl(event.target.value); setError(null); }} placeholder="https://mcp.example.com/mcp" aria-label="Address" autoFocus />
-        <DenInput value={name} onChange={(event) => setName(event.target.value)} placeholder="Name (optional)" aria-label="Name" />
+        <DenInput value={url} onChange={(event) => { setUrl(event.target.value); setError(null); }} placeholder="https://mcp.example.com/mcp" aria-label={t("denConnector.picker.addressLabel")} autoFocus />
+        <DenInput value={name} onChange={(event) => setName(event.target.value)} placeholder={t("denConnector.picker.namePlaceholder")} aria-label={t("denPlugin.form.name")} />
         {error ? <p className="text-[12px] text-red-600">{error}</p> : null}
         <div className="flex justify-end gap-2">
-          <DenButton type="button" variant="secondary" size="sm" onClick={onCancel}>Cancel</DenButton>
-          <DenButton type="submit" size="sm">Continue</DenButton>
+          <DenButton type="button" variant="secondary" size="sm" onClick={onCancel}>{t("denPlugin.action.cancel")}</DenButton>
+          <DenButton type="submit" size="sm">{t("denConnector.action.continue")}</DenButton>
         </div>
       </form>
     </div>
@@ -123,6 +125,7 @@ export function ConnectorPicker({ entries, loading, addHref, customHref, mode, c
   customName: string | null;
   onCustomNameChange: (name: string | null) => void;
 }) {
+  const t = useDenT();
   const router = useRouter();
   const [query, setQuery] = useState("");
   const admin = mode === "admin";
@@ -144,32 +147,32 @@ export function ConnectorPicker({ entries, loading, addHref, customHref, mode, c
           onChange={setQuery}
           size="sm"
           className="w-[200px] max-w-full"
-          placeholder="Filter by name"
+          placeholder={t("denConnector.picker.filterPlaceholder")}
           onEnter={pasted ? addPasted : undefined}
         />
         <DenButton variant="secondary" size="sm" icon={Plus} onClick={() => onCustomNameChange("")}>
-          Add another MCP
+          {t("denConnector.action.addAnotherMcp")}
         </DenButton>
       </div>
       {customName !== null ? (
         <AddMcpForm
           key={customName}
-          title="Add another MCP"
+          title={t("denConnector.action.addAnotherMcp")}
           initialName={customName}
           onCancel={() => onCustomNameChange(null)}
           onContinue={(input) => router.push(customHref(input))}
         />
       ) : null}
       {noMatch && customName !== null && !pasted ? null : <ItemPanel>
-        {loading ? <ItemRowsSkeleton label="Loading connectors" rows={5} /> : null}
+        {loading ? <ItemRowsSkeleton label={t("denConnector.picker.loading")} rows={5} /> : null}
         {pasted ? (
           <div className="flex items-center gap-3.5 rounded-t-2xl bg-gray-50 px-5 py-3" data-testid="connector-picker-url-row">
             <GlobeTile />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[14px] font-medium leading-5 text-gray-900">{pasted.host}</p>
-              <p className="text-[13px] leading-[18px] text-gray-500">MCP server</p>
+              <p className="text-[13px] leading-[18px] text-gray-500">{t("denConnector.picker.mcpServerKind")}</p>
             </div>
-            <DenButton size="sm" onClick={addPasted} data-testid="connector-picker-url-add">Add MCP</DenButton>
+            <DenButton size="sm" onClick={addPasted} data-testid="connector-picker-url-add">{t("denConnector.picker.addMcp")}</DenButton>
           </div>
         ) : null}
         {visible.map((entry) => (
@@ -180,27 +183,27 @@ export function ConnectorPicker({ entries, loading, addHref, customHref, mode, c
             title={entry.name}
             description={entry.description}
             action={entry.openHref ? (
-              <LinkButton size="xs" href={entry.openHref} aria-label={`Open ${entry.name}`}>Open</LinkButton>
+              <LinkButton size="xs" href={entry.openHref} aria-label={`Open ${entry.name}`}>{t("denConnector.action.open")}</LinkButton>
             ) : (
-              <LinkButton size="xs" href={addHref(entry)} aria-label={`${entry.addLabel ?? "Add"} ${entry.name}`}>{entry.addLabel ?? "Add"}</LinkButton>
+              <LinkButton size="xs" href={addHref(entry)} aria-label={`${entry.addLabel ?? t("denConnector.action.add")} ${entry.name}`}>{entry.addLabel ?? t("denConnector.action.add")}</LinkButton>
             )}
           />
         ))}
         {noMatch && !pasted ? (
           <div className="flex flex-col items-center gap-1.5 px-6 pb-8 pt-10 text-center" data-testid="connector-picker-no-match">
             <ServerTile />
-            <p className="mt-2.5 text-[15px] font-semibold leading-[22px] text-gray-900">{urlInput ? "Add this MCP server" : <>No app called &ldquo;{query.trim()}&rdquo;</>}</p>
-            {!urlInput ? <p className="text-[13px] leading-5 text-gray-500">Add it with the address your vendor or IT team gave you.</p> : null}
+            <p className="mt-2.5 text-[15px] font-semibold leading-[22px] text-gray-900">{urlInput ? t("denConnector.picker.addThisServer") : t("denConnector.picker.noMatch", { name: query.trim() })}</p>
+            {!urlInput ? <p className="text-[13px] leading-5 text-gray-500">{t("denConnector.picker.noMatchHint")}</p> : null}
             <DenButton size="md" icon={Plus} className="mt-3.5" data-testid="connector-picker-no-match-add" onClick={() => urlInput
               ? router.push(customHref({ name: "", url: needle.startsWith("http") ? query.trim() : `https://${query.trim()}` }))
               : onCustomNameChange(query.trim())}>
-              {urlInput ? "Add this MCP" : "Add another MCP"}
+              {urlInput ? t("denConnector.picker.addThisMcp") : t("denConnector.action.addAnotherMcp")}
             </DenButton>
           </div>
         ) : null}
       </ItemPanel>}
       {pasted && !loading && visible.length === 0 ? (
-        <p className="text-center text-[12px] leading-4 text-gray-400" data-testid="connector-picker-url-no-match">No catalog connectors match this address.</p>
+        <p className="text-center text-[12px] leading-4 text-gray-400" data-testid="connector-picker-url-no-match">{t("denConnector.picker.urlNoMatch")}</p>
       ) : null}
     </div>
   );

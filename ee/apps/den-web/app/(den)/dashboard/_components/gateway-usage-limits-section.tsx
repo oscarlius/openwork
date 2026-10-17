@@ -12,6 +12,7 @@ import { DenCombobox } from "../../_components/ui/combobox";
 import { DenNotice } from "../../_components/ui/notice";
 import { DenTable } from "../../_components/ui/table";
 import { getAiGatewayLimitRoute, getAiGatewayLimitsRoute, getAiGatewayPersonRoute, getNewAiGatewayLimitRoute, type DenOrgMember, type DenOrgTeam } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useGatewayAccessProviders } from "./gateway-subject-access-data";
 import { describeWho } from "./gateway-limit-editor-screen";
 import { formatLimitMoney, timeframeLabels, timeframePeriods, useGatewayLimitsMutation, useGatewayMembers, useGatewayPolicies, type GatewayUsageMember } from "./gateway-usage-limits-data";
@@ -106,6 +107,7 @@ function GatewayUsageCoverage({ coverage }: { coverage: GatewayUsageStatus["cove
 }
 
 export function GatewayMemberUsageDetails({ status, policies, teams }: { status: GatewayUsageStatus; policies: GatewayUsageLimitPolicy[]; teams: DenOrgTeam[] }) {
+  const t = useDenT();
   const matchingPolicies = policies.filter((policy) => !policy.archivedAt && policy.assignments.some((assignment) => assignment.organization || assignment.memberId === status.memberId || teams.some((team) => team.id === assignment.teamId && team.memberIds.includes(status.memberId))));
   return <div className="flex flex-col gap-4">
     <div className="flex flex-wrap items-center gap-3"><DenBadge tone={status.state === "over_limit" ? "warning" : "neutral"} icon={status.state === "blocked" ? LockKeyhole : undefined}>{status.state === "unlimited" ? "Unlimited" : status.state === "blocked" ? "Blocked" : status.state === "over_limit" ? "Over allowance" : "Within allowance"}</DenBadge><span className="text-xs text-[var(--ow-muted)]">Updated <GatewayLimitTimestamp value={status.serverTime} /></span></div>
@@ -133,7 +135,7 @@ export function GatewayMemberUsageDetails({ status, policies, teams }: { status:
         ) },
         { key: "usage", header: "Usage", align: "right", render: (bucket) => (
           <div className="flex flex-col gap-1 whitespace-nowrap text-sm tabular-nums">
-            <span className="font-medium">{formatLimitMoney(bucket.usedMicroUsd)} used</span>
+            <span className="font-medium">{t("denGateway.limitRow.usedSuffix", { used: formatLimitMoney(bucket.usedMicroUsd) })}</span>
             <span className={bucket.remainingMicroUsd < 0 ? "text-[var(--ow-warning)]" : "text-[var(--ow-muted)]"}>{bucket.remainingMicroUsd < 0 ? `${formatLimitMoney(-bucket.remainingMicroUsd)} over allowance` : `${formatLimitMoney(bucket.remainingMicroUsd)} remaining`}</span>
             <span className="mt-1 text-xs text-[var(--ow-muted)]">Resets <GatewayLimitTimestamp value={bucket.resetAt} /></span>
           </div>

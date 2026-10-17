@@ -11,6 +11,8 @@ import { DenSelect } from "../../_components/ui/select";
 import { DenTextarea } from "../../_components/ui/textarea";
 import { getRequestError, requestJson } from "../../_lib/den-flow";
 import { getImportPluginRoute, getMcpConnectionsRoute, getPluginRoute, getPluginsRoute } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
+import { type DenTranslate } from "../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { IntegrationIcon } from "./integration-icon";
 import { useMarketplaces } from "./marketplace-data";
@@ -121,7 +123,7 @@ function createdItemId(payload: unknown): string | null {
   return typeof item?.id === "string" ? item.id : null;
 }
 
-function connectorAuthDescription(connection: ExternalMcpConnection): string {
+function connectorAuthDescription(t: DenTranslate, connection: ExternalMcpConnection): string {
   let description: string;
   if (connection.authType === "oauth") {
     description = connection.credentialMode === "per_member"
@@ -130,7 +132,7 @@ function connectorAuthDescription(connection: ExternalMcpConnection): string {
   } else if (connection.authType === "apikey") {
     description = "Organization API key";
   } else {
-    description = "No sign-in needed";
+    description = t("denConnector.list.noSignInNeeded");
   }
   return !connection.connected && connection.credentialMode === "shared"
     ? `${description} · Not connected yet`
@@ -154,6 +156,7 @@ function ConnectorPicker({
   orgSlug: string | null;
   onChange: (connectionId: string) => void;
 }) {
+  const t = useDenT();
   if (loading) {
     return <p className="text-[13px] text-gray-500">Loading connectors…</p>;
   }
@@ -163,7 +166,7 @@ function ConnectorPicker({
       <p className="text-[13px] text-gray-500">
         No connectors yet.{" "}
         <Link href={getMcpConnectionsRoute(orgSlug)} className="font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900">
-          Add a connector
+          {t("denConnector.action.addConnector")}
         </Link>
       </p>
     );
@@ -196,7 +199,7 @@ function ConnectorPicker({
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-medium text-gray-900">{connection.name}</span>
                 <span className="block text-[12px] text-gray-500">
-                  {taken ? "Already in this plugin" : connectorAuthDescription(connection)}
+                  {taken ? "Already in this plugin" : connectorAuthDescription(t, connection)}
                 </span>
               </span>
               {selected ? <Check size={16} className="shrink-0 text-gray-900" aria-hidden /> : null}
@@ -207,7 +210,7 @@ function ConnectorPicker({
       <p className="text-[12px] text-gray-500">
         Need a different service?{" "}
         <Link href={getMcpConnectionsRoute(orgSlug)} className="font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900">
-          Add a connector
+          {t("denConnector.action.addConnector")}
         </Link>
       </p>
     </div>
@@ -215,6 +218,7 @@ function ConnectorPicker({
 }
 
 export function PluginEditorScreen() {
+  const t = useDenT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -402,7 +406,7 @@ export function PluginEditorScreen() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-[28px] font-semibold text-gray-900">Create a plugin</h1>
+          <h1 className="text-[28px] font-semibold text-gray-900">{t("denPlugin.editor.createTitle")}</h1>
           <p className="mt-1 text-[15px] text-gray-500">
             Bundle skills, commands, and connectors your team can install in OpenWork with one click.
           </p>
@@ -412,7 +416,7 @@ export function PluginEditorScreen() {
           className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-700 transition hover:bg-gray-50"
         >
           <Download size={14} />
-          {importDraft ? "Change import" : "Import from GitHub"}
+          {importDraft ? "Change import" : t("denPlugin.import.title")}
         </Link>
       </div>
 
@@ -484,7 +488,7 @@ export function PluginEditorScreen() {
               </div>
             </div>
             {[...importedSkills.map((skill) => ({ key: `skill:${skill.skillKey}`, label: "Skill", name: skill.name, Icon: FileText })),
-              ...importedServers.map((server) => ({ key: `mcp:${server.serverKey}`, label: "MCP server", name: server.name, Icon: Server }))]
+              ...importedServers.map((server) => ({ key: `mcp:${server.serverKey}`, label: t("denConnector.picker.mcpServerKind"), name: server.name, Icon: Server }))]
               .map((item) => (
                 <div key={item.key} className="flex items-center gap-3 border-b border-gray-100 px-5 py-3 last:border-b-0">
                   <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gray-50 text-gray-500">
@@ -578,7 +582,7 @@ export function PluginEditorScreen() {
       </div>
 
       <div className="mt-6 flex flex-col gap-4 rounded-[24px] border border-gray-200 bg-white p-6">
-        <h2 className="text-[18px] font-semibold text-gray-900">Share</h2>
+        <h2 className="text-[18px] font-semibold text-gray-900">{t("denPlugin.action.share")}</h2>
         <label className="flex items-start gap-3 text-[14px] text-gray-700">
           <input
             type="checkbox"
@@ -632,7 +636,7 @@ export function PluginEditorScreen() {
           onClick={() => clearPluginImportDraft()}
           className="text-[14px] text-gray-500 hover:text-gray-900"
         >
-          Cancel
+          {t("denPlugin.action.cancel")}
         </Link>
       </div>
     </div>

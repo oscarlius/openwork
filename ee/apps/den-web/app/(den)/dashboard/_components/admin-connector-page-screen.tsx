@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { getMcpConnectionsRoute, getOrgAccessFlags, getToolTesterRoute, permissionLockReason } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useDenFlow } from "../../_providers/den-flow-provider";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { type AccessDraft, accessAddedToast } from "./access-summary";
@@ -33,6 +34,7 @@ import { SlackAssistantSetup } from "./slack-assistant-setup";
 import { WhoCanUseIt } from "./who-can-use-it";
 
 function UseInAnotherApp({ connection, lockedReason }: { connection: ExternalMcpConnection; lockedReason: string | null }) {
+  const t = useDenT();
   const { runtimeConfig, runtimeConfigLoaded } = useDenFlow();
   const updateConnection = useUpdateMcpConnection();
   const [open, setOpen] = useState(false);
@@ -54,7 +56,7 @@ function UseInAnotherApp({ connection, lockedReason }: { connection: ExternalMcp
         access: connection.access ?? { orgWide: false, memberIds: [], teamIds: [] },
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not save.");
+      setError(cause instanceof Error ? cause.message : t("denConnector.form.notSaved"));
     }
   }
 
@@ -131,6 +133,7 @@ function nativeKeyFor(connection: ExternalMcpConnection) {
 
 /** C6: a connector in Manage, with Who can use it inline instead of Share. */
 export function AdminConnectorPageScreen({ connection }: { connection: ExternalMcpConnection }) {
+  const t = useDenT();
   const router = useRouter();
   const toast = useDenToast();
   const { orgSlug, orgContext } = useOrgDashboard();
@@ -183,14 +186,14 @@ export function AdminConnectorPageScreen({ connection }: { connection: ExternalM
 
   async function remove() {
     await deleteConnection.mutateAsync(connectionId);
-    toast({ title: `${name} is removed`, description: "Nobody can use it anymore." });
+    toast({ title: t("denPlugin.item.removedTitle", { name }), description: t("denPlugin.item.removedDescription") });
     router.push(getMcpConnectionsRoute(orgSlug));
   }
 
   const accountValue = signedIn
     ? connection.authType === "none" ? "Not needed" : connection.externalAccountId ?? "Signed in"
     : connection.issuerReviewRequired ? <DenButton variant="secondary" size="xs" onClick={() => setSettingsOpen(true)}>Review sign-in server</DenButton>
-    : <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>Sign in</DenButton>;
+    : <DenButton variant="secondary" size="xs" loading={signIn.pendingId === connectionId} onClick={() => void signIn.signIn(connection)}>{t("denConnector.action.signIn")}</DenButton>;
 
   const details = [
     ...(connection.authType === "oauth"
@@ -209,7 +212,7 @@ export function AdminConnectorPageScreen({ connection }: { connection: ExternalM
           <>
             <ItemMenu
               size="md"
-              label={`More for ${name}`}
+              label={t("denPlugin.item.moreFor", { name })}
               entries={[
                 { label: "Edit settings", onSelect: () => setSettingsOpen(true) },
                 ...(!native && signedIn && memberAccess?.canManageConnections ? [{ label: "Test tools", href: `${getToolTesterRoute(orgSlug)}?connectionId=${encodeURIComponent(connectionId)}` }] : []),
@@ -231,7 +234,7 @@ export function AdminConnectorPageScreen({ connection }: { connection: ExternalM
 
       {orgContext && !connection.access ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="Who can use it" meta={signInSentence(connection)} />
+          <SectionTitle title={t("denPlugin.access.whoCanUseIt")} meta={signInSentence(connection)} />
           <ItemPanel>
             <div className="flex items-center justify-between gap-4 px-5 py-3 text-[13px]" data-testid="access-locked">
               <span className="font-medium text-gray-900">Everyone in your organization</span>
@@ -243,7 +246,7 @@ export function AdminConnectorPageScreen({ connection }: { connection: ExternalM
 
       {orgContext && connection.access ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="Who can use it" meta={signInSentence(connection)} />
+          <SectionTitle title={t("denPlugin.access.whoCanUseIt")} meta={signInSentence(connection)} />
           <WhoCanUseIt
             value={draft}
             onChange={(next) => void changeAccess(next)}
@@ -264,7 +267,7 @@ export function AdminConnectorPageScreen({ connection }: { connection: ExternalM
 
       {details.length > 0 ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="Details" />
+          <SectionTitle title={t("denPlugin.detail.section")} />
           <DetailRows rows={details} />
           {signIn.failure?.id === connectionId ? (
             <p className="text-[13px] text-red-600" role="alert">{`Could not sign in to ${name}. ${signIn.failure.message}`}</p>

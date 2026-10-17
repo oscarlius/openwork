@@ -21,6 +21,8 @@ import { DenSelect } from "../../../_components/ui/select";
 import { DenToggleRow } from "../../../_components/ui/toggle-row";
 import { DenRequestTimeoutError } from "../../../_lib/den-flow";
 import { getMcpConnectionsRoute, getOrgAccessFlags } from "../../../_lib/den-org";
+import { useDenT } from "../../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
 import { marketplaceConnectionNeedsAdminSetup } from "../mcp-connection-setup";
 import { personalApiKeyStatus, personalApiKeyStatusLabel } from "../member-api-key";
@@ -64,24 +66,26 @@ function toolTitle(tool: ExternalMcpTool): string {
   return tool.title || tool.annotations?.title || tool.name;
 }
 
-function relativeDate(value: string | null): string | null {
+function relativeDate(value: string | null, t: DenTranslate): string | null {
   if (!value) return null;
   const timestamp = new Date(value).getTime();
   if (!Number.isFinite(timestamp)) return null;
   const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
-  if (elapsedMinutes < 1) return "just now";
-  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+  if (elapsedMinutes < 1) return t("denToolTester.page.relativeJustNow");
+  if (elapsedMinutes < 60) return t("denToolTester.page.relativeMinutes", { count: elapsedMinutes });
   const hours = Math.floor(elapsedMinutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("denToolTester.page.relativeHours", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return t("denToolTester.page.relativeDays", { count: days });
   return new Date(timestamp).toLocaleDateString();
 }
 
-function policyAttribution(policy: ExternalMcpToolPolicyView): string {
+function policyAttribution(policy: ExternalMcpToolPolicyView, t: DenTranslate): string {
   if (!policy.updatedBy) return "";
-  const updated = relativeDate(policy.updatedAt);
-  return updated ? ` by ${policy.updatedBy} · ${updated}` : ` by ${policy.updatedBy}`;
+  const updated = relativeDate(policy.updatedAt, t);
+  return updated
+    ? t("denToolTester.page.policyUpdated", { name: policy.updatedBy, when: updated })
+    : t("denToolTester.page.policyUpdatedNoDate", { name: policy.updatedBy });
 }
 
 function testableConnection(
@@ -97,6 +101,7 @@ function testableConnection(
 }
 
 export function ToolTesterScreen() {
+  const t = useDenT();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -245,11 +250,11 @@ export function ToolTesterScreen() {
     try {
       parsed = JSON.parse(argumentsText);
     } catch {
-      setLocalError("Arguments must be valid JSON before switching to Form.");
+      setLocalError(t("denToolTester.page.argsValidJson"));
       return;
     }
     if (!isRecord(parsed)) {
-      setLocalError("Arguments must be a JSON object before switching to Form.");
+      setLocalError(t("denToolTester.page.argsJsonObject"));
       return;
     }
     setFormValues(formValuesFromArguments(selectedTool.inputSchema, parsed));
@@ -268,7 +273,7 @@ export function ToolTesterScreen() {
       await updatePolicy.mutateAsync(nextPolicy);
       return true;
     } catch (error) {
-      setPolicyError(error instanceof Error ? error.message : "Failed to update the tool policy.");
+      setPolicyError(error instanceof Error ? error.message : t("denToolTester.page.policyUpdateFailed"));
       return false;
     }
   }
@@ -306,16 +311,16 @@ export function ToolTesterScreen() {
       try {
         parsed = JSON.parse(argumentsText);
       } catch {
-        setLocalError("Arguments must be valid JSON.");
+        setLocalError(t("denToolTester.page.argsRunValidJson"));
         return;
       }
     }
     if (!isRecord(parsed)) {
-      setLocalError("Arguments must be a JSON object, such as {}.");
+      setLocalError(t("denToolTester.page.argsRunJsonObject"));
       return;
     }
     if (selectedTool.annotations?.destructiveHint && !destructiveConfirmed) {
-      setLocalError("Confirm the destructive tool warning before running this tool.");
+      setLocalError(t("denToolTester.page.confirmDestructive"));
       return;
     }
 
@@ -368,10 +373,10 @@ export function ToolTesterScreen() {
             mayHaveSideEffects: selectedTool.annotations?.readOnlyHint !== true,
           })
         : null;
-      const message = error instanceof Error ? error.message : "The MCP tool failed.";
+      const message = error instanceof Error ? error.message : t("denToolTester.page.toolFailed");
       const outcome: McpToolCallOutcome = {
         status: "failed",
-        referenceId: failureAttribution?.diagnosticReference ?? serverFailure?.diagnostic?.referenceId ?? "No reference",
+        referenceId: failureAttribution?.diagnosticReference ?? serverFailure?.diagnostic?.referenceId ?? t("denToolTester.page.noReference"),
         durationMs: inspection?.response?.durationMs ?? Date.now() - startedAt,
         result: { error: message, diagnostic: serverFailure?.diagnostic ?? null },
         inspection,
@@ -405,33 +410,33 @@ export function ToolTesterScreen() {
     <DashboardPageTemplate
       icon={Wrench}
       title="Tool Tester"
-      description="Run any tool your connections expose, inspect the request on the wire, and control which tools your organization can use. Runs execute with your credential and are never written to OpenWork logs."
+      description={t("denToolTester.page.description")}
     >
       {connectionsQuery.error ? (
-        <DenNotice className="mb-4" message={connectionsQuery.error instanceof Error ? connectionsQuery.error.message : "Failed to load connections."} />
+        <DenNotice className="mb-4" message={connectionsQuery.error instanceof Error ? connectionsQuery.error.message : t("denToolTester.page.connectionsLoadFailed")} />
       ) : null}
 
       {connectionsQuery.isLoading || presetsQuery.isLoading ? (
         <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-5 py-6 text-[13px] text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Loading testable connections…
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {t("denToolTester.page.connectionsLoading")}
         </div>
       ) : testableConnections.length === 0 ? (
         <DenNotice
           tone="neutral"
-          message={<span>No connected, testable MCP connections are available. <Link className="font-medium text-gray-900 underline" href={getMcpConnectionsRoute(orgSlug)}>Add or connect a connector first.</Link></span>}
+          message={<span>{t("denToolTester.page.noConnections")}<Link className="font-medium text-gray-900 underline" href={getMcpConnectionsRoute(orgSlug)}>{t("denToolTester.page.noConnectionsLink")}</Link></span>}
         />
       ) : selectedConnection ? (
         <div className="space-y-5">
           <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1 sm:max-w-sm">
-              <DenSelect aria-label="Connection" value={selectedConnection.id} onChange={(event) => chooseConnection(event.target.value)}>
+              <DenSelect aria-label={t("denToolTester.page.connectionAriaLabel")} value={selectedConnection.id} onChange={(event) => chooseConnection(event.target.value)}>
                 {testableConnections.map((connection) => <option key={connection.id} value={connection.id}>{connection.name}</option>)}
               </DenSelect>
             </div>
             <DenBadge tone={selectedApiKeyStatus === "reconnect_required" ? "warning" : selectedApiKeyStatus === "saved_unverified" ? "neutral" : selectedConnection.connectedForMe ? "success" : "neutral"}>
               {selectedApiKeyStatus
                 ? personalApiKeyStatusLabel(selectedApiKeyStatus)
-                : selectedConnection.connectedForMe ? "Connected as you" : "Not connected"}
+                : selectedConnection.connectedForMe ? t("denToolTester.page.connectedAsYou") : t("denToolTester.page.notConnected")}
             </DenBadge>
             <DenButton
               className="shrink-0 whitespace-nowrap sm:ml-auto"
@@ -441,23 +446,23 @@ export function ToolTesterScreen() {
               loading={catalog.isFetching}
               onClick={() => void catalog.refetch()}
             >
-              Refresh tools
+              {t("denToolTester.page.refreshTools")}
             </DenButton>
           </div>
 
           {catalog.isLoading ? (
             <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-white px-5 py-8 text-[13px] text-gray-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Reading the MCP tool catalog…
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {t("denToolTester.page.catalogLoading")}
             </div>
           ) : catalog.error ? (
-            <DenNotice message={catalog.error instanceof Error ? catalog.error.message : "Could not read this MCP's tools."} />
+            <DenNotice message={catalog.error instanceof Error ? catalog.error.message : t("denToolTester.page.catalogFailed")} />
           ) : policy ? (
             <>
               <div className="space-y-3">
                 <DenToggleRow
                   icon={Shield}
-                  title="Tools enabled for your organization"
-                  description={`Turn off to block every ${selectedConnection.name} tool at the OpenWork layer — agents can't discover or call them, members can't run them.`}
+                  title={t("denToolTester.page.policyTitle")}
+                  description={t("denToolTester.page.policyDescription", { connection: selectedConnection.name })}
                   checked={!policy.allDisabled}
                   disabled={updatePolicy.isPending}
                   onChange={(checked) => {
@@ -471,14 +476,14 @@ export function ToolTesterScreen() {
                 {policy.allDisabled ? (
                   <DenNotice
                     tone="warning"
-                    message={`${selectedConnection.name} tools are disabled for your organization. Agents can't discover or call them, and members can't run them from OpenWork.${policy.updatedBy ? ` Turned off${policyAttribution(policy)}` : ""}`}
+                    message={`${t("denToolTester.page.policyDisabledNotice", { connection: selectedConnection.name })}${policy.updatedBy ? t("denToolTester.page.policyTurnedOff", { attribution: policyAttribution(policy, t) }) : ""}`}
                   />
                 ) : null}
                 {policyError ? <DenNotice message={policyError} /> : null}
               </div>
 
               {tools.length === 0 ? (
-                <DenNotice tone="neutral" message="This MCP is connected but does not currently expose any tools." />
+                <DenNotice tone="neutral" message={t("denToolTester.page.noToolsExposed")} />
               ) : (
                 <div className="flex flex-col items-start gap-4 lg:flex-row">
                   <ToolRail
@@ -486,7 +491,7 @@ export function ToolTesterScreen() {
                     selectedToolName={selectedToolName}
                     policy={policy}
                     search={toolSearch}
-                    policyAttribution={policyAttribution(policy)}
+                    policyAttribution={policyAttribution(policy, t)}
                     policyUpdating={updatePolicy.isPending}
                     onSearchChange={setToolSearch}
                     onSelect={chooseTool}
@@ -500,13 +505,13 @@ export function ToolTesterScreen() {
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-[16px] font-semibold tracking-tight text-gray-950">{toolTitle(selectedTool)}</h2>
                             {selectedTool.annotations?.readOnlyHint ? (
-                              <DenBadge tone="success">Read-only</DenBadge>
+                              <DenBadge tone="success">{t("denToolTester.page.badgeReadOnly")}</DenBadge>
                             ) : selectedTool.annotations?.destructiveHint ? (
-                              <DenBadge tone="danger" icon={Trash2}>Destructive</DenBadge>
+                              <DenBadge tone="danger" icon={Trash2}>{t("denToolTester.page.badgeDestructive")}</DenBadge>
                             ) : (
-                              <DenBadge tone="warning" icon={AlertTriangle}>Not marked read-only</DenBadge>
+                              <DenBadge tone="warning" icon={AlertTriangle}>{t("denToolTester.page.badgeNotMarkedReadOnly")}</DenBadge>
                             )}
-                            {selectedToolDisabled ? <DenBadge tone="neutral">Disabled</DenBadge> : null}
+                            {selectedToolDisabled ? <DenBadge tone="neutral">{t("denToolTester.rail.disabled")}</DenBadge> : null}
                           </div>
                           {selectedTool.description ? <p className="mt-2 text-[12.5px] leading-5 text-gray-500">{selectedTool.description}</p> : null}
                         </div>
@@ -519,11 +524,11 @@ export function ToolTesterScreen() {
                         <div className="mt-5 space-y-3">
                           <DenNotice
                             tone="warning"
-                            message={`Disabled for your organization${policyAttribution(policy)}. Agents can't call it and members can't run it. Re-enable it to test it here.`}
+                            message={t("denToolTester.page.toolDisabledNotice", { attribution: policyAttribution(policy, t) })}
                           />
                           <div className="flex flex-wrap gap-2">
-                            <DenButton size="md" icon={Play} disabled>Run tool</DenButton>
-                            <DenButton variant="secondary" size="md" loading={updatePolicy.isPending} onClick={() => void enableSelectedTool()}>Enable tool</DenButton>
+                            <DenButton size="md" icon={Play} disabled>{t("denToolTester.page.runTool")}</DenButton>
+                            <DenButton variant="secondary" size="md" loading={updatePolicy.isPending} onClick={() => void enableSelectedTool()}>{t("denToolTester.page.enableTool")}</DenButton>
                           </div>
                         </div>
                       ) : (
@@ -552,22 +557,22 @@ export function ToolTesterScreen() {
                                 checked={destructiveConfirmed}
                                 onChange={(event) => setDestructiveConfirmed(event.target.checked)}
                               />
-                              <span><strong>Destructive tool warning.</strong> The provider says this tool may change or delete external data. I want to run it with these arguments.</span>
+                              <span><strong>{t("denToolTester.page.destructiveWarningLead")}</strong>{t("denToolTester.page.destructiveWarningBody")}</span>
                             </label>
                           ) : selectedTool.annotations?.readOnlyHint ? (
                             <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-blue-700">
-                              <Check className="h-3.5 w-3.5" /> Provider marks this tool as read-only.
+                              <Check className="h-3.5 w-3.5" /> {t("denToolTester.page.providerReadOnly")}
                             </p>
                           ) : (
                             <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-amber-700">
-                              <AlertTriangle className="h-3.5 w-3.5" /> The provider did not mark this tool as read-only. Review the arguments before running it.
+                              <AlertTriangle className="h-3.5 w-3.5" /> {t("denToolTester.page.providerNotReadOnly")}
                             </p>
                           )}
 
                           {localError ? <DenNotice message={localError} /> : null}
                           <div className="flex flex-wrap items-center gap-3">
-                            <DenButton size="md" icon={Play} loading={runTool.isPending} onClick={() => void handleRun()}>Run tool</DenButton>
-                            <p className="text-[11px] text-gray-500">Runs immediately against {selectedConnection.name}, as you.</p>
+                            <DenButton size="md" icon={Play} loading={runTool.isPending} onClick={() => void handleRun()}>{t("denToolTester.page.runTool")}</DenButton>
+                            <p className="text-[11px] text-gray-500">{t("denToolTester.page.runAsYou", { connection: selectedConnection.name })}</p>
                           </div>
                         </div>
                       )}
@@ -582,7 +587,7 @@ export function ToolTesterScreen() {
 
               <RecentToolRuns
                 runs={recentRuns}
-                caption="Kept in this browser for this session only — OpenWork never stores run results."
+                caption={t("denToolTester.page.recentRunsCaption")}
                 onLoad={loadRun}
               />
             </>
@@ -603,13 +608,13 @@ export function ToolTesterScreen() {
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600"><Shield className="h-5 w-5" aria-hidden="true" /></div>
               <div>
-                <h2 id="disable-tools-title" className="text-[18px] font-semibold tracking-[-0.02em] text-gray-950">Disable all {selectedConnection.name} tools?</h2>
-                <p id="disable-tools-description" className="mt-1 text-[13px] leading-6 text-gray-600">This immediately blocks every tool across your organization. Agents will stop discovering and calling them, and members will not be able to run them.</p>
+                <h2 id="disable-tools-title" className="text-[18px] font-semibold tracking-[-0.02em] text-gray-950">{t("denToolTester.page.disableAllTitle", { connection: selectedConnection.name })}</h2>
+                <p id="disable-tools-description" className="mt-1 text-[13px] leading-6 text-gray-600">{t("denToolTester.page.disableAllDescription")}</p>
               </div>
             </div>
             {policyError ? <div className="mt-4"><DenNotice message={policyError} /></div> : null}
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <DenButton variant="secondary" disabled={updatePolicy.isPending} onClick={() => setDisableAllConfirmOpen(false)}>Cancel</DenButton>
+              <DenButton variant="secondary" disabled={updatePolicy.isPending} onClick={() => setDisableAllConfirmOpen(false)}>{t("denCommon.action.cancel")}</DenButton>
               <DenButton
                 variant="destructive"
                 loading={updatePolicy.isPending}
@@ -617,7 +622,7 @@ export function ToolTesterScreen() {
                   if (saved) setDisableAllConfirmOpen(false);
                 })}
               >
-                Disable all tools
+                {t("denToolTester.page.disableAllConfirm")}
               </DenButton>
             </div>
           </div>

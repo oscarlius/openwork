@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useDenT } from "../../../_lib/i18n/client";
 import { DenNotice } from "../../_components/ui/notice";
 import { getOrgAccessFlags, permissionLockReason, type DenOrgTeam } from "../../_lib/den-org";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 
 export function TeamAdminCheckbox({ team }: { team: DenOrgTeam }) {
+  const t = useDenT();
   const { orgContext, updateTeam, mutationBusy } = useOrgDashboard();
   const [error, setError] = useState<string | null>(null);
   const canManageAdminTeams = orgContext && getOrgAccessFlags(orgContext.currentMember.role, orgContext.currentMember.isOwner, orgContext.currentMember.permissions).canManageAdminTeams;
@@ -22,16 +24,16 @@ export function TeamAdminCheckbox({ team }: { team: DenOrgTeam }) {
             try {
               await updateTeam(team.id, { grantsOrganizationAdmin: event.target.checked });
             } catch (cause) {
-              setError(cause instanceof Error ? cause.message : "Could not update team Admin access.");
+              setError(cause instanceof Error ? cause.message : t("denTeam.admin.updateError"));
             }
           }}
         />
-        <span>Grant organisation Admin to all members of {team.name}</span>
+        <span>{t("denTeam.admin.grantAll", { teamName: team.name })}</span>
       </label>
       <p className="text-[12px] text-gray-500">
-        {canManageAdminTeams ? "" : `Locked. ${permissionLockReason("teams.manage_admin")} `}
-        Admin access is inherited while a member belongs to this team; individual roles are unchanged.
-        {team.managedByScim ? " Membership is managed by your identity provider. Disabling SCIM mapping or removing its group or provider clears this grant and requires reapproval." : ""}
+        {canManageAdminTeams ? "" : t("denTeam.admin.lockedNotice", { reason: permissionLockReason("teams.manage_admin") })}
+        {t("denTeam.admin.inheritedNote")}
+        {team.managedByScim ? t("denTeam.admin.scimNote") : ""}
       </p>
       {error ? <DenNotice tone="error" message={error} /> : null}
     </div>
