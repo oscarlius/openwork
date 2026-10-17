@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { t } from "@/i18n";
 import { readDenSettings } from "../../../app/lib/den";
 import { recordInspectorEvent } from "../../../app/lib/app-inspector";
 import type {
@@ -62,8 +63,8 @@ function missingContextIssue(input: {
       code: "cloud_mcp_submission_context_missing",
       stage: "engine_delivery",
       retryable: true,
-      message: "OpenWork could not resolve the workspace server before checking connected service tools.",
-      recommendedAction: "Retry after the workspace finishes loading.",
+      message: t("connect.submit_message_workspace_unresolved"),
+      recommendedAction: t("connect.submit_action_retry_after_load"),
     };
   }
   if (!input.providerModel) {
@@ -71,16 +72,16 @@ function missingContextIssue(input: {
       code: "cloud_mcp_submission_model_missing",
       stage: "provider_projection",
       retryable: false,
-      message: "Select a provider and model before using connected service tools.",
-      recommendedAction: "Choose a model, then Retry.",
+      message: t("connect.submit_message_select_model"),
+      recommendedAction: t("connect.submit_action_choose_model_retry"),
     };
   }
   return {
     code: "cloud_mcp_submission_context_missing",
     stage: "provider_projection",
     retryable: false,
-    message: "OpenWork could not verify connected service tools for this submission.",
-    recommendedAction: "Retry or open Settings → Connect for diagnostics.",
+    message: t("connect.submit_message_verify_failed"),
+    recommendedAction: t("connect.submit_action_retry_or_connect_diag"),
   };
 }
 

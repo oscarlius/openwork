@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { sanitizeCloudMcpHealthDiagnostic } from "../../../app/lib/diagnostic-sanitizer";
 import type {
   OpenworkCloudMcpEngineRefresh,
@@ -114,22 +115,22 @@ export function cloudMcpAdvancedRows(health: OpenworkCloudMcpHealth | null): Clo
   if (!health) return [];
   const rows: CloudMcpAdvancedRow[] = [];
   const failure = health.firstFailure;
-  rows.push({ label: "Phase", value: String(health.phase) });
+  rows.push({ label: t("connect.adv_phase"), value: String(health.phase) });
   if (failure) {
     rows.push({
-      label: "Failure",
+      label: t("connect.adv_failure"),
       value: `${failure.code} · stage ${failure.stage} · ${failure.retryable ? "retryable" : "not retryable"}`,
       tone: "error",
     });
-    rows.push({ label: "Failure message", value: compactText(failure.message), tone: "error" });
+    rows.push({ label: t("connect.adv_failure_message"), value: compactText(failure.message), tone: "error" });
     const failureDetail = describeCloudMcpErrorDetail(failure.details);
-    if (failureDetail) rows.push({ label: "Failure detail", value: failureDetail, tone: "muted" });
-    if (failure.requestId) rows.push({ label: "Request ID", value: failure.requestId });
-    if (failure.referenceId) rows.push({ label: "Reference ID", value: failure.referenceId });
+    if (failureDetail) rows.push({ label: t("connect.adv_failure_detail"), value: failureDetail, tone: "muted" });
+    if (failure.requestId) rows.push({ label: t("connect.adv_request_id"), value: failure.requestId });
+    if (failure.referenceId) rows.push({ label: t("connect.adv_reference_id"), value: failure.referenceId });
   }
   const engineError = cloudMcpEngineErrorText(health);
   rows.push({
-    label: "Engine MCP status",
+    label: t("connect.adv_engine_mcp_status"),
     value: engineError ? `${health.engine.status} — ${engineError}` : String(health.engine.status),
     ...(health.engine.status === "connected" ? {} : { tone: "error" as const }),
   });
@@ -137,8 +138,8 @@ export function cloudMcpAdvancedRows(health: OpenworkCloudMcpHealth | null): Clo
   if (inspection?.checked) {
     if (inspection.cloudPresent === false) {
       rows.push({
-        label: "Engine registration",
-        value: "openwork-cloud is not registered in the engine (the dynamic entry is lost after an engine restart) — use Refresh engine connection",
+        label: t("connect.adv_engine_registration"),
+        value: t("connect.adv_engine_registration_hint"),
         tone: "error",
       });
     }
@@ -147,13 +148,13 @@ export function cloudMcpAdvancedRows(health: OpenworkCloudMcpHealth | null): Clo
       .map((server) => `${server.name} ${server.status}${server.error ? ` — ${compactText(server.error)}` : ""}`)
       .join("; ");
     rows.push({
-      label: "Engine MCP servers",
+      label: t("connect.adv_engine_mcp_servers"),
       value: servers.length ? compactText(`${inspection.serverCount ?? servers.length} tracked: ${summary}`) : "none tracked",
       ...(servers.some((server) => server.status !== "connected") ? {} : { tone: "muted" as const }),
     });
   }
   rows.push({
-    label: "Delivery",
+    label: t("connect.adv_delivery"),
     value: `${health.delivery.state} · desired ${shortRevision(health.delivery.desiredRevision)} · applied ${shortRevision(health.delivery.appliedRevision)} · last attempt ${formatEpoch(health.delivery.lastAttemptAt)}${health.delivery.trigger ? ` · trigger ${health.delivery.trigger}` : ""}`,
   });
   const direct = health.tools.direct;
@@ -170,26 +171,26 @@ export function cloudMcpAdvancedRows(health: OpenworkCloudMcpHealth | null): Clo
         ? compactText(`${probeFailure.code} — ${probeFailure.message}`)
         : "not checked";
     rows.push({
-      label: "Direct endpoint check",
+      label: t("connect.adv_direct_endpoint_check"),
       value: summary,
       ...(direct.checked && direct.missing.length === 0 && direct.present.length > 0 ? {} : { tone: "error" as const }),
     });
-    if (cause) rows.push({ label: "Probe transport cause", value: cause, tone: "error" });
-    if (direct.trace?.endpoint) rows.push({ label: "Endpoint", value: direct.trace.endpoint, tone: "muted" });
+    if (cause) rows.push({ label: t("connect.adv_probe_transport_cause"), value: cause, tone: "error" });
+    if (direct.trace?.endpoint) rows.push({ label: t("connect.adv_endpoint"), value: direct.trace.endpoint, tone: "muted" });
     if (direct.trace?.serverInfo?.name) {
       rows.push({
-        label: "Endpoint server",
+        label: t("connect.adv_endpoint_server"),
         value: `${direct.trace.serverInfo.name}${direct.trace.serverInfo.version ? ` ${direct.trace.serverInfo.version}` : ""}${direct.trace.protocolVersion ? ` · protocol ${direct.trace.protocolVersion}` : ""}`,
         tone: "muted",
       });
     }
   } else {
-    rows.push({ label: "Direct endpoint check", value: "not run — use Test now to verify the endpoint outside the engine", tone: "muted" });
+    rows.push({ label: t("connect.adv_direct_endpoint_check"), value: t("connect.adv_direct_check_not_run"), tone: "muted" });
   }
   const token = health.desired.token;
   const expiresAt = token.metadata.expiresAt;
   rows.push({
-    label: "Cloud token",
+    label: t("connect.adv_cloud_token"),
     value: token.present
       ? `present${typeof expiresAt === "string" || typeof expiresAt === "number" ? ` · expires ${expiresAt}` : ""}`
       : "missing",
@@ -197,16 +198,16 @@ export function cloudMcpAdvancedRows(health: OpenworkCloudMcpHealth | null): Clo
   });
   const org = health.desired.org;
   if (org && (org.id || org.slug || org.name)) {
-    rows.push({ label: "Organization", value: [org.name, org.slug, org.id].filter(Boolean).join(" · "), tone: "muted" });
+    rows.push({ label: t("settings.provider_source_organization"), value: [org.name, org.slug, org.id].filter(Boolean).join(" · "), tone: "muted" });
   }
   const compatibility = health.compatibility;
   rows.push({
-    label: "Versions",
+    label: t("connect.adv_versions"),
     value: `app ${describeCloudMcpErrorDetail(compatibility.openwork.app?.version) ?? "unknown"} · server ${compatibility.openwork.serverVersion ?? "unknown"} · engine ${compatibility.opencode.actualVersion ?? "unknown"}${compatibility.opencode.expectedVersion ? ` (expected ${compatibility.opencode.expectedVersion})` : ""}`,
     tone: "muted",
   });
   rows.push({
-    label: "Checked",
+    label: t("status.cap_past_check"),
     value: `${health.checkedAt}${typeof health.durationMs === "number" ? ` · took ${Math.max(0, Math.round(health.durationMs))} ms` : ""}`,
     tone: "muted",
   });

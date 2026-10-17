@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { NewSessionDestination } from "./new-session-destination";
+import { t } from "@/i18n";
 
 type Props = {
   destination: NewSessionDestination;
@@ -31,10 +32,10 @@ export function NewTaskDestinationMenu(props: Props) {
   const hasDestinationChoices = hasGroups || canChooseWorkspace;
   if (!hasDestinationChoices && !props.hasDraft) return null;
 
-  const workspaceLabel = workspaces.find((workspace) => workspace.id === props.destination.workspaceId)?.label ?? "Workspace";
+  const workspaceLabel = workspaces.find((workspace) => workspace.id === props.destination.workspaceId)?.label ?? t("session.workspace_fallback");
   const groupLabel = props.destination.groupId
-    ? props.groups.find((group) => group.id === props.destination.groupId)?.label ?? "Unavailable group"
-    : "No group";
+    ? props.groups.find((group) => group.id === props.destination.groupId)?.label ?? t("composer.destination_unavailable_group")
+    : t("session_management.no_group");
 
   return (
     <span className="min-w-0 max-w-full text-muted-foreground">
@@ -42,8 +43,8 @@ export function NewTaskDestinationMenu(props: Props) {
         <DropdownMenuTrigger
           render={<Button variant="ghost" size={hasDestinationChoices ? "xs" : "icon-xs"} />}
           disabled={props.disabled}
-          aria-label={hasGroups ? "Session destination" : canChooseWorkspace ? "Workspace destination" : "Draft actions"}
-          title={hasGroups ? `${workspaceLabel} / ${groupLabel}` : canChooseWorkspace ? workspaceLabel : "Draft actions"}
+          aria-label={hasGroups ? t("composer.destination_session") : canChooseWorkspace ? t("composer.destination_workspace") : t("composer.draft_actions")}
+          title={hasGroups ? `${workspaceLabel} / ${groupLabel}` : canChooseWorkspace ? workspaceLabel : t("composer.draft_actions")}
         >
           {hasDestinationChoices ? <>
             <span className="max-w-40 truncate">{hasGroups ? groupLabel : workspaceLabel}</span>
@@ -54,7 +55,7 @@ export function NewTaskDestinationMenu(props: Props) {
           {hasGroups ? <DropdownMenuGroup>
             <DropdownMenuLabel>{workspaceLabel}</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={props.destination.groupId ?? ""}>
-              <DropdownMenuRadioItem closeOnClick value="" onClick={() => props.onChange({ ...props.destination, groupId: undefined })}>No group</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem closeOnClick value="" onClick={() => props.onChange({ ...props.destination, groupId: undefined })}>{t("session_management.no_group")}</DropdownMenuRadioItem>
               {props.groups.map((group) => <DropdownMenuRadioItem closeOnClick key={group.id} value={group.id} onClick={() => props.onChange({ ...props.destination, groupId: group.id })}>
                 {group.label}
               </DropdownMenuRadioItem>)}
@@ -63,7 +64,7 @@ export function NewTaskDestinationMenu(props: Props) {
           {canChooseWorkspace ? <>
             {hasGroups ? <DropdownMenuSeparator /> : null}
             <DropdownMenuGroup>
-              <DropdownMenuLabel>Workspace</DropdownMenuLabel>
+              <DropdownMenuLabel>{t("session.workspace_fallback")}</DropdownMenuLabel>
               <DropdownMenuRadioGroup value={props.destination.workspaceId}>
                 {workspaces.map((workspace) => <DropdownMenuRadioItem closeOnClick key={workspace.id} value={workspace.id} onClick={() => props.onChange({ workspaceId: workspace.id, parent: props.destination.parent })}>
                   {workspace.label}
@@ -76,7 +77,7 @@ export function NewTaskDestinationMenu(props: Props) {
             <DropdownMenuGroup>
               <DropdownMenuItem variant="destructive" onClick={props.onDiscard}>
                 <Trash2 />
-                Discard draft
+                {t("composer.discard_draft")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </> : null}

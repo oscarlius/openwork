@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { t } from "@/i18n";
 import { createDenClient, readDenSettings, type DenClient, type DenExternalMcpConnection } from "@/app/lib/den";
 import { denSettingsChangedEvent } from "@/app/lib/den-session-events";
 import { openDesktopUrl } from "@/app/lib/desktop";
@@ -28,11 +29,11 @@ export type OrgMcpConnectFailure =
 export function orgMcpConnectFailureMessage(failure: OrgMcpConnectFailure): string {
   switch (failure) {
     case "missing_context":
-      return "Sign in to OpenWork Cloud and select an organization before connecting.";
+      return t("connect.org_conn_needs_signin");
     case "missing_authorization_url":
-      return "The connection did not return a sign-in URL. Check its OAuth configuration and try again.";
+      return t("connect.org_conn_no_url");
     case "timeout":
-      return "Sign-in did not complete. Check the provider window for an OAuth error, then verify the provider redirect URI and try again.";
+      return t("connect.org_conn_timeout");
   }
 }
 
@@ -204,7 +205,7 @@ export function useOrgMcpConnections() {
         refreshRunRef.current !== run
         || (expectedScope && !isActionScopeCurrent(expectedScope))
       ) return;
-      setError(fetchError instanceof Error ? fetchError.message : "Failed to load organization MCP connections.");
+      setError(fetchError instanceof Error ? fetchError.message : t("connect.org_conn_load_failed"));
     } finally {
       if (
         refreshRunRef.current === run
@@ -308,7 +309,7 @@ export function useOrgMcpConnections() {
       }, CONNECT_POLL_INTERVAL_MS);
     } catch (connectError) {
       if (!isActionScopeCurrent(pollScope)) return;
-      setError(connectError instanceof Error ? connectError.message : "Failed to start the connection.");
+      setError(connectError instanceof Error ? connectError.message : t("connect.org_conn_connect_failed"));
       setConnectingId(null);
     }
   }, [isActionScopeCurrent, refresh, setConnections, stopPolling]);
@@ -336,7 +337,7 @@ export function useOrgMcpConnections() {
       if (!isActionScopeCurrent(actionScope)) return;
     } catch (disconnectError) {
       if (!isActionScopeCurrent(actionScope)) return;
-      setError(disconnectError instanceof Error ? disconnectError.message : "Failed to disconnect the account.");
+      setError(disconnectError instanceof Error ? disconnectError.message : t("connect.org_conn_disconnect_failed"));
     } finally {
       if (isActionScopeCurrent(actionScope)) setDisconnectingId(null);
     }

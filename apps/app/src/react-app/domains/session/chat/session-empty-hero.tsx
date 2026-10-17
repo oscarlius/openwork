@@ -26,6 +26,7 @@ import {
 } from "./new-task-composer";
 import { consumePendingChatSeed, pendingChatSeedEvent } from "./pending-chat-seed";
 import { hideEmptyHeroIntroduction } from "./empty-hero-introduction";
+import { t } from "@/i18n";
 
 type HeroSuggestion = {
   title: string;
@@ -33,28 +34,31 @@ type HeroSuggestion = {
   prompt: string;
 };
 
-const DEFAULT_SUGGESTIONS: HeroSuggestion[] = [
-  {
-    title: "Summarize my week",
-    description: "Pull highlights from email and calendar.",
-    prompt: "Summarize my week: pull the highlights from my connected email and calendar and give me a short digest of what happened and what needs my attention.",
-  },
-  {
-    title: "Clean up a spreadsheet",
-    description: "Drop in a CSV and describe the result you want.",
-    prompt: "Create a sample CSV file with 20 rows of fake customer data (name, email, company, revenue). Then show me a summary of the data.",
-  },
-  {
-    title: "Draft a document",
-    description: "Reports, emails, or briefs from a few bullet points.",
-    prompt: "Draft a one-page project brief. Ask me for the bullet points you need, then turn them into a clear, well-structured document.",
-  },
-  {
-    title: "Automate a web task",
-    description: "Use the built-in browser for repetitive steps.",
-    prompt: "Open craigslist.org in the browser and search for couches for sale. Show me the top 5 results with prices.",
-  },
-];
+/** Built-in hero cards. Labels resolve per locale at render time; the prompts stay English because they are agent instructions. */
+function defaultHeroSuggestions(): HeroSuggestion[] {
+  return [
+    {
+      title: t("session.hero_suggestion_summarize_week"),
+      description: t("session.hero_suggestion_summarize_week_desc"),
+      prompt: "Summarize my week: pull the highlights from my connected email and calendar and give me a short digest of what happened and what needs my attention.",
+    },
+    {
+      title: t("session.hero_suggestion_spreadsheet"),
+      description: t("session.hero_suggestion_spreadsheet_desc"),
+      prompt: "Create a sample CSV file with 20 rows of fake customer data (name, email, company, revenue). Then show me a summary of the data.",
+    },
+    {
+      title: t("session.hero_suggestion_document"),
+      description: t("session.hero_suggestion_document_desc"),
+      prompt: "Draft a one-page project brief. Ask me for the bullet points you need, then turn them into a clear, well-structured document.",
+    },
+    {
+      title: t("session.hero_suggestion_web_task"),
+      description: t("session.hero_suggestion_web_task_desc"),
+      prompt: "Open craigslist.org in the browser and search for couches for sale. Show me the top 5 results with prices.",
+    },
+  ];
+}
 
 export type SessionEmptyHeroProps = {
   providerCount: number;
@@ -170,7 +174,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
       });
       return { title: card.title, description: card.description, prompt: card.selectionPrompt };
     })
-    : DEFAULT_SUGGESTIONS;
+    : defaultHeroSuggestions();
 
   const submit = async (
     resolvedPrompt: string,
@@ -206,7 +210,7 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
     <div data-chat-empty-hero className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4 max-lg:h-full max-lg:min-h-0 max-lg:gap-4 max-lg:overflow-y-auto max-lg:px-3 max-lg:pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-6">
       <div data-empty-greeting hidden={hideIntroduction} className="text-center max-lg:pt-6">
         <h2 className="text-lg font-medium tracking-tight text-foreground">
-          What do you need done?
+          {t("session.empty_hero_greeting")}
         </h2>
       </div>
 
@@ -225,20 +229,20 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
           className="flex items-center justify-center gap-2 text-[12px] text-muted-foreground"
           data-testid="openwork-models-hint"
         >
-          <span>Using the free starter model.</span>
+          <span>{t("session.free_starter_model_hint")}</span>
           <button
             type="button"
             className="flex items-center gap-1 font-medium text-blue-10 transition-colors hover:text-blue-11"
             onClick={() => platform.openLink(getOpenWorkModelsActionUrl(denAuth.isSignedIn, "sign-up"))}
           >
-            Get frontier models with no API keys
+            {t("session.openwork_models_cta")}
             <ArrowRight className="size-3" />
           </button>
           <button
             type="button"
             className="flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:text-foreground"
             onClick={hideOpenWorkModelsPromo}
-            aria-label="Hide OpenWork Models hint"
+            aria-label={t("session.hide_models_hint")}
           >
             <X className="size-3" />
           </button>
@@ -253,9 +257,9 @@ export function SessionEmptyHero(props: SessionEmptyHeroProps) {
         >
           <Zap className="mt-0.5 size-4 shrink-0 text-blue-10" />
           <div>
-            <div className="text-[13px] font-medium text-foreground">Connect a model provider</div>
+            <div className="text-[13px] font-medium text-foreground">{t("session.connect_model_provider")}</div>
             <div className="mt-0.5 text-[12px] text-muted-foreground">
-              Add an API key for Anthropic, OpenAI, Google, or other providers so tasks can run.
+              {t("session.connect_model_provider_desc")}
             </div>
           </div>
         </button>

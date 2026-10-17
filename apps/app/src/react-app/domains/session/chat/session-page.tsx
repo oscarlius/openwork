@@ -9,7 +9,7 @@ import { DesktopUpdateButton } from "../../settings/state/desktop-updater-provid
 import { ArrowLeft, Cloud, FileText, Globe, Maximize2, MoreHorizontal, PanelRight, TextSearch, X, Zap } from "lucide-react";
 
 import { resolveExtensionIconSrc } from "@/react-app/design-system/extension-icon-src";
-import { t } from "../../../../i18n";
+import { currentLocale, t } from "../../../../i18n";
 import { buildDenAuthUrl, readDenBootstrapConfig } from "../../../../app/lib/den";
 import { markDesktopSignInInitiated } from "../../../../app/lib/den-sign-in-intent";
 import { type OpenworkServerClient, type OpenworkServerStatus } from "../../../../app/lib/openwork-server";
@@ -688,7 +688,7 @@ export function SessionPage(props: SessionPageProps) {
       if (isElectronRuntime()) {
         if (options?.external) {
           void openDesktopUrl(url).catch((error: unknown) => {
-            toast.error(error instanceof Error ? error.message : "Could not open this link.");
+            toast.error(error instanceof Error ? error.message : t("session.open_link_failed"));
           });
           return;
         }
@@ -707,7 +707,7 @@ export function SessionPage(props: SessionPageProps) {
     }
 
     const reportOpenError = (error: unknown) => {
-      toast.error(error instanceof Error ? error.message : "Could not open this file.");
+      toast.error(error instanceof Error ? error.message : t("desktop.open_file_failed"));
     };
     const canOpenLocally = isElectronRuntime();
     const openLocalFile = (fileTarget: OpenTarget) => {
@@ -715,7 +715,7 @@ export function SessionPage(props: SessionPageProps) {
       // The desktop re-checks the resolved file on disk before launching anything.
       const native = nativeFileAction(runtime.workspaceRoot, fileTarget.value, options);
       if (!native) {
-        reportOpenError(new Error("This is not a local file path."));
+        reportOpenError(new Error(t("session.not_local_file_path")));
         return;
       }
       if (native.action === "reveal") {
@@ -724,7 +724,7 @@ export function SessionPage(props: SessionPageProps) {
       }
       void openDesktopWorkspaceFile(runtime.workspaceRoot, native.path)
         .then((action) => {
-          if (action === "revealed") toast.info("This file points outside the workspace, so it was shown in its folder instead.");
+          if (action === "revealed") toast.info(t("session.file_revealed_in_folder"));
         })
         .catch(reportOpenError);
     };
@@ -758,14 +758,14 @@ export function SessionPage(props: SessionPageProps) {
     if (target.exists !== true) {
       if (!runtime.client || !runtime.runtimeWorkspaceId) {
         if (canOpenLocally) openLocalFile(target);
-        else reportOpenError(new Error("Connect to the workspace to open this file."));
+        else reportOpenError(new Error(t("session.connect_workspace_to_open_file")));
         return;
       }
       void resolveCollectibleOpenTarget(runtime.client, runtime.runtimeWorkspaceId, target)
         .then((resolvedTarget) => {
           if (resolvedTarget) openFileTarget(resolvedTarget);
           else if (canOpenLocally) openLocalFile(target);
-          else reportOpenError(new Error("This file is missing or outside the workspace."));
+          else reportOpenError(new Error(t("session.file_missing_or_outside_workspace")));
         })
         .catch(reportOpenError);
       return;
@@ -1062,7 +1062,7 @@ export function SessionPage(props: SessionPageProps) {
         status: "unavailable",
         workspaceId: splitSession.workspaceId,
         workspaceTitle: splitWorkspaceTitle,
-        message: "This workspace does not have a connected runtime.",
+        message: t("session.no_connected_runtime"),
       };
     }
     if (
@@ -1090,20 +1090,21 @@ export function SessionPage(props: SessionPageProps) {
       status: "unavailable",
       workspaceId: splitSession.workspaceId,
       workspaceTitle: splitWorkspaceTitle,
-      message: selectedWorkspaceErrorMessage || "This workspace is disconnected.",
+      message: selectedWorkspaceErrorMessage || t("session.workspace_disconnected"),
     };
   })();
+  const paneOptionLocale = currentLocale();
   const narrowPaneOptions = useMemo<NarrowPaneOption[]>(() => {
-    const options: NarrowPaneOption[] = [{ id: "chat", label: "Chat" }];
+    const options: NarrowPaneOption[] = [{ id: "chat", label: t("extensions.detail_chat") }];
     if (splitSession) options.push({ id: "split", label: t("session_management.split_view") });
     if (sidePanelOpen) {
       options.push({
         id: "panel",
-        label: activeSidePanel === "extensions" ? "Extensions" : "Tools",
+        label: activeSidePanel === "extensions" ? t("session.pane_extensions") : t("settings.tools_section_title"),
       });
     }
     return options;
-  }, [activeSidePanel, sidePanelOpen, splitSession]);
+  }, [activeSidePanel, paneOptionLocale, sidePanelOpen, splitSession]);
   const showNarrowPaneSwitcher = shouldShowNarrowPaneSwitcher(
     isMobile,
     Boolean(splitSession),
@@ -1464,7 +1465,7 @@ export function SessionPage(props: SessionPageProps) {
                         size="sm"
                         className="h-6 shrink-0 cursor-pointer gap-1 rounded-lg px-1.5 text-[12px] text-gray-10 transition-colors hover:bg-muted hover:text-foreground titlebar-no-drag"
                         data-parent-session-back={parentSessionLink.sessionId}
-                        aria-label={`Back to ${parentSessionLink.title || "parent chat"}`}
+                        aria-label={parentSessionLink.title ? t("session.back_to_named_chat", { title: parentSessionLink.title }) : t("session.back_to_parent_chat")}
                         onClick={() => openSessionTab(parentSessionLink.workspaceId, parentSessionLink.sessionId)}
                       >
                         <ArrowLeft size={14} />
@@ -1474,7 +1475,7 @@ export function SessionPage(props: SessionPageProps) {
                       </Button>
                     }
                   />
-                  <TooltipContent>Back to parent chat</TooltipContent>
+                  <TooltipContent>{t("session.back_to_parent_chat")}</TooltipContent>
                 </Tooltip>
               ) : null}
               <h1 data-session-header-title className={cn("truncate font-medium text-dls-text", !isElectronRuntime() && !props.primaryTitle && !props.mainContentTitle && "max-lg:hidden", props.mainContentHeaderActionsRef ? "text-base leading-6" : "text-[13px]")}>
@@ -1521,14 +1522,14 @@ export function SessionPage(props: SessionPageProps) {
                         variant="ghost"
                         size="icon-sm"
                         className="hidden rounded-xl text-gray-10 transition-colors hover:bg-muted hover:text-foreground lg:inline-flex"
-                        aria-label="Find in conversation"
+                        aria-label={t("session.find_in_conversation")}
                         onClick={() => useSessionFindStore.getState().openFind({ sessionId: findButtonSessionId })}
                       >
                         <TextSearch size={16} />
                       </Button>
                     }
                   />
-                  <TooltipContent>Find in conversation ({isMacPlatform() ? "⌘F" : "Ctrl+F"})</TooltipContent>
+                  <TooltipContent>{`${t("session.find_in_conversation")} (${isMacPlatform() ? "⌘F" : "Ctrl+F"})`}</TooltipContent>
                 </Tooltip>
               ) : null}
               {showCloudSignIn ? (
@@ -1551,7 +1552,7 @@ export function SessionPage(props: SessionPageProps) {
                       variant="ghost"
                       size="icon-sm"
                       className="rounded-xl text-gray-10 transition-colors hover:bg-muted hover:text-foreground lg:hidden"
-                      aria-label="More actions"
+                      aria-label={t("session.more_actions")}
                     >
                       <MoreHorizontal size={18} />
                     </Button>
@@ -1563,12 +1564,12 @@ export function SessionPage(props: SessionPageProps) {
                       onClick={() => useSessionFindStore.getState().openFind({ sessionId: findButtonSessionId })}
                     >
                       <TextSearch className="size-4" />
-                      Find in conversation
+                      {t("session.find_in_conversation")}
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem onClick={openArtifactRailPane}>
                     <FileText className="size-4" />
-                    Files{artifactTargetCount > 0 ? ` (${artifactTargetCount})` : ""}
+                    {t("composer.plus_files")}{artifactTargetCount > 0 ? ` (${artifactTargetCount})` : ""}
                   </DropdownMenuItem>
                   {showCloudSignIn ? (
                     <DropdownMenuItem onClick={openCloudSignIn}>
@@ -1604,7 +1605,7 @@ export function SessionPage(props: SessionPageProps) {
                         "hidden rounded-xl text-gray-10 transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
                         sidePanelOpen && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
                       )}
-                      aria-label={sidePanelOpen ? "Close side panel" : "Open side panel"}
+                      aria-label={sidePanelOpen ? t("session.close_side_panel") : t("session.open_side_panel")}
                       aria-pressed={sidePanelOpen}
                       onClick={() => {
                         if (sidePanelOpen) {
@@ -1618,7 +1619,7 @@ export function SessionPage(props: SessionPageProps) {
                     </Button>
                   }
                 />
-                <TooltipContent>{sidePanelOpen ? "Close side panel" : "Open side panel"}</TooltipContent>
+                <TooltipContent>{sidePanelOpen ? t("session.close_side_panel") : t("session.open_side_panel")}</TooltipContent>
               </Tooltip>
             </div>}
           </header>}
@@ -1881,7 +1882,7 @@ export function SessionPage(props: SessionPageProps) {
                   {props.notFoundMessage ? (
                     <div className="px-6 py-16 text-center">
                       <div className="mx-auto max-w-md rounded-2xl border border-dls-border bg-dls-card px-5 py-6 shadow-[var(--dls-card-shadow)]">
-                        <h3 className="text-base font-medium text-dls-text">Workspace or session not found</h3>
+                        <h3 className="text-base font-medium text-dls-text">{t("session.not_found_title")}</h3>
                         <p className="mt-2 text-sm leading-6 text-dls-secondary">{props.notFoundMessage}</p>
                       </div>
                     </div>
@@ -1968,8 +1969,8 @@ export function SessionPage(props: SessionPageProps) {
                   browserRailActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
                 )}
                 onClick={openBrowserRailPane}
-                title="Browser"
-                aria-label="Browser"
+                title={t("settings.browser_title")}
+                aria-label={t("settings.browser_title")}
                 aria-pressed={browserRailActive}
               >
                 <Globe size={15} />
@@ -1983,8 +1984,8 @@ export function SessionPage(props: SessionPageProps) {
                 filesRailActive && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
               )}
               onClick={filesRailActive ? closeRightPane : openArtifactRailPane}
-              title={`Files (${artifactTargetCount})`}
-              aria-label={`Files (${artifactTargetCount})`}
+              title={`${t("composer.plus_files")} (${artifactTargetCount})`}
+              aria-label={`${t("composer.plus_files")} (${artifactTargetCount})`}
               aria-pressed={filesRailActive}
             >
               <FileText size={15} />

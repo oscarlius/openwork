@@ -1,5 +1,6 @@
 import type { WorkspaceInfo } from "@/app/lib/desktop";
 import type { ResolvedWorkspaceEndpoint } from "@/app/lib/workspace-endpoint";
+import { t } from "@/i18n";
 
 type PaneWorkspace = Pick<WorkspaceInfo, "id" | "path" | "workspaceType">;
 
@@ -30,7 +31,7 @@ export function resolveWorkbenchPaneEndpoint<TWorkspace extends PaneWorkspace>(i
       status: "unavailable",
       workspaceId: input.workspaceId,
       workspaceTitle: input.workspaceTitle,
-      message: "This workspace is no longer available.",
+      message: t("session.workspace_no_longer_available"),
     };
   }
 
@@ -49,7 +50,7 @@ export function resolveWorkbenchPaneEndpoint<TWorkspace extends PaneWorkspace>(i
       status: "unavailable",
       workspaceId: input.workspace.id,
       workspaceTitle: input.workspaceTitle,
-      message: "OpenWork could not connect to this workspace runtime.",
+      message: t("session.workspace_runtime_connect_failed"),
     };
   }
 

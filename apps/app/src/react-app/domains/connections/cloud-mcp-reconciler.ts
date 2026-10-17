@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import {
   type DenMcpToken,
   type DenMcpTokenMintContext,
@@ -81,7 +82,7 @@ export type CloudMcpMainStatus = "ready" | "connecting" | "disabled" | "degraded
 
 export type CloudMcpDisplaySummary = {
   status: CloudMcpMainStatus;
-  statusLabel: "Ready" | "Connecting" | "Disabled" | "Degraded" | "Signed out";
+  statusLabel: string;
   tone: "ready" | "warning" | "neutral" | "error";
   stageLabel: string;
   recommendedAction: string;
@@ -487,21 +488,21 @@ export function cloudMcpFailureStageLabel(input: {
   userState?: CloudMcpUserState | null;
   health?: OpenworkCloudMcpHealth | null;
 }): string {
-  if (!input.signedIn) return "Sign in required";
-  if (!input.orgSelected) return "Select an organization";
-  if (input.userState) return "Agent access disabled";
+  if (!input.signedIn) return t("connect.agent_stage_signin_required");
+  if (!input.orgSelected) return t("calendar.select_organization");
+  if (input.userState) return t("connect.agent_stage_disabled");
   const code = normalizeCode(input.health?.firstFailure?.code);
-  if (!code) return input.health?.usableByCurrentModel === null ? "Current model access not checked" : "Agent access ready";
-  if (code === "cloud_mcp_disabled" || code === "cloud_disabled") return "Agent access disabled";
-  if (code === "cloud_desired_missing" || code === "cloud_mcp_missing") return "Couldn’t apply Cloud access to this workspace";
-  if (code.includes("auth") || code.includes("token") || code.includes("unauthorized")) return "Cloud authentication expired";
-  if (code === "cloud_tools_missing") return "Cloud endpoint tools are missing";
-  if (code === "cloud_status_missing" || code === "cloud_registration_failed") return "Cloud tools weren’t registered";
-  if (isProviderProjectionFailure(input.health?.firstFailure)) return "Current model can’t use Cloud tools";
-  if (code.includes("tool_ids") || code.includes("client_registration")) return "OpenWork components need updating";
-  if (code === "extensions_plugin_missing") return "Agent instructions are out of date";
-  if (code.includes("unreachable") || code.includes("connection") || code.includes("status_missing")) return "Cloud connection unavailable";
-  return "Couldn’t apply Cloud access to this workspace";
+  if (!code) return input.health?.usableByCurrentModel === null ? t("connect.agent_stage_model_unchecked") : t("connect.agent_stage_ready");
+  if (code === "cloud_mcp_disabled" || code === "cloud_disabled") return t("connect.agent_stage_disabled");
+  if (code === "cloud_desired_missing" || code === "cloud_mcp_missing") return t("connect.agent_stage_workspace_failed");
+  if (code.includes("auth") || code.includes("token") || code.includes("unauthorized")) return t("connect.agent_stage_auth_expired");
+  if (code === "cloud_tools_missing") return t("connect.agent_stage_tools_missing");
+  if (code === "cloud_status_missing" || code === "cloud_registration_failed") return t("connect.agent_stage_not_registered");
+  if (isProviderProjectionFailure(input.health?.firstFailure)) return t("connect.agent_stage_model_unsupported");
+  if (code.includes("tool_ids") || code.includes("client_registration")) return t("connect.agent_stage_components_outdated");
+  if (code === "extensions_plugin_missing") return t("connect.agent_stage_instructions_outdated");
+  if (code.includes("unreachable") || code.includes("connection") || code.includes("status_missing")) return t("connect.agent_stage_unreachable");
+  return t("connect.agent_stage_workspace_failed");
 }
 
 export function cloudMcpRecommendedAction(input: {
@@ -510,26 +511,26 @@ export function cloudMcpRecommendedAction(input: {
   userState?: CloudMcpUserState | null;
   health?: OpenworkCloudMcpHealth | null;
 }): string {
-  if (!input.signedIn) return "Sign in to OpenWork Cloud.";
-  if (!input.orgSelected) return "Choose the organization agents should use.";
-  if (input.userState) return "Enable Agent access or use Repair and test when you want agents to use connected services.";
+  if (!input.signedIn) return t("connect.agent_action_signin");
+  if (!input.orgSelected) return t("connect.agent_action_choose_org");
+  if (input.userState) return t("connect.agent_action_enable_or_repair");
   const code = normalizeCode(input.health?.firstFailure?.code);
   if (!code) {
-    if (input.health?.usableByCurrentModel === null) return "Model access was not checked because no current model is selected.";
-    return "No action needed.";
+    if (input.health?.usableByCurrentModel === null) return t("connect.agent_action_model_unchecked");
+    return t("connect.state_ready_action");
   }
-  if (code === "cloud_mcp_disabled" || code === "cloud_disabled") return "Enable Agent access or use Repair and test when you want agents to use connected services.";
-  if (code === "cloud_desired_missing" || code === "cloud_mcp_missing") return "Use Repair and test to apply agent access for this workspace.";
-  if (code.includes("auth") || code.includes("token") || code.includes("unauthorized")) return "Use Repair and test to refresh Cloud authentication.";
-  if (code.includes("membership")) return "Ask an organization admin to grant access.";
-  if (code.includes("scope")) return "Reconnect OpenWork Cloud with the required permissions.";
-  if (code.includes("policy") || code.includes("forbidden") || code.includes("resource")) return "Check organization policy and resource access.";
-  if (isProviderProjectionFailure(input.health?.firstFailure)) return "Choose a model that can use OpenWork Cloud tools.";
-  if (code.includes("tool_ids") || code.includes("client_registration")) return "Update OpenWork, then retry.";
-  if (code === "extensions_plugin_missing") return "Reload the agent so OpenWork instructions are current.";
-  if (code === "cloud_tools_missing") return "Reconnect OpenWork Cloud so the endpoint exposes search_capabilities and execute_capability.";
-  if (code === "cloud_status_missing" || code === "cloud_registration_failed") return "Use Repair and test to register the Cloud tools.";
-  return input.health?.firstFailure?.recommendedAction || "Use Repair and test, then check Advanced Settings if it still fails.";
+  if (code === "cloud_mcp_disabled" || code === "cloud_disabled") return t("connect.agent_action_enable_or_repair");
+  if (code === "cloud_desired_missing" || code === "cloud_mcp_missing") return t("connect.agent_action_repair_apply");
+  if (code.includes("auth") || code.includes("token") || code.includes("unauthorized")) return t("connect.agent_action_repair_auth");
+  if (code.includes("membership")) return t("connect.agent_action_ask_admin");
+  if (code.includes("scope")) return t("connect.agent_action_reconnect");
+  if (code.includes("policy") || code.includes("forbidden") || code.includes("resource")) return t("connect.agent_action_check_policy");
+  if (isProviderProjectionFailure(input.health?.firstFailure)) return t("connect.agent_action_choose_model");
+  if (code.includes("tool_ids") || code.includes("client_registration")) return t("connect.agent_action_update");
+  if (code === "extensions_plugin_missing") return t("connect.agent_action_reload_agent");
+  if (code === "cloud_tools_missing") return t("connect.agent_action_reconnect_tools");
+  if (code === "cloud_status_missing" || code === "cloud_registration_failed") return t("connect.agent_action_repair_register");
+  return input.health?.firstFailure?.recommendedAction || t("connect.agent_action_repair_advanced");
 }
 
 export function cloudMcpDisplaySummary(input: {
@@ -542,16 +543,16 @@ export function cloudMcpDisplaySummary(input: {
   if (input.connecting) {
     return {
       status: "connecting",
-      statusLabel: "Connecting",
+      statusLabel: t("status.connecting"),
       tone: "warning",
-      stageLabel: "Cloud connection unavailable",
-      recommendedAction: "Checking agent access now.",
+      stageLabel: t("connect.agent_stage_unreachable"),
+      recommendedAction: t("connect.agent_action_checking_now"),
     };
   }
   if (!input.signedIn) {
     return {
       status: "signed_out",
-      statusLabel: "Signed out",
+      statusLabel: t("den.signed_out"),
       tone: "neutral",
       stageLabel: cloudMcpFailureStageLabel(input),
       recommendedAction: cloudMcpRecommendedAction(input),
@@ -563,7 +564,7 @@ export function cloudMcpDisplaySummary(input: {
   if (disabled) {
     return {
       status: "disabled",
-      statusLabel: "Disabled",
+      statusLabel: t("connect.state_disabled_label"),
       tone: "neutral",
       stageLabel: cloudMcpFailureStageLabel(input),
       recommendedAction: cloudMcpRecommendedAction(input),
@@ -572,7 +573,7 @@ export function cloudMcpDisplaySummary(input: {
   if (input.health?.usable) {
     return {
       status: "ready",
-      statusLabel: "Ready",
+      statusLabel: t("connect.state_ready_label"),
       tone: "ready",
       stageLabel: cloudMcpFailureStageLabel(input),
       recommendedAction: cloudMcpRecommendedAction(input),
@@ -580,7 +581,7 @@ export function cloudMcpDisplaySummary(input: {
   }
   return {
     status: "degraded",
-    statusLabel: "Degraded",
+    statusLabel: t("connect.agent_status_degraded"),
     tone: "error",
     stageLabel: cloudMcpFailureStageLabel(input),
     recommendedAction: cloudMcpRecommendedAction(input),

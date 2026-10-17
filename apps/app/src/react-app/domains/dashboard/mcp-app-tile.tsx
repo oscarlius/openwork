@@ -32,6 +32,7 @@ import {
   writeDashboardTileCache,
 } from "./dashboard-tile-cache";
 import type { DashboardMcpAppEntry } from "./dashboard-mcp-app-entry";
+import { t } from "@/i18n";
 
 /** A workspace MCP runtime a tile may launch through. */
 export type DashboardLaunchEndpoint = {
@@ -109,11 +110,11 @@ function freshnessLabel({ result, cachedAt }: Pick<ReadyTileState, "result" | "c
   const generatedAt = typeof artifact?.generatedAt === "string" ? Date.parse(artifact.generatedAt) : NaN;
   const updatedAt = Number.isFinite(generatedAt) ? generatedAt : cachedAt;
   const ageMinutes = Math.max(0, Math.floor((now - updatedAt) / 60_000));
-  if (ageMinutes < 1) return "Updated just now";
-  if (ageMinutes === 1) return "Updated 1 minute ago";
-  if (ageMinutes < 60) return `Updated ${ageMinutes} minutes ago`;
+  if (ageMinutes < 1) return t("dashboard.fresh_just_now");
+  if (ageMinutes === 1) return t("dashboard.fresh_minutes_one", { count: ageMinutes });
+  if (ageMinutes < 60) return t("dashboard.fresh_minutes_other", { count: ageMinutes });
   const ageHours = Math.floor(ageMinutes / 60);
-  return ageHours === 1 ? "Updated 1 hour ago" : `Updated ${ageHours} hours ago`;
+  return ageHours === 1 ? t("dashboard.fresh_hours_one", { count: ageHours }) : t("dashboard.fresh_hours_other", { count: ageHours });
 }
 
 function launchArgumentsSignature(argumentsValue: Record<string, unknown>) {
@@ -259,10 +260,10 @@ function McpAppTileContent({
     const next = await attempt?.promise;
     // A successful refresh retires the cached iframe. Its queued startup reads
     // belong to that old document; only the replacement may use the new lease.
-    if (!document?.active) throw new Error("This artifact view has closed or changed.");
+    if (!document?.active) throw new Error(t("dashboard.tile_view_closed"));
     if (!attempt || attempt.controller.signal.aborted || launchRef.current !== attempt
       || next?.phase !== "ready" || !next.lifetime.active || next.origin.readOnly || !next.app.launchId) {
-      throw new Error("This artifact's workspace is still unavailable. Refresh the tile to reconnect.");
+      throw new Error(t("dashboard.tile_reconnect_required"));
     }
     return { origin: next.origin, app: next.app };
   }, []);
@@ -435,7 +436,7 @@ function McpAppTileContent({
             target = null;
           }
           assertActive();
-          if (!target) return { phase: "error", message: "This tool no longer advertises an interactive artifact." };
+          if (!target) return { phase: "error", message: t("dashboard.tile_no_interactive") };
           const { endpoint, app } = target;
           attempt.endpoint = endpoint;
           if (!app.launchId) throw new OpenworkServerError(422, "missing_launch_context", "This artifact has no live launch context. Update OpenWork and run the tile again.");
@@ -618,8 +619,8 @@ function McpAppTileContent({
     }
     if (state.phase === "ready" && entry.requiresApproval === true) return "Saved locally · run on request";
     if (state.phase === "ready") return freshnessLabel(state, freshnessNow);
-    if (state.phase === "loading") return "Loading";
-    if (state.phase === "error") return "Refresh failed";
+    if (state.phase === "loading") return t("settings.loading");
+    if (state.phase === "error") return t("dashboard.tile_refresh_failed");
     if (entry.organizationAutoLaunch === true) return "Organization auto-run";
     if (entry.requiresApproval === true) return "Run on request";
     if (manualLaunch) return "Run once to enable";
@@ -689,7 +690,7 @@ function McpAppTileContent({
                 inputArguments={launchArguments}
                 result={state.result}
                 updateMode="notify"
-                unavailableNotice="This artifact view is unavailable."
+                unavailableNotice={t("dashboard.tile_unavailable_notice")}
                 presentation="dashboard"
                 onRetry={run}
                 onAppToolResult={(result) => {
@@ -738,8 +739,8 @@ function McpAppTileContent({
         ) : null}
       </DashboardTileShell>
       {loadingDocument ? (
-        <div className="absolute inset-0 z-10 flex flex-col gap-3 rounded-xl bg-background p-3" role="status" aria-label={`Loading ${entry.title}`} data-dashboard-loading>
-          <span className="text-xs text-muted-foreground">Loading {entry.title}</span>
+        <div className="absolute inset-0 z-10 flex flex-col gap-3 rounded-xl bg-background p-3" role="status" aria-label={t("dashboard.tile_loading_named", { title: entry.title })} data-dashboard-loading>
+          <span className="text-xs text-muted-foreground">{t("dashboard.tile_loading_named", { title: entry.title })}</span>
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="min-h-24 w-full flex-1" />
         </div>

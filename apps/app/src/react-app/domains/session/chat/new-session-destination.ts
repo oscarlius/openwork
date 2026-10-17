@@ -3,6 +3,7 @@ import { NEW_TASK_DRAFT_SESSION_ID, sessionDraftScopeKey } from "../sync/draft-s
 import { useWorkbenchStore, workbenchSessionKey, type WorkbenchSessionTab } from "./workbench-store";
 import type { ComposerSessionState } from "../surface/composer-state-store";
 import { encodeComposerMentionValue } from "../surface/composer/mention-encoding";
+import { t } from "@/i18n";
 
 export type NewSessionDestination = {
   workspaceId: string;
@@ -34,7 +35,7 @@ export function openNewSessionDraft(destination: NewSessionDestination, navigate
       workspaceId: destination.parent.workspaceId,
       workspaceTitle: destination.parent.workspaceTitle,
       sessionId: newSessionDraftSlot(destination),
-      title: "Draft",
+      title: t("workspace_list.new_task_draft"),
       draftDestination: destination,
     };
     workbench.openTab(tab);

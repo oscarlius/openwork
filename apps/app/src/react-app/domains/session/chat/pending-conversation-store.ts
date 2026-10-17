@@ -6,6 +6,7 @@ import { createDraftFirstSend } from "./draft-first-send";
 import { useWorkbenchStore, workbenchSessionKey } from "./workbench-store";
 import type { ResolvedWorkspaceEndpoint } from "@/app/lib/workspace-endpoint";
 import { composerAutoSendScopeKey, type ComposerAutoSendPayload } from "../surface/composer-auto-send";
+import { t } from "@/i18n";
 
 /** Local navigation identity. It is never an engine session ID. */
 export type PendingConversation = {
@@ -40,7 +41,7 @@ export function pendingConversationForRoute(conversations: Record<string, Pendin
 
 export function bindPendingConversationWorkspace(id: string, workspaceId: string) {
   const entry = usePendingConversationStore.getState().conversations[id];
-  if (!entry || entry.sessionId || (entry.destination.workspaceId && entry.destination.workspaceId !== workspaceId)) throw new Error("Pending conversation destination changed.");
+  if (!entry || entry.sessionId || (entry.destination.workspaceId && entry.destination.workspaceId !== workspaceId)) throw new Error(t("session.pending_destination_changed"));
   update(id, { destination: { ...entry.destination, workspaceId } });
 }
 
@@ -85,7 +86,7 @@ function update(id: string, patch: Partial<PendingConversation>) {
 
 /** Begin synchronously, before consuming the source draft or starting network work. */
 export function beginPendingConversation(input: Pick<PendingConversation, "scope" | "destination" | "submitted">) {
-  if (!input.scope) throw new Error("Wait for your account to finish loading before sending.");
+  if (!input.scope) throw new Error(t("session.wait_for_account_load"));
   const id = crypto.randomUUID();
   const conversation: PendingConversation = {
     ...input, id, submitted: snapshotComposerSessionState(input.submitted),
