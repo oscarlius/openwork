@@ -61,7 +61,7 @@ noindex: true
 | SSO | SSO | 未开始 |
 | Self-host | 自托管 | 未开始 |
 | API | 不提供 | 见 §3，`openapi` 引用不复制 |
-| Roadmap | 不提供 | 见 §3 |
+| Roadmap | 已提供 | 见 §3（状态 token 逐字保留） |
 | Changelog | 禁止 | 见 §3，翻译会打挂 CI |
 
 - group 名同样按语义译：`Get started`→`开始使用`、`Connect services`→`连接服务`、`Skills`→`技能`、
@@ -87,7 +87,8 @@ noindex: true
 
 - `changelog.mdx`：**禁止**建中文副本、禁止翻译。它被 `scripts/check-changelog-output.mjs:20`、
   `scripts/release/release-notes-from-changelog.mjs:15` 解析，并被 `.github/workflows/changelog.yml:62,162,195` grep/提交。动了就红。
-- `roadmap.mdx`：**决定不译**（没有脚本解析它，但条目对应 `/admin` 的 feature registry 状态与内部工单口径，中文副本会造出与英文不一致的承诺）。中文读者直达英文页。
+- `roadmap.mdx`：**已提供中文副本**（2026-10-17 覆盖本条早先的「不译」裁定）。约束：状态 token（`Live`/`Preview`/`Partial`/`Building`/`Next`/`Exploring`）逐字保留、只在组件里给中文释义，因为它们对应 `/admin` feature registry 的口径；规范条目本身没有脚本解析。残留风险：英文 roadmap 更新频繁而中文副本会漂，改动英文页时需同步 `zh/roadmap.mdx`。
+- `changelog.mdx`：**不译**（`scripts/check-changelog-output.mjs`、`scripts/release/release-notes-from-changelog.mjs` 与 `.github/workflows/changelog.yml` 会解析并提交它）。
 - `openapi.json`、`packages/sdk/src/gen/**`：CI 生成物，不改不复制。
 - `docs.json` 的 `markdown.instructions`：给 AI agent 读的英文提示，不译。
 - `snippets/**`（`openwork-connect-installer.jsx`、`openwork-downloads.jsx`）：不是页面而是被 `import` 的组件，

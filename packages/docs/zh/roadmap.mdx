@@ -1,0 +1,129 @@
+---
+title: "路线图"
+description: "OpenWork 桌面应用、可移植能力、托管工作区，以及工作发生的每一个入口的路线图。"
+---
+
+今天，大多数人通过桌面应用使用 OpenWork。创建工作区、处理文件、连接服务、添加技能、定制智能体的工作方式，都在这里完成。
+
+你在这里创建的东西，不该只留在这里。OpenWork Connect 已经把这些相同的能力带进兼容的智能体。接下来是持久化的托管工作区、Slack、移动端，以及更多入口。
+
+最后更新：2026 年 8 月
+
+<Info>
+  **Live** 表示今天即可使用。**Preview** 表示今天已面向部分客户开放——请联系我们获取访问权限。**Partial** 表示支持但仍有限制。**Building** 表示正在开发。**Next** 是下一个产品阶段。**Exploring** 只是一个方向，并非承诺。
+</Info>
+
+## 桌面应用是主场
+
+桌面应用是 OpenWork 的主要体验形态。人们在这里处理文件、运行智能体、管理会话、创建技能、连接服务，并自定义工作区。
+
+| 能力 | 作用 | 状态 |
+| --- | --- | --- |
+| macOS、Windows 和 Linux 桌面应用 | 一套本地优先的完整工作区，用来做智能体作业。 | Live |
+| 本地文件与工作区 | 直接使用你电脑上已有的文件和代码仓库。 | Live |
+| 技能、插件、MCP 与已连接服务 | 自定义你的智能体懂什么、能用哪些系统。 | Live |
+| 组织托管能力 | 共享已审批的技能与连接，不必再手工重建每一套配置。 | Live |
+| 产物 | 无需离开桌面工作区，就能预览、编辑、下载并重新打开生成的文件。 | Live |
+| 实时产物 | 持久、可交互的仪表盘，每次打开都会用你已连接的应用与文件里的最新数据刷新。 | Preview |
+| MCP Apps | 直接由智能体结果渲染出的富交互应用视图——已创建的技能卡片、工作流结果视图、连接状态卡片。 | Preview |
+| 定时任务 | 按计划或触发条件运行任意提示词——设置一次，之后它自己跑。 | Partial |
+| 内置浏览器控制 | 让智能体在一个常驻应用内、你随时看得见的浏览器里访问页面、点击、输入和截取画面。 | Live |
+| 隔离的沙箱工作区 | 在独立的 Docker 或 microsandbox 环境中运行任务，目前在部分平台和搭建方式上仍有限制。 | Partial |
+| 更好的长时任务组织方式 | 让正在运行、正在等待和已经完成的任务更易辨认，回来时也更容易找到它们。 | Building |
+
+> 今天大多数人在桌面应用里配置 OpenWork，Connect 负责把这套配置带向别处。
+
+## 你的配置跟着你走
+
+你在 OpenWork 里配置好的东西，不该困在一个界面中。OpenWork Connect 把这些相同的能力带进你已经在用的智能体。
+
+| 能力 | 状态 |
+| --- | --- |
+| OpenWork Connect MCP | Live |
+| Codex、Claude Code、Cursor 与 OpenCode | Live |
+| 组织 Collections 与访问控制 | Live |
+| 共享式与按用户的身份验证 | Live |
+| 基于 Git 的发布与自动同步 | Building |
+
+## MCP 规范符合性
+
+OpenWork 在链路两端都实现了 [MCP 授权规范](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization)：既作为 MCP 客户端（桌面应用与 OpenWork Cloud 连接），也作为自带授权服务器的 MCP 服务器（OpenWork Cloud）。标记为 Building 或 Next 的条目对齐 2026-07-28 版 MCP 规范。
+
+| 能力 | 作用 | 状态 |
+| --- | --- | --- |
+| OAuth 2.1 自发现 | 只用一个 URL 就能连上符合规范的 MCP 服务器或企业 MCP 网关：`WWW-Authenticate` 质询、`Protected Resource Metadata`（RFC 9728）、`Authorization Server Metadata`（RFC 8414）与 `Dynamic Client Registration`（RFC 7591）。 | Live |
+| PKCE 与资源标识符 | 所有授权流程都强制使用 PKCE（S256），并在授权请求与 token 请求中带上 RFC 8707 资源标识符。 | Live |
+| 静默续期会话 | 短时效 access token 由带重放保护、可轮换的 refresh grant 支撑，连接能自己续期，不会再让你重新登录。 | Live |
+| 手动录入客户端凭据的回退 | 对不提供 `Dynamic Client Registration` 的授权服务器，手动填入 client ID 与 secret。 | Live |
+| `application_type` 声明（SEP-837） | 在 `Dynamic Client Registration` 期间声明应用是原生类型还是 Web 类型，以兼容由 OIDC 支撑的企业授权服务器。 | Building |
+| `Client ID Metadata Documents`（SEP-991） | OpenWork 拥有一个单一且稳定的 HTTPS 客户端身份，企业只需加一次白，取代逐连接注册和通配重定向白名单。 | Building |
+| 与签发方绑定的凭据（SEP-2352） | 把已保存的客户端凭据绑定到签发它的那台授权服务器；当某台服务器的授权服务器变了，自动重新注册。 | Building |
+| 授权加固（SEP-2468、SEP-2207） | 校验授权响应里的 `iss` 参数（RFC 9207），并采用澄清后的 refresh token 作用域语义。 | Next |
+| OpenWork Cloud 中基于 URL 的 client ID | 在 OpenWork Cloud 的授权服务器里接受 `Client ID Metadata Document` 身份。 | Next |
+
+> 严格遵守规范，OpenWork 才能与企业 MCP 网关即插即用：粘贴网关 URL，用你的身份提供商登录，它所代理的每一个下游系统就都可用了。
+
+## 集中管理
+
+OpenWork Cloud 是控制平面，用来分发能力、下发桌面策略、管理身份与访问，并了解整个组织的使用情况。
+
+| 能力 | 作用 | 状态 |
+| --- | --- | --- |
+| 桌面策略 | 按组织、团队或成员，管控自定义模型提供商、OpenCode Zen、工作区、设置、扩展、内置工具和新手引导。 | Live |
+| 全托管桌面 | 更强的策略模式：由你的组织决定应用到底能做什么，只允许已审批的提供商、连接、技能和工具，其余一概不可用。 | Building |
+| 提供商花费管控 | 按组织、团队或成员，为托管提供商设置模型用量的预算与上限。 | Live |
+| 成员、团队与角色 | 邀请人员、组建团队，并决定谁可以管理能力和安全设置。 | Live |
+| 技能与插件 Collections | 一次发布技能、命令、MCP 依赖和扩展，再把它们分配给合适的人员与团队。 | Live |
+| 兼容 Anthropic 的插件 | 导入兼容 Claude 的插件与市场 manifest，把其中的技能、MCP、命令和工具规范化为 OpenWork 扩展。 | Live |
+| SAML SSO | 接入身份提供商，并在成员首次登录时完成组织内的开通。 | Live |
+| 用量与采用度遥测 | 用事件元数据查看活跃成员、会话和任务结果随时间的变化；绝不采集提示词、代码或文件内容。 | Live |
+| OpenTelemetry 覆盖 | 把 OTLP 链路追踪、指标和日志覆盖到 OpenWork 的各项服务与部署路径上。 | Building |
+
+> 在 OpenWork Cloud 里配置一次策略与访问权限，桌面应用和 OpenWork Connect 会按成员与团队分别执行。
+
+## 一直开着的工作区
+
+托管工作区为个人或团队提供持久的文件系统，以及云中可预期的环境。合上笔记本之后，文件、依赖、仓库状态和正在运行的任务依然可用。
+
+| 能力 | 状态 |
+| --- | --- |
+| 持久化托管工作区 | Building |
+| 可复现的环境 | Building |
+| 长时任务与后台任务 | Building |
+| 定时工作流 | Next |
+| 换个入口继续 | Next |
+
+> 从桌面应用开始，把工作留在托管工作区里运行；再从桌面、Slack、手机或别的入口回来接着做。
+
+## OpenWork 出现在每个入口
+
+桌面应用仍是最完整的 OpenWork 体验。其他入口用更聚焦的方式，让你访问相同的能力、权限、工作区和历史记录。
+
+| 入口 | 状态 |
+| --- | --- |
+| OpenWork 桌面 | Live |
+| 通过 MCP 接入现有 AI 智能体 | Live |
+| OpenWork Web——浏览器里的完整工作区，无需安装 | Live |
+| Slack | Next |
+| 手机应用，先从 MCP Apps 起步 | Next |
+| 从手机派活——安排任务在你自己的桌面上运行 | Next |
+| 邮件与即时消息 | Exploring |
+| 组织自建智能体 | Exploring |
+
+## 是系统，不只是对话
+
+持久的环境加上可移植的身份验证，让一次成功的智能体作业有机会变成能反复运行的可靠系统。
+
+| 能力 | 状态 |
+| --- | --- |
+| 搜索与执行 | Live |
+| Code Mode——在你已连接的工具之间运行带身份验证的多步脚本 | Preview |
+| 定时计划与事件触发 | Next |
+| 人工审批与可恢复的运行 | Next |
+| 重试、日志与运行历史 | Next |
+
+## 一起决定下一步
+
+告诉我们，哪种工作流、工作区或入口会让你的工作方式有最大的不同。
+
+[分享反馈](https://openworklabs.com/feedback?source=roadmap)
