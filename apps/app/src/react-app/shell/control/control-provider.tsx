@@ -20,6 +20,7 @@ import {
   type OpenworkAffordanceResult,
 } from "@openwork/types/openwork-affordance";
 import type { OpenworkContextSnapshot } from "@openwork/types/openwork-context";
+import { currentLocale, t } from "@/i18n";
 import { useUiControlMailbox } from "./use-ui-control-mailbox";
 
 export type OpenworkControlSideEffect = "none" | "navigation" | "mutation" | "external";
@@ -156,7 +157,7 @@ const SPOTLIGHT_TIMING_MS = Object.freeze({
 const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 function describeError(error: unknown) {
-  return error instanceof Error ? error.message : String(error || "Unknown error");
+  return error instanceof Error ? error.message : String(error || t("app.unknown_error"));
 }
 
 function returnedActionError(result: unknown) {
@@ -167,7 +168,7 @@ function returnedActionError(result: unknown) {
   return {
     error: typeof payload.error === "string" && payload.error.trim()
       ? payload.error
-      : "Action returned an error.",
+      : t("status.action_returned_error"),
     ...(code.success ? { code: code.data } : {}),
     ...(typeof payload.hint === "string" && payload.hint.trim() ? { hint: payload.hint } : {}),
   };
@@ -227,7 +228,7 @@ function affordanceForAction(action: OpenworkControlActionMetadata): OpenworkAff
     confirmation: action.requiresConfirmation ? "destructive" : "never",
     availability: {
       enabled: !action.disabled && !action.busy,
-      ...(action.disabled ? { reason: "This action is not available in the current app state." } : {}),
+      ...(action.disabled ? { reason: t("status.action_unavailable_state") } : {}),
     },
     executor: { kind: "openwork" },
   };
@@ -262,7 +263,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
   const [version, setVersion] = useState(0);
   const [enabledState, setEnabledState] = useState(false);
   const [busyActionId, setBusyActionId] = useState<string | null>(null);
-  const [narration, setNarration] = useState("Control mode is off.");
+  const [narration, setNarration] = useState(() => t("status.control_mode_off"));
   const [spotlight, setSpotlight] = useState<SpotlightState>({ visible: false, phase: "target", rect: null });
   const busyActionIdRef = useRef<string | null>(null);
   const busyActorRef = useRef<string | null>(null);
@@ -418,16 +419,23 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
   ): Promise<OpenworkControlResult> => {
     const registered = actionsRef.current.get(actionId);
     const action = registered?.ref.current;
-    if (!registered || !action) return { ok: false, actionId, error: `Unknown action: ${actionId}` };
-    if (action.disabled) return { ok: false, actionId, error: `Action is disabled: ${action.label}` };
+    if (!registered || !action) return { ok: false, actionId, error: t("status.control_unknown_action", { id: actionId }) };
+    if (action.disabled) return { ok: false, actionId, error: t("status.control_action_disabled", { label: action.label }) };
     if (busyActionIdRef.current) {
-      const actor = busyActorRef.current ? ` for ${busyActorRef.current}` : "";
-      return { ok: false, actionId, error: `Already acting: ${busyActionIdRef.current}${actor}` };
+      const busyId = busyActionIdRef.current;
+      return {
+        ok: false,
+        actionId,
+        error: busyActorRef.current
+          ? t("status.control_already_acting_by", { id: busyId, actor: busyActorRef.current })
+          : t("status.control_already_acting", { id: busyId }),
+        code: "conflict",
+      };
     }
 
     if (action.requiresConfirmation && isBrowser()) {
-      const confirmed = window.confirm(`Allow Control Mode to ${action.label}?`);
-      if (!confirmed) return { ok: false, actionId, error: "User cancelled action." };
+      const confirmed = window.confirm(t("status.control_confirm_action", { label: action.label }));
+      if (!confirmed) return { ok: false, actionId, error: t("status.control_user_cancelled") };
     }
 
     const runId = spotlightRunRef.current + 1;
@@ -436,22 +444,22 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
     contextRevisionRef.current += 1;
     setEnabled(true);
     setBusyActionId(action.id);
-    setNarration(`Moving to ${action.label}…`);
+    setNarration(t("status.control_moving_to", { label: action.label }));
 
     try {
       await playTargetChoreography(action, runId);
-      setNarration(`Running ${action.label}…`);
+      setNarration(t("status.control_running_action", { label: action.label }));
       const effectiveArgs = args === undefined ? action.previewArgs : args;
       const result = await action.execute(effectiveArgs, { setNarration, origin, bridged });
       const resultError = returnedActionError(result);
       if (resultError) {
-        setNarration(`Could not ${action.label}: ${resultError.error}`);
+        setNarration(t("status.control_could_not", { label: action.label, error: resultError.error }));
         if (spotlightRunRef.current === runId) {
           setSpotlight({ visible: false, phase: "target", rect: null });
         }
         return { ok: false, actionId, ...resultError };
       }
-      setNarration(`Done: ${action.label}`);
+      setNarration(t("status.control_done", { label: action.label }));
       await wait(SPOTLIGHT_TIMING_MS.done);
       if (spotlightRunRef.current === runId) {
         setSpotlight({ visible: false, phase: "target", rect: null });
@@ -459,7 +467,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       return { ok: true, actionId, result };
     } catch (error) {
       const message = describeError(error);
-      setNarration(`Could not ${action.label}: ${message}`);
+      setNarration(t("status.control_could_not", { label: action.label, error: message }));
       if (spotlightRunRef.current === runId) {
         setSpotlight({ visible: false, phase: "target", rect: null });
       }
@@ -480,7 +488,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       return {
         ok: false,
         id: request.id,
-        error: `Unknown query: ${request.id}`,
+        error: t("status.control_unknown_query", { id: request.id }),
         code: "unavailable",
         revision,
       };
@@ -489,7 +497,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       return {
         ok: false,
         id: request.id,
-        error: `Query is disabled: ${action.label}`,
+        error: t("status.control_query_disabled", { label: action.label }),
         code: "unavailable",
         revision,
       };
@@ -535,17 +543,19 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       return {
         ok: false,
         id: request.id,
-        error: `Unknown command: ${request.id}`,
+        error: t("status.control_unknown_command", { id: request.id }),
         code: "unavailable",
         revision,
       };
     }
     if (busyActionIdRef.current) {
-      const actor = busyActorRef.current ? ` for ${busyActorRef.current}` : "";
+      const busyId = busyActionIdRef.current;
       return {
         ok: false,
         id: request.id,
-        error: `Already acting: ${busyActionIdRef.current}${actor}`,
+        error: busyActorRef.current
+          ? t("status.control_already_acting_by", { id: busyId, actor: busyActorRef.current })
+          : t("status.control_already_acting", { id: busyId }),
         code: "conflict",
         revision,
       };
@@ -554,7 +564,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
       return {
         ok: false,
         id: request.id,
-        error: `OpenWork context changed from revision ${request.expectedRevision} to ${revision}.`,
+        error: t("status.control_revision_changed", { expected: request.expectedRevision, actual: revision }),
         code: "conflict",
         revision,
       };
@@ -567,7 +577,7 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
         ok: false,
         id: request.id,
         error: result.error,
-        code: result.code ?? (result.error.startsWith("Already acting:") ? "conflict" : "failed"),
+        code: result.code ?? "failed",
         ...(result.hint ? { hint: result.hint } : {}),
         revision: contextRevisionRef.current,
       };
@@ -608,9 +618,9 @@ export function OpenworkControlProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!enabled) {
-      setNarration("Control mode is off.");
-    } else if (narration === "Control mode is off.") {
-      setNarration("Ready. A controller can inspect and run visible actions.");
+      setNarration(t("status.control_mode_off"));
+    } else if (narration === t("status.control_mode_off")) {
+      setNarration(t("status.control_ready"));
     }
   }, [enabled, narration]);
 
@@ -750,54 +760,56 @@ export function OpenworkRouteControlActions() {
     const target = settingsNavigationFromPathname(pathnameRef.current, tab);
     navigate(target.to, { state: target.state });
   }, [navigate]);
+  // Rebuild the action list when the language changes so labels stay translated.
+  const controlLocale = currentLocale();
 
   const actions = useMemo<OpenworkControlAction[]>(() => [
     {
       id: "route.session",
-      label: "Open sessions",
-      description: "Navigate to the main session view.",
+      label: t("session.open_sessions"),
+      description: t("session.open_sessions_desc"),
       sideEffect: "navigation",
       execute: () => navigate("/session"),
     },
     {
       id: "route.settings.general",
-      label: "Open general settings",
-      description: "Navigate to general settings.",
+      label: t("session.open_general_settings"),
+      description: t("session.open_general_settings_desc"),
       sideEffect: "navigation",
       execute: () => openSettingsTab("general"),
     },
     {
       id: "route.extensions.skills",
-      label: "Open extensions",
-      description: "Browse the skills and MCPs available to this agent.",
+      label: t("session.open_extensions"),
+      description: t("session.open_extensions_desc"),
       sideEffect: "navigation",
       execute: () => navigate("/extensions/skills"),
     },
     {
       id: "route.settings.providers",
-      label: "Open provider settings",
-      description: "Navigate to AI provider settings.",
+      label: t("session.open_provider_settings"),
+      description: t("session.open_provider_settings_desc"),
       sideEffect: "navigation",
       execute: () => openSettingsTab("ai"),
     },
     {
       id: "route.settings.authorized_folders",
-      label: "Open authorized folder settings",
-      description: "Navigate to authorized folders and file access settings.",
+      label: t("session.open_folder_settings"),
+      description: t("session.open_folder_settings_desc"),
       sideEffect: "navigation",
       execute: () => openSettingsTab("permissions"),
     },
     {
       id: "route.settings.appearance",
-      label: "Open appearance settings",
-      description: "Navigate to appearance settings.",
+      label: t("session.open_appearance_settings"),
+      description: t("session.open_appearance_settings_desc"),
       sideEffect: "navigation",
       execute: () => openSettingsTab("appearance"),
     },
     {
       id: "settings.panel.open",
-      label: "Open a settings panel",
-      description: "Navigate to a specific settings panel by tab id.",
+      label: t("session.open_settings_panel"),
+      description: t("session.open_settings_panel_desc"),
       sideEffect: "navigation",
       requiresArgs: true,
       args: [
@@ -816,7 +828,10 @@ export function OpenworkRouteControlActions() {
         if (!SETTINGS_TABS.has(panel)) {
           return {
             ok: false,
-            error: `Unknown settings panel: ${panel || "(empty)"}. Expected one of ${Array.from(SETTINGS_TABS).join(", ")}.`,
+            error: t("session.unknown_settings_panel", {
+              panel: panel || t("settings.environment.empty_value"),
+              options: Array.from(SETTINGS_TABS).join(", "),
+            }),
           };
         }
         openSettingsTab(panel);
@@ -825,40 +840,40 @@ export function OpenworkRouteControlActions() {
     },
     {
       id: "route.back",
-      label: "Go back",
-      description: "Navigate back one entry in history.",
+      label: t("session.go_back"),
+      description: t("session.navigate_back_history"),
       sideEffect: "navigation",
       execute: () => navigate(-1),
     },
     {
       id: "route.forward",
-      label: "Go forward",
-      description: "Navigate forward one entry in history.",
+      label: t("session.go_forward"),
+      description: t("session.navigate_forward_history"),
       sideEffect: "navigation",
       execute: () => navigate(1),
     },
     {
       id: "help.capabilities",
-      label: "What can OpenWork do?",
-      description: "List the main capabilities of OpenWork.",
+      label: t("common.capabilities_title"),
+      description: t("common.capabilities_desc"),
       kind: "query",
       effects: { data: "read", ui: "none", external: false },
       sideEffect: "none",
       execute: () => ({
         capabilities: [
-          { id: "browse", label: "Browse the web", description: "Control a browser to navigate, scrape, and automate web tasks." },
-          { id: "providers", label: "AI model providers", description: "Connect Anthropic, OpenAI, Google, OpenRouter, Ollama, or other LLM providers." },
-          { id: "extensions", label: "Library", description: "Skills, connections, and tools your agent can use." },
-          { id: "files", label: "File management", description: "Read, write, and organize files in your workspace." },
-          { id: "code", label: "Write and run code", description: "Generate, edit, and execute code with full tool access." },
-          { id: "skills", label: "Skills", description: "Install specialized skill packs for specific workflows." },
-          { id: "automations", label: "Automations", description: "Schedule recurring tasks and background agents." },
-          { id: "sharing", label: "Share sessions", description: "Share workspace sessions with collaborators via OpenWork Cloud." },
+          { id: "browse", label: t("common.capability_browse_web"), description: t("common.capability_browse_web_desc") },
+          { id: "providers", label: t("common.capability_providers"), description: t("common.capability_providers_desc") },
+          { id: "extensions", label: t("extensions.title"), description: t("extensions.subtitle") },
+          { id: "files", label: t("common.capability_files"), description: t("common.capability_files_desc") },
+          { id: "code", label: t("common.capability_code"), description: t("common.capability_code_desc") },
+          { id: "skills", label: t("skills.title"), description: t("common.capability_skills_desc") },
+          { id: "automations", label: t("palette.automations"), description: t("common.capability_automations_desc") },
+          { id: "sharing", label: t("common.capability_sharing"), description: t("common.capability_sharing_desc") },
         ],
-        hint: "Use settings.panel.open for settings such as AI providers, and route.extensions.skills to browse Library.",
+        hint: t("common.capabilities_hint"),
       }),
     },
-  ], [navigate, openSettingsTab]);
+  ], [navigate, openSettingsTab, controlLocale]);
 
   useControlActions(actions);
   return null;

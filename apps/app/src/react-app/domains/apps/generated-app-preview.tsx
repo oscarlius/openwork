@@ -4,6 +4,7 @@ import { McpAppSandboxView, type McpAppSandboxViewProps } from "@/components/cha
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/react-app/shell/workspace-provider";
 import { useDashboardTileGeometry } from "../dashboard/use-dashboard-tile-geometry";
+import { t } from "@/i18n";
 
 const PREVIEW_ARGUMENTS = {};
 
@@ -33,13 +34,13 @@ export function GeneratedAppPreview({ html, payload, title, revision, presentati
     : null, [openworkServerClient, workspaceId]);
   if (!origin || !workspaceId) {
     return <>
-      <p role="status" className="text-sm text-muted-foreground">Connect a workspace to open the preview.</p>
-      {presentation === "dashboard" && geometry ? <p className="mt-3 text-xs text-muted-foreground">Updated {new Date(payload.artifact.generatedAt).toLocaleString()}</p> : null}
+      <p role="status" className="text-sm text-muted-foreground">{t("app.connect_workspace_to_preview")}</p>
+      {presentation === "dashboard" && geometry ? <p className="mt-3 text-xs text-muted-foreground">{t("settings.environment.updated_at", { date: new Date(payload.artifact.generatedAt).toLocaleString() })}</p> : null}
     </>;
   }
   const frameProps: McpAppSandboxViewProps = {
     origin, app: resource, toolName: title, inputArguments: PREVIEW_ARGUMENTS, result,
-    unavailableNotice: "This artifact could not open. Try reopening it, or ask OpenWork to fix the preview.",
+    unavailableNotice: t("app.artifact_open_failed_notice"),
     presentation,
   };
   if (presentation === "dashboard" && geometry) {
@@ -65,8 +66,8 @@ function DashboardGeneratedAppPreview({ frameProps, geometry, workspaceId, gener
     {layoutReady ? <McpAppSandboxView {...frameProps} initialHeight={initialHeight ?? 360}
       onHeightChange={(height) => { setHasHeight(true); recordHeight(height); }}
       onReady={() => setReady(true)} onError={() => setReady(true)} /> : null}
-    <p className="mt-3 text-xs text-muted-foreground" data-testid={`dashboard-artifact-status-${artifactViewId}`}>Updated {new Date(generatedAt).toLocaleString()}</p>
-    {!ready ? <div className="absolute inset-0 space-y-2 overflow-hidden bg-background pt-3" role="status" aria-label={`Loading ${frameProps.toolName}`}>
+    <p className="mt-3 text-xs text-muted-foreground" data-testid={`dashboard-artifact-status-${artifactViewId}`}>{t("settings.environment.updated_at", { date: new Date(generatedAt).toLocaleString() })}</p>
+    {!ready ? <div className="absolute inset-0 space-y-2 overflow-hidden bg-background pt-3" role="status" aria-label={t("dashboard.tile_loading_named", { title: frameProps.toolName })}>
       <Skeleton className="h-4 w-2/3" />
       <Skeleton className="h-24 w-full" />
     </div> : null}

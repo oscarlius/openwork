@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { isLiveGeneratedApp } from "./live-generated-app-model";
-import { useAppsClient, dashboardManagementReason } from "./use-apps";
+import { useAppsClient } from "./use-apps";
+import { t } from "@/i18n";
 import type { SavedAppDetail } from "@openwork/types/workflows";
 
 export function getAppUpdatePrompt(app?: SavedAppDetail): string | undefined {
@@ -36,8 +37,8 @@ export function AppActionsMenu({ appId, title, canManage: appCanManage, canDelet
   const cache = useQueryClient();
   const deletion = useMutation({
     mutationFn: async () => {
-      if (!canManage || !canDelete) throw new Error(dashboardManagementReason);
-      if (!client || !orgId) throw new Error("Sign in to delete this artifact.");
+      if (!canManage || !canDelete) throw new Error(t("app.manage_only_org_admins"));
+      if (!client || !orgId) throw new Error(t("app.sign_in_to_delete_artifact"));
       await client.deleteApp(orgId, appId);
     },
     onSuccess: async () => {
@@ -54,31 +55,31 @@ export function AppActionsMenu({ appId, title, canManage: appCanManage, canDelet
   if (!hasActions && !showDelete) return null;
   return <>
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className={cn("shrink-0 text-muted-foreground", onOpen && "bg-background/90")} aria-label={`Artifact options for ${title}`} disabled={busy}><Ellipsis className="size-4" /></Button>} />
+      <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" className={cn("shrink-0 text-muted-foreground", onOpen && "bg-background/90")} aria-label={t("dashboard.tile_options_aria", { title })} disabled={busy}><Ellipsis className="size-4" /></Button>} />
       <DropdownMenuContent align="end" className="w-64 min-w-0 max-w-[calc(100vw-2rem)]">
         {hasActions ? <DropdownMenuGroup>
           {badge ? <DropdownMenuLabel><span className="block">{title}</span>{badge}</DropdownMenuLabel> : null}
-          {onOpen ? <DropdownMenuItem onClick={onOpen} aria-label={`Open ${title}`}><ExternalLink />Open artifact</DropdownMenuItem> : null}
-          {onRefresh ? <DropdownMenuItem onClick={onRefresh} disabled={refreshing} aria-label={`Refresh ${title}`}><RefreshCw />Refresh</DropdownMenuItem> : null}
-          {onRun ? <DropdownMenuItem onClick={onRun}><Play />Run again</DropdownMenuItem> : null}
-          {canManage && onEdit ? <DropdownMenuItem onClick={onEdit}><Sparkles />Ask for changes</DropdownMenuItem> : null}
-          {canManage && onUpdate ? <DropdownMenuItem onClick={onUpdate} disabled={busy}><Sparkles />Update artifact</DropdownMenuItem> : null}
-          {canManage && onRemove ? <DropdownMenuItem onClick={onRemove} aria-label={`Remove ${title} from dashboard`}><Minus />Remove from dashboard</DropdownMenuItem> : null}
+          {onOpen ? <DropdownMenuItem onClick={onOpen} aria-label={t("app.open_artifact_aria", { title })}><ExternalLink />{t("app.open_artifact")}</DropdownMenuItem> : null}
+          {onRefresh ? <DropdownMenuItem onClick={onRefresh} disabled={refreshing} aria-label={t("dashboard.tile_refresh_aria", { title })}><RefreshCw />{t("common.refresh")}</DropdownMenuItem> : null}
+          {onRun ? <DropdownMenuItem onClick={onRun}><Play />{t("app.run_again")}</DropdownMenuItem> : null}
+          {canManage && onEdit ? <DropdownMenuItem onClick={onEdit}><Sparkles />{t("app.ask_for_changes")}</DropdownMenuItem> : null}
+          {canManage && onUpdate ? <DropdownMenuItem onClick={onUpdate} disabled={busy}><Sparkles />{t("app.update_artifact")}</DropdownMenuItem> : null}
+          {canManage && onRemove ? <DropdownMenuItem onClick={onRemove} aria-label={t("dashboard.tile_remove_aria", { title })}><Minus />{t("dashboard.remove_from_board")}</DropdownMenuItem> : null}
         </DropdownMenuGroup> : null}
         {hasActions && showDelete ? <DropdownMenuSeparator /> : null}
-        {showDelete ? <DropdownMenuGroup><DropdownMenuItem variant="destructive" aria-label={`Delete ${title}`} onClick={() => { deletion.reset(); setOpen(true); }}><Trash2 />Delete artifact</DropdownMenuItem></DropdownMenuGroup> : null}
+        {showDelete ? <DropdownMenuGroup><DropdownMenuItem variant="destructive" aria-label={t("app.delete_artifact_aria", { title })} onClick={() => { deletion.reset(); setOpen(true); }}><Trash2 />{t("app.delete_artifact")}</DropdownMenuItem></DropdownMenuGroup> : null}
       </DropdownMenuContent>
     </DropdownMenu>
     <Dialog open={showDelete && open} onOpenChange={(next) => { if (!deletion.isPending) setOpen(next); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete “{title}”?</DialogTitle>
-          <DialogDescription>This removes the saved artifact from everyone’s dashboards and the artifact list. Past results stay available.</DialogDescription>
+          <DialogTitle>{t("app.delete_dialog_title", { title })}</DialogTitle>
+          <DialogDescription>{t("app.delete_dialog_desc")}</DialogDescription>
         </DialogHeader>
         {deletion.error ? <p role="alert" className="text-sm text-destructive">{deletion.error.message}</p> : null}
         <DialogFooter>
-          <Button variant="outline" disabled={deletion.isPending} onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="destructive" disabled={deletion.isPending} onClick={() => deletion.mutate()}>{deletion.isPending ? "Deleting…" : "Delete artifact"}</Button>
+          <Button variant="outline" disabled={deletion.isPending} onClick={() => setOpen(false)}>{t("common.cancel")}</Button>
+          <Button variant="destructive" disabled={deletion.isPending} onClick={() => deletion.mutate()}>{deletion.isPending ? t("settings.environment.deleting") : t("app.delete_artifact")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

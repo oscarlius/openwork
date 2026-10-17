@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { desktopBridge } from "@/app/lib/desktop";
+import { t } from "@/i18n";
 import type {
   DesktopIntegrationResult,
   DesktopIntegrationStatus,
@@ -38,10 +39,10 @@ function statusDescription(status: DesktopIntegrationStatus) {
 }
 
 function statusLabel(status: DesktopIntegrationStatus) {
-  if (status.state === "integrated") return "Integrated";
-  if (status.state === "managed_externally") return "Managed by another app";
-  if (status.state === "needs_repair") return "Needs repair";
-  return "Not integrated";
+  if (status.state === "integrated") return t("settings.desktop_integration_state_integrated");
+  if (status.state === "managed_externally") return t("settings.desktop_integration_state_external");
+  if (status.state === "needs_repair") return t("settings.desktop_integration_state_needs_repair");
+  return t("settings.desktop_integration_state_not_integrated");
 }
 
 export function DesktopIntegrationSection() {
@@ -68,7 +69,7 @@ export function DesktopIntegrationSection() {
     try {
       const result = await action();
       setStatus(result.status);
-      if (!result.ok) setError(result.error ?? "Desktop integration failed.");
+      if (!result.ok) setError(result.error ?? t("settings.desktop_integration_failed"));
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : String(actionError));
     } finally {
@@ -84,7 +85,7 @@ export function DesktopIntegrationSection() {
   return (
     <LayoutSection>
       <LayoutSectionHeader>
-        <LayoutSectionTitle>AppImage desktop integration</LayoutSectionTitle>
+        <LayoutSectionTitle>{t("settings.desktop_integration_title")}</LayoutSectionTitle>
         <LayoutSectionDescription>
           Control the launcher, icon, and openwork:// callback for this AppImage.
         </LayoutSectionDescription>

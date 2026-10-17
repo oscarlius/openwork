@@ -11,6 +11,7 @@ import {
   isAppBuilderPart,
   latestBuiltAppParts,
 } from "./built-mcp-app-model";
+import { t } from "@/i18n";
 
 const LatestBuiltAppPartsContext = createContext<DynamicToolUIPart[]>([]);
 
@@ -29,7 +30,7 @@ export function BuiltAppChatPreview({ part, compact = false }: { part: DynamicTo
       <Button
         variant="ghost"
         size={compact ? "xs" : "sm"}
-        aria-label="Open preview"
+        aria-label={t("app.open_preview")}
         disabled={!mcpAppOrigin}
         onClick={() => {
           if (!mcpAppOrigin) return;
@@ -49,7 +50,7 @@ export function BuiltAppChatPreview({ part, compact = false }: { part: DynamicTo
         }}
       >
         <PanelRightOpen className={compact ? "size-3.5" : "size-4"} />
-        {compact ? "Open" : "Open preview"}
+        {compact ? t("session.open") : t("app.open_preview")}
       </Button>
     </div>
   );

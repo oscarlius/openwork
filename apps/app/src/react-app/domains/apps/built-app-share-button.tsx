@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLibraryCloud } from "../settings/use-library-cloud";
 import { LibrarySharePage } from "../settings/pages/library-share-page";
 import { useAppsClient } from "./use-apps";
+import { t } from "@/i18n";
 
 export function BuiltAppShareButton({
   pluginId,
@@ -23,7 +24,7 @@ export function BuiltAppShareButton({
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Share
+        {t("extensions.detail_share")}
       </Button>
       <BuiltAppShareDialog pluginId={pluginId} title={title} open={open} onOpenChange={setOpen} />
     </>
@@ -47,7 +48,7 @@ export function BuiltAppShareDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader className="sr-only">
-          <DialogTitle>Share {title}</DialogTitle>
+          <DialogTitle>{t("dashboard.tile_share_aria", { title })}</DialogTitle>
         </DialogHeader>
         {context.client && context.orgId && context.identityVerified ? (
           <AppSharing
@@ -59,7 +60,7 @@ export function BuiltAppShareDialog({
           />
         ) : (
           <p role="status" className="text-sm">
-            Sign in to share this artifact.
+            {t("app.sign_in_to_share_artifact")}
           </p>
         )}
       </DialogContent>
@@ -80,7 +81,7 @@ function AppSharing({
 }) {
   // The caller verifies these before mounting. Avoid retaining another member's grants.
   if (!context.client || !context.orgId)
-    throw new Error("Sign in to share this artifact.");
+    throw new Error(t("app.sign_in_to_share_artifact"));
   const library = useLibraryCloud({
     client: context.client,
     organizationId: context.orgId,
@@ -91,16 +92,16 @@ function AppSharing({
     return (
       <div className="flex items-center gap-2">
         <p role="alert" className="text-sm">
-          Sharing could not be loaded.
+          {t("app.sharing_load_failed")}
         </p>
         <Button variant="outline" onClick={() => void library.refresh()}>
-          Try again
+          {t("engine_migration.try_again")}
         </Button>
       </div>
     );
   if (!library.ready || !library.directory)
     return (
-      <div role="status" aria-label="Checking sharing">
+      <div role="status" aria-label={t("app.sharing_checking_aria")}>
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="mt-4 h-40 w-full" />
       </div>
@@ -109,7 +110,7 @@ function AppSharing({
   if (!plugin || !library.ownedPluginIds.has(pluginId))
     return (
       <p role="status" className="text-sm">
-        Only this artifact's owner can share it. Ask them for access.
+        {t("app.share_owner_only")}
       </p>
     );
   if (!library.grantsReadyFor(pluginId))

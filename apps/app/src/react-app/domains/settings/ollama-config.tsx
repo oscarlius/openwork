@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatFileSize } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { t } from "@/i18n";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   fetchOllamaModelCapabilities,
@@ -288,6 +289,16 @@ export function OllamaConfig(props: OllamaConfigProps) {
   };
 
   const working = props.busy || checkingCapabilities;
+  const modelCount = data?.models?.length ?? 0;
+  const statusAlertText = (() => {
+    if (status === "checking") return t("settings.ollama_checking");
+    if (status === "running") {
+      return modelCount === 1
+        ? t("settings.ollama_running_one", { count: modelCount })
+        : t("settings.ollama_running_other", { count: modelCount });
+    }
+    return t("settings.ollama_not_reachable");
+  })();
 
   /** Makes OpenWork's Ollama models match what Ollama has now, with fresh capabilities. */
   const handleSync = () => {
@@ -309,8 +320,8 @@ export function OllamaConfig(props: OllamaConfigProps) {
     return (
       <Card variant="outline" size="sm">
         <CardHeader>
-          <CardTitle>Configuration</CardTitle>
-          <CardDescription>Connect to a local Ollama instance and choose a model.</CardDescription>
+          <CardTitle>{t("settings.ollama_config_title")}</CardTitle>
+          <CardDescription>{t("settings.ollama_config_desc")}</CardDescription>
           <CardAction>
             <Button variant="ghost" size="icon-sm" onClick={() => void refetch()} disabled={isFetching}>
               <RefreshCw className={isFetching ? "animate-spin" : ""} />
@@ -330,7 +341,7 @@ export function OllamaConfig(props: OllamaConfigProps) {
               <EmptyMedia variant="icon">
                 <Download />
               </EmptyMedia>
-              <EmptyTitle>Ollama isn't installed or running</EmptyTitle>
+              <EmptyTitle>{t("settings.ollama_not_installed_title")}</EmptyTitle>
               <EmptyDescription>
                 Download and start Ollama to use open-source models in your workspace.
               </EmptyDescription>
@@ -353,8 +364,8 @@ export function OllamaConfig(props: OllamaConfigProps) {
   return (
     <Card variant="outline" size="sm">
       <CardHeader>
-        <CardTitle>Configuration</CardTitle>
-        <CardDescription>Connect to a local Ollama instance and choose a model.</CardDescription>
+        <CardTitle>{t("settings.ollama_config_title")}</CardTitle>
+        <CardDescription>{t("settings.ollama_config_desc")}</CardDescription>
         <CardAction>
           <Button variant="ghost" size="icon-sm" onClick={() => void refetch()} disabled={isFetching}>
             <RefreshCw className={isFetching ? "animate-spin" : ""} />
@@ -377,13 +388,7 @@ export function OllamaConfig(props: OllamaConfigProps) {
           ) : (
             <XCircle  />
           )}
-          <AlertDescription>
-            {status === "checking"
-              ? "Checking Ollama..."
-              : status === "running"
-                ? `Ollama running (${data?.models?.length ?? 0} model${(data?.models?.length ?? 0) === 1 ? "" : "s"})`
-                : "Ollama not reachable"}
-          </AlertDescription>
+          <AlertDescription>{statusAlertText}</AlertDescription>
         </Alert>
 
         {/* Model selection */}
@@ -473,7 +478,7 @@ export function OllamaConfig(props: OllamaConfigProps) {
               nativeButton
               render={<button type="button" />}
             />
-            <FieldLabel htmlFor="ollama-set-default">Use as default model in workspace</FieldLabel>
+            <FieldLabel htmlFor="ollama-set-default">{t("settings.ollama_use_as_default")}</FieldLabel>
           </Field>
         </FieldGroup>
         <Button
@@ -560,7 +565,7 @@ function PullModelDialog(props: PullModelDialogProps) {
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent className="w-full max-w-md sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Pull model</DialogTitle>
+          <DialogTitle>{t("settings.ollama_pull_dialog_title")}</DialogTitle>
           <DialogDescription>
             Download a model from ollama.com/library to your local Ollama instance.
           </DialogDescription>
@@ -568,7 +573,7 @@ function PullModelDialog(props: PullModelDialogProps) {
         <FieldSet className="w-full">
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="ollama-model-pull">Model to pull</FieldLabel>
+              <FieldLabel htmlFor="ollama-model-pull">{t("settings.ollama_model_to_pull")}</FieldLabel>
               <Input
                 id="ollama-model-pull"
                 type="text"

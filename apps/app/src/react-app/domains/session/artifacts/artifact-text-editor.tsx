@@ -6,6 +6,7 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { ActionContextMenu } from "@/components/ui/action-context-menu";
 import type { MenuAction } from "@/components/ui/action-menu-model";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 import { markdownLivePreview } from "./markdown-live-preview";
 
@@ -148,19 +149,19 @@ export function ArtifactTextEditor(props: ArtifactTextEditorProps) {
   };
 
   const actions: MenuAction[] = [
-    { type: "item", id: "heading-1", label: "Heading 1", onSelect: () => format((view) => setLinePrefix(view, "# ")) },
-    { type: "item", id: "heading-2", label: "Heading 2", onSelect: () => format((view) => setLinePrefix(view, "## ")) },
-    { type: "item", id: "heading-3", label: "Heading 3", onSelect: () => format((view) => setLinePrefix(view, "### ")) },
-    { type: "item", id: "paragraph", label: "Paragraph", onSelect: () => format((view) => setLinePrefix(view, "")) },
+    { type: "item", id: "heading-1", label: t("context_panel.format_heading_1"), onSelect: () => format((view) => setLinePrefix(view, "# ")) },
+    { type: "item", id: "heading-2", label: t("context_panel.format_heading_2"), onSelect: () => format((view) => setLinePrefix(view, "## ")) },
+    { type: "item", id: "heading-3", label: t("context_panel.format_heading_3"), onSelect: () => format((view) => setLinePrefix(view, "### ")) },
+    { type: "item", id: "paragraph", label: t("context_panel.format_paragraph"), onSelect: () => format((view) => setLinePrefix(view, "")) },
     { type: "separator" },
-    { type: "item", id: "bold", label: "Bold", onSelect: () => format((view) => wrapSelection(view, "**")) },
-    { type: "item", id: "italic", label: "Italic", onSelect: () => format((view) => wrapSelection(view, "*")) },
-    { type: "item", id: "strikethrough", label: "Strikethrough", onSelect: () => format((view) => wrapSelection(view, "~~")) },
-    { type: "item", id: "inline-code", label: "Inline code", onSelect: () => format((view) => wrapSelection(view, "`")) },
+    { type: "item", id: "bold", label: t("context_panel.format_bold"), onSelect: () => format((view) => wrapSelection(view, "**")) },
+    { type: "item", id: "italic", label: t("context_panel.format_italic"), onSelect: () => format((view) => wrapSelection(view, "*")) },
+    { type: "item", id: "strikethrough", label: t("context_panel.format_strikethrough"), onSelect: () => format((view) => wrapSelection(view, "~~")) },
+    { type: "item", id: "inline-code", label: t("context_panel.format_inline_code"), onSelect: () => format((view) => wrapSelection(view, "`")) },
     { type: "separator" },
-    { type: "item", id: "bullet-list", label: "Bullet list", onSelect: () => format((view) => setLinePrefix(view, "- ")) },
-    { type: "item", id: "numbered-list", label: "Numbered list", onSelect: () => format((view) => setLinePrefix(view, (index) => `${index + 1}. `)) },
-    { type: "item", id: "quote", label: "Quote", onSelect: () => format((view) => setLinePrefix(view, "> ")) },
+    { type: "item", id: "bullet-list", label: t("context_panel.format_bullet_list"), onSelect: () => format((view) => setLinePrefix(view, "- ")) },
+    { type: "item", id: "numbered-list", label: t("context_panel.format_numbered_list"), onSelect: () => format((view) => setLinePrefix(view, (index) => `${index + 1}. `)) },
+    { type: "item", id: "quote", label: t("context_panel.format_quote"), onSelect: () => format((view) => setLinePrefix(view, "> ")) },
   ];
   return <ActionContextMenu actions={actions} includeEditing className="block h-full min-h-0">{editor}</ActionContextMenu>;
 }

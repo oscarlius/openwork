@@ -8,6 +8,7 @@ import type { OpenworkServerClient, OpenworkWorkspaceCatalogEntry } from "@/app/
 import { Button } from "@/components/ui/button";
 import { useNativeContextMenu } from "@/components/ui/action-context-menu";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 const TREE_CSS = `
@@ -149,8 +150,8 @@ export function WorkspaceFileTree({ client, workspaceId, workspaceName, selected
         <InputGroup className="h-7 min-w-0 flex-1 bg-background">
           <InputGroupAddon align="inline-start"><Search /></InputGroupAddon>
           <InputGroupInput
-            aria-label={`Search ${workspaceName} files`}
-            placeholder="Search files"
+            aria-label={t("context_panel.search_files_aria", { name: workspaceName })}
+            placeholder={t("context_panel.search_files_placeholder")}
             value={search.value}
             onChange={(event) => {
               const value = event.target.value;
@@ -162,24 +163,24 @@ export function WorkspaceFileTree({ client, workspaceId, workspaceName, selected
         <Button
           variant="ghost"
           size="icon-xs"
-          aria-label="Refresh workspace files"
+          aria-label={t("context_panel.refresh_workspace_files")}
           onClick={() => void query.refetch()}
         >
           <RefreshCw className={cn(query.isFetching && "animate-spin")} />
         </Button>
       </div>
       {query.isError ? (
-        <p role="alert" className="p-3 text-xs text-dls-secondary">Could not load workspace files. Use Refresh to try again.</p>
+        <p role="alert" className="p-3 text-xs text-dls-secondary">{t("context_panel.workspace_files_load_failed")}</p>
       ) : (
         <FileTree
           model={model}
-          aria-label={`${workspaceName} files`}
+          aria-label={t("context_panel.workspace_files_aria", { name: workspaceName })}
           className="min-h-0 flex-1 overflow-hidden"
           style={{ ["--trees-fg-override" as string]: "var(--foreground)" }}
         />
       )}
       {query.data?.incomplete ? (
-        <p role="status" className="border-t border-border px-2 py-1 text-[10px] text-muted-foreground">Some folders could not be read. Check their permissions and refresh.</p>
+        <p role="status" className="border-t border-border px-2 py-1 text-[10px] text-muted-foreground">{t("context_panel.workspace_files_incomplete")}</p>
       ) : null}
     </aside>
   );

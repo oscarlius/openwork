@@ -10,6 +10,7 @@ import type {
   DenPluginCloudReadiness,
 } from "../../../app/lib/den";
 import type { McpServerEntry, SkillCard } from "../../../app/types";
+import { t } from "@/i18n";
 import { connectionNeedsReconnect } from "../connections/native-provider-connections";
 import {
   resolveConnectRowGroup,
@@ -147,11 +148,11 @@ export function orgMcpConnectionDescription(connection: Pick<DenExternalMcpConne
   const prefix = provider ? `${provider} — ` : "";
   if (connection.credentialMode === "shared") return `${prefix}One org account managed by your organization — the AI acts as it.`;
   if (connection.authType === "apikey") {
-    if (connection.needsReconnect === true || connection.credentialHealth === "reconnect_required") return "Your key was rejected.";
+    if (connection.needsReconnect === true || connection.credentialHealth === "reconnect_required") return t("settings.org_mcp_key_rejected");
     return connection.connectedForMe && !connectionNeedsReconnect(connection)
-      ? "Uses your own key."
-      : connection.connectedForMe ? "Your key was rejected."
-      : "Available from your organization. Add your own key to use it.";
+      ? t("settings.org_mcp_uses_own_key")
+      : connection.connectedForMe ? t("settings.org_mcp_key_rejected")
+      : t("settings.org_mcp_available_add_key");
   }
   if (connection.connectedForMe && connectionNeedsReconnect(connection)) return `${prefix}Reconnect your account to grant newly requested permissions.`;
   if (connection.connectedForMe) {
@@ -165,18 +166,18 @@ export function orgMcpConnectionDescription(connection: Pick<DenExternalMcpConne
 }
 
 export function orgMcpConnectionActionLabel(connection: Pick<DenExternalMcpConnection, "credentialMode" | "connected" | "connectedForMe" | "needsReconnect" | "missingFeatures" | "externalAccountId"> & PersonalKeyReadiness) {
-  if (connection.credentialMode === "shared") return "Managed by your organization";
+  if (connection.credentialMode === "shared") return t("mcp.org_connection_managed_label");
   if (connection.authType === "apikey") {
-    if (connection.needsReconnect === true || connection.credentialHealth === "reconnect_required") return "Replace key";
-    return isOrgMcpConnectionReady(connection) ? "Key saved" : connection.connectedForMe ? "Replace key" : "Add key";
+    if (connection.needsReconnect === true || connection.credentialHealth === "reconnect_required") return t("session.connection_action_replace_key");
+    return isOrgMcpConnectionReady(connection) ? t("extensions.detail_key_saved") : connection.connectedForMe ? t("session.connection_action_replace_key") : t("session.connection_action_add_key");
   }
-  if (connection.connectedForMe && connectionNeedsReconnect(connection)) return "Reconnect";
+  if (connection.connectedForMe && connectionNeedsReconnect(connection)) return t("mcp.org_connection_reconnect_action");
   if (connection.connectedForMe) {
     // Show WHICH account: with several connectors for one service (two Google
     // domains), a bare "Connected" badge cannot tell the sign-ins apart.
-    return connection.externalAccountId ? `Connected — ${connection.externalAccountId}` : "Connected";
+    return connection.externalAccountId ? t("settings.org_mcp_connected_as", { account: connection.externalAccountId }) : t("mcp.org_connection_connected_label");
   }
-  return "Connect your account";
+  return t("mcp.org_connection_connect_action");
 }
 
 export function isOrgMcpConnectionItem(item: ExtensionItem): item is ExtensionItem & { orgMcpConnection: DenExternalMcpConnection } {
