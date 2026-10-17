@@ -1,0 +1,57 @@
+---
+title: "团队提示卡片"
+description: "在 OpenWork 桌面应用中向所有人展示你自己的建议提示词，或给不同团队展示不同的提示词。"
+keywords: ["prompt cards", "suggested prompts", "organization prompt suggestions", "starter prompts", "task suggestions", "team prompts", "onboarding prompts", "提示卡片", "建议提示词", "团队提示", "入门提示"]
+---
+
+提示卡片是成员在 OpenWork 桌面应用中新建会话时看到的建议任务。你可以用自建的内容替换默认建议，作用于所有人，或只作用于特定团队和成员。
+
+提示卡片在[桌面策略](/zh/cloud/share-with-your-team/desktop-policies)中设置，由所有者管理。桌面策略是企业版计划的一部分。
+
+<Note>
+提示卡片目前是生效的。多数其他桌面策略控件在重新设计期间已暂停，但组织提示建议仍会下发到成员的桌面应用。见[桌面策略](/zh/cloud/share-with-your-team/desktop-policies)。
+</Note>
+
+## 创建提示卡片
+
+1. 打开 [app.openworklabs.com](https://app.openworklabs.com/)，进入 **Manage › Desktop policies**。
+2. 选择受众：
+   - 面向所有人：在标记为 **Default** 的策略上点击 **Edit**。
+   - 面向特定团队或成员：点击 **New policy**。
+3. 打开 **Organization prompt suggestions**。
+4. 填写 **First prompt** 和 **Second prompt**。**Optional third prompt** 可以留空。
+5. 每条提示分别填写：
+   - **Description**：卡片标题，最多 120 个字符。
+   - **Prompt**：会进入输入框的文本，最多 500 个字符。
+6. 新建策略时，在 **Members** 和 **Teams** 下选择谁能看到它。
+7. 点击 **Create policy**；已有策略则点击 **Save changes**。
+
+要给不同部门不同的提示，就为每个部门建一条策略，并把每条指派给对应的团队。
+
+## 多条策略同时命中时
+
+成员只会看到一组提示卡片，多组提示不会混用。
+
+- 如果某个成员命中的多条策略都带提示，**Priority** 更高的那条生效。优先级相同时，先创建的那条生效。
+- 如果命中的策略都没有提示，成员看到的是默认策略的提示。
+- 如果默认策略也没有提示，成员看到的是 OpenWork 的标准建议。
+- 已禁用的策略不参与计算。
+
+## 成员会看到什么
+
+<Frame>
+  ![OpenWork 桌面应用的输入区，展示通过 Cloud 桌面策略指派的组织提示卡片](/images/desktop-team-prompt-cards.png)
+</Frame>
+
+- 卡片出现在成员新建会话时看到的界面上。
+- **Description** 就是卡片标题。留空时，卡片会命名为「Organization prompt 1」「Organization prompt 2」，依次类推。
+- **Prompt** 会显示在卡片上，成员点击后填入输入框。成员可以在发送前修改它，不会有任何内容被自动发送。
+
+桌面应用会在成员登录时、切换组织时以及每小时检查一次变更。想更早看到变更，成员可以退出并重新打开应用。
+
+<Accordion title="技术细节">
+- 提示词存储在桌面策略文档的 `onboardingPrompts`（2 或 3 个字符串）和 `onboardingPromptDescriptions`（数量相同的字符串）中。
+- 成员通过 `GET /v1/me/desktop-config` 在自己的桌面配置里拿到最终解析出的提示组。
+- **Priority** 相同时先比创建时间（最早的胜出），再比策略 ID（最小的胜出）。
+- 组织没有企业版计划时，桌面策略相关路由返回 HTTP `402`。
+</Accordion>

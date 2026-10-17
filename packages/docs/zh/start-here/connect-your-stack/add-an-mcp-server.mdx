@@ -1,0 +1,49 @@
+---
+title: "添加自定义 MCP 服务器"
+description: "连接一个无法通过 OpenWork Connect 获取的自定义或本地 MCP 服务器"
+keywords: ["custom MCP", "local MCP", "add MCP server", "workspace MCP", "Add workspace MCP", "OAuth on this device", "MCP URL", "自定义 MCP", "本地 MCP", "工作区 MCP", "添加 MCP 服务器"]
+---
+
+<Note>
+**本地工作区配置。** 自定义 MCP 服务器不需要 OpenWork Cloud 账户，因此这条路径始终免费、始终留在当前工作区。要使用由组织统一管理和分配的连接，请到 **Manage › Connectors** 下配置 [OpenWork Cloud 连接器](/cloud/share-with-your-team/shared-mcp-connections)。
+</Note>
+
+只有当你需要的是无法通过 OpenWork Connect 获取的自定义或本地 MCP 服务器时，才使用本指南。
+
+Gmail、Google Calendar、Google Drive、Slack、Notion、Linear 及其他托管服务，请按[连接你的服务](/zh/start-here/connect-your-stack/connect-services)操作。
+
+在 OpenWork 里接入一个自定义应用只需要四次点击。
+
+- 在桌面应用中打开 **Settings › Library**，展开 **Advanced settings**，然后点击 **Add workspace MCP**。
+
+<Frame>
+  ![Library 页面展开 Advanced settings，显示 Add workspace MCP 按钮](/images/library-advanced-settings.png)
+</Frame>
+
+填入 **App name** 和 **Server URL**，然后点击 **Add App**。这个 MCP 就被加到当前工作区了。
+
+<Frame>
+  ![Add workspace MCP 弹窗，包含应用名称、服务器 URL 和 OAuth 选项](/images/library-add-mcp-modal.png)
+
+  如果该服务器需要 OAuth，请在添加前先展开 **OAuth on this device**。
+</Frame>
+
+这套配置适用于支持动态 OAuth 客户端注册的服务器。
+
+<Frame>
+  ![MCP 服务器的 OAuth 授权页面](/images/mcp-oauth-approval-page.png)
+</Frame>
+
+在浏览器里完成该提供商的 OAuth 授权流程，之后应当会自动跳回 OpenWork。如果某个自定义 MCP 需要的行为 OpenWork 还不支持，请[提交 issue](https://github.com/different-ai/openwork/issues/)。
+
+### 问题排查
+
+有些 MCP 服务器不支持动态客户端注册。如果服务器给了你预先注册好的 OAuth client ID 和 client secret，请在 **Add workspace MCP** 的 **OAuth on this device** 下填写（**OAuth client ID** 和 **OAuth client secret**）。
+
+<Note>
+工作区 MCP 只属于你本人。要把一个 MCP 服务器及其 MCP Apps 共享给整个组织，请到 OpenWork Cloud 的 **Manage › Connectors** 里添加。想自己构建 MCP App，见[构建 MCP App](/dashboards/build-an-mcp-app)。
+</Note>
+
+<Frame>
+  ![MCP 服务器不支持动态客户端注册时的报错](/images/mcp-dynamic-registration-error.png)
+</Frame>

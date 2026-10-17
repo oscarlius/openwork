@@ -1,0 +1,53 @@
+---
+title: "部署到 Google Cloud"
+description: "在 GKE Autopilot 或 Google Cloud Run 上搭配 Cloud SQL for MySQL 运行 OpenWork。"
+---
+
+OpenWork 支持两种 Google Cloud 部署形态。需要完整 chart 能力时，用 GKE Autopilot 加 Helm。想要无服务器的 Den Web 和 Den API 部署、并把迁移任务单独拆出去，就用 Cloud Run 起步方案。
+
+<CardGroup cols={2}>
+  <Card title="用 Helm 部署 GKE" icon="container" href="https://github.com/different-ai/openwork/blob/dev/docs/gcp-gke-helm.md">
+    完整的 chart 路径，包括 Kubernetes 定制和可选的 Gateway。
+  </Card>
+  <Card title="Google Cloud Run" icon="cloud" href="https://github.com/different-ai/openwork/blob/dev/docs/gcp-cloud-run.md">
+    无服务器起步方案，覆盖 Den Web、Den API、Cloud SQL、Secret Manager 和显式的迁移任务。
+  </Card>
+</CardGroup>
+
+## 选择部署目标
+
+需要 Helm 钩子、Pod 级定制、自定义 CA 挂载、安装器产物卷，或者可选的 OpenWork Gateway 时，选 GKE。Den Web 和 Den API 符合请求驱动的服务模型、你又更想要不用 Kubernetes 集群的托管自动扩缩容时，选 Cloud Run。
+
+## Google Cloud 负责哪些部分
+
+- GKE 控制面和 Autopilot 的计算生命周期
+- VPC 网络、Cloud Load Balancing、防火墙规则和 IAM
+- Cloud SQL for MySQL、加密、备份和故障切换
+- 你使用这些服务时，还包括 Cloud DNS 和 Google 托管的证书
+
+OpenWork chart 负责 Deployments、Services、ConfigMaps、Secret 引用、探针、Ingress 以及数据库迁移 Job。GKE 的 `BackendConfig` 和 `ManagedCertificate` 资源要配合 chart 一起创建。
+
+## GKE 清单
+
+1. 启用 Kubernetes Engine、Compute Engine、Cloud SQL Admin 和 Service Networking 这几项 API。
+2. 创建一个区域级 GKE Autopilot 集群；如果你的 Cloud SDK 不含 `gke-gcloud-auth-plugin`，就先装上。
+3. 配置好私有服务访问，并创建一个带内网 IP 的 Cloud SQL for MySQL。
+4. 保留一个全局 IPv4 地址，创建 GKE 的健康检查和证书资源。
+5. 把 `DATABASE_URL`、`BETTER_AUTH_SECRET` 和 `DEN_DB_ENCRYPTION_KEY` 存进一个 Kubernetes Secret。
+6. 从 chart 的 `values.gcp-ingress.yaml` 示例开始改，安装 chart，然后校验迁移和就绪状态。
+7. 把两个域名都指向那个保留地址，等托管证书转为可用状态。
+
+具体的 GKE 命令、values、健康检查、迁移排障、验证和清理，请看 [GKE 运维手册](https://github.com/different-ai/openwork/blob/dev/docs/gcp-gke-helm.md)。
+
+## Cloud Run 清单
+
+1. 启用 Cloud Run、Artifact Registry、Cloud SQL Admin 和 Secret Manager 这几项 API。
+2. 把带版本号的 Den API 和 Den Web 镜像同步到 Artifact Registry。
+3. 创建 Cloud SQL for MySQL，并把各自独立的应用密钥存进 Secret Manager。
+4. 从 `packaging/cloud-run` 渲染出起步方案的服务清单和任务清单。
+5. 部署 API 和 Web 的新修订版本之前，先执行迁移任务。
+6. 打开设置页之前，把四个健康和就绪端点全部验证通过。
+
+清单内容、具体命令、迁移顺序、验证和升级说明，请看 [Cloud Run 运维手册](https://github.com/different-ai/openwork/blob/dev/docs/gcp-cloud-run.md)。
+
+下一步：[创建第一位管理员](/zh/self-host/deploy-to-your-cloud/first-administrator)。

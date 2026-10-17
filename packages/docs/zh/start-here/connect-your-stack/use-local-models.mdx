@@ -1,0 +1,93 @@
+---
+title: "使用本地模型（Ollama、LM Studio）"
+description: "通过 Ollama 或 LM Studio 让 OpenWork 跑在 Qwen、Llama、Gemma 这类本地模型上，不需要 API 密钥，也不需要云账户。"
+---
+
+可以，OpenWork 能完全跑在你自己电脑上的模型。用 Ollama 时，打开 `Settings > Ollama`，选一个模型，点击 `Add to workspace` 就行。用 LM Studio 或任何其他带 OpenAI 兼容 API 的本地服务器时，把它作为提供商添加进工作区的 `opencode.jsonc`。
+
+<Note>
+**免费且本地。** 本地模型不需要 API 密钥，不需要 OpenWork Cloud 账户，模型下载好之后也不需要联网。你的提示词和文件都留在你自己的机器上。
+</Note>
+
+## 使用 Ollama
+
+OpenWork 内置了 Ollama 的配置页面，它连接的是 `http://localhost:11434` 上的 Ollama。
+
+1. 安装 [Ollama](https://ollama.com/download) 并启动它。
+2. 在 OpenWork 里打开 `Settings`，选择 `Ollama`。
+3. 等状态显示 `Ollama running`。如果显示的是 `Ollama isn't installed or running`，请先启动 Ollama，再点击刷新按钮。
+4. 在 `Available models` 下选择一个你已经下载过的模型。一个都没有的话，点击 `Pull a model`（或 `Add a custom model`），输入一个来自 [Ollama library](https://ollama.com/library) 的模型名，例如 `qwen2.5-coder:7b`，然后等下载完成。
+5. 如果希望新对话都用这个模型，就保持 `Use as default model in workspace` 勾选状态。
+6. 点击 `Add to workspace`。OpenWork 会把该提供商保存为 `Ollama (local)`，并重新加载工作区。
+7. 发起一个聊天，在模型选择器里确认模型名称。
+
+OpenWork 会检查这个模型能否读图。支持视觉的模型接受图片附件，纯文本模型则不接受。
+
+OpenWork 还会读取模型支持的思考档位（thinking level），例如 `low`、`high`、`max`，并把它们列在模型选择器的思考菜单里。不具备思考能力的模型不会显示任何档位。
+
+要用多个 Ollama 模型时，对每个模型重复一遍上面的步骤。先前添加的模型会一直留在模型选择器里。重复添加同一个模型，会刷新它的图片支持情况和思考档位，例如在你升级 Ollama 之后。
+
+想一次性让 OpenWork 和 Ollama 里的内容对齐，点击模型列表下方的 `Sync all models`。OpenWork 会添加 Ollama 拥有的全部模型、移除你从 Ollama 里删掉的模型，并刷新每个模型的图片支持情况和思考档位。
+
+## 使用 LM Studio 或其他本地服务器
+
+LM Studio、llama.cpp 的 server、vLLM 以及同类工具都会暴露一个 OpenAI 兼容 API。OpenWork 连接它们的方式，和连接任意[自定义 LLM](/zh/start-here/connect-your-stack/add-a-custom-llm)完全一样。
+
+1. 在你的工具里启动本地服务器并加载一个模型。在 LM Studio 中，从开发者视图启动本地服务器；默认监听 `http://localhost:1234`。
+2. 复制服务器给出的模型标识（LM Studio 里就是已加载模型显示的那个名字）。
+3. 打开你的工作区文件夹，编辑根目录下的 `opencode.jsonc`（不存在就先创建）。
+4. 添加一个指向该服务器 `/v1` 端点的提供商：
+
+   ```jsonc
+   {
+     "provider": {
+       "lmstudio": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "LM Studio (local)",
+         "options": {
+           "baseURL": "http://localhost:1234/v1"
+         },
+         "models": {
+           "qwen2.5-7b-instruct": {
+             "name": "Qwen 2.5 7B Instruct"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+5. 把 `qwen2.5-7b-instruct` 换成第 2 步里那个确切的模型标识。
+6. 通过命令面板运行 `Reload OpenCode config`（或者重启 OpenWork），然后在聊天的模型选择器里选中这个模型。
+
+同样的写法适用于任何本地服务器：改提供商的键名、`name`、`baseURL` 和模型 ID 即可。
+
+## 选一个能用工具的模型
+
+OpenWork 是一个智能体：它会读文件、跑工具、调用 MCP 服务器。小的本地模型往往聊天不错，但很难可靠地发起工具调用。如果任务卡住了，或者模型不理你的文件，请换一个更大的模型，或者明确声明支持 tool 或 function calling 的模型。另外保留一个云端模型作为兜底，用来处理长链路的多步骤任务。
+
+## 常见问题
+
+<AccordionGroup>
+  <Accordion title="用本地模型时 OpenWork 免费吗？">
+    免费。OpenWork 是免费且开源的，跑本地模型不会带来任何 OpenWork 费用。你只需要一台跑得动该模型的硬件。
+  </Accordion>
+  <Accordion title="用本地模型时，OpenWork 会把我的数据发到别处吗？">
+    模型请求只会发往你配置的那个本地服务器，例如 `http://localhost:11434`。你自己添加的连接器与 MCP 服务器，仍然会去连它们各自的服务。
+  </Accordion>
+  <Accordion title="Ollama 页面提示连不上 Ollama。">
+    确认 Ollama 运行在同一台机器上，并在监听 `11434` 端口。然后在 `Ollama` 设置页面点击刷新按钮。
+  </Accordion>
+  <Accordion title="工作电脑上不让我加本地提供商。">
+    你的组织可能只允许使用它自己提供的模型（OpenWork Cloud 里的 **AI Gateway › Who can use models › Only models you provide**）。请问你的 OpenWork 管理员。
+  </Accordion>
+  <Accordion title="整个团队能共用一个自托管模型吗？">
+    可以。把模型放在团队都能访问的 OpenAI 兼容端点后面，然后在 OpenWork Cloud 里一次性添加为[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)。
+  </Accordion>
+</AccordionGroup>
+
+## 相关文档
+
+- [添加自定义 LLM 或 AI 网关](/zh/start-here/connect-your-stack/add-a-custom-llm)
+- [使用 Gemini 与 Google Vertex AI](/zh/start-here/connect-your-stack/use-gemini-and-vertex-ai)
+- [从 Claude Cowork 迁移](/start-here/migrate-from-claude-cowork)

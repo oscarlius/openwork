@@ -1,0 +1,77 @@
+---
+title: "企业桌面应用部署"
+description: "用你现有的软件分发体系部署 OpenWork Enterprise 二进制包，也可以通过 MDM 下发一个配置文件。"
+---
+
+企业部署就是标准的 **OpenWork Enterprise 二进制包**，再加上可选的、通过 MDM 下发的一个配置文件。没有为客户定制的 installer 构建，不做包装，也不重新打包 —— 已签名的发布产物从不被修改，因此 macOS 和 Windows 正常的签名校验都得以保留。
+
+## 企业版二进制包
+
+OpenWork 在公开发布版本之外，另外提供一个专用的企业发行版。两者都发布在 [GitHub Releases](https://github.com/different-ai/openwork/releases) 上；企业版产物走 `enterprise` 更新频道。
+
+| 平台 | 产物 |
+| --- | --- |
+| macOS（Apple Silicon / Intel） | `openwork-enterprise-mac-arm64-<version>.dmg`、`openwork-enterprise-mac-x64-<version>.dmg` |
+| Windows（x64 / ARM64） | `openwork-enterprise-win-x64-<version>.exe`、`openwork-enterprise-win-arm64-<version>.exe` |
+| Linux | `openwork-enterprise-linux-x86_64-<version>.AppImage`、`openwork-enterprise-linux-arm64-<version>.AppImage`，以及 `.tar.gz` 变体 |
+
+企业发行版与公开构建的差异是在构建时就写进包元数据的，不能靠配置开关改变：
+
+- 产品名为 **OpenWork Enterprise**。
+- 一律要求登录。
+- **一律要求激活**：在管理员发起的激活完成之前，应用只开放用于接受连接链接、读写其引导配置的最小界面。聊天、工具和工作区访问都保持锁定。
+- 自动更新走 `enterprise` 发布频道，因此企业安装永远不会拿到公开频道的产物。
+
+已打包的公开构建无法靠环境变量或配置文件变成企业构建；发行版类型只从不变的包元数据中读取。
+
+## 可选的 MDM 下发：`desktop-bootstrap.json`
+
+如果你用 MDM（Jamf、Intune 或类似工具）管理设备群，就按你分发其他应用的方式分发企业二进制包，并在装机阶段额外写入一个 JSON 文件，让首次启动时应用已经知道你的 Den 服务器：
+
+| 操作系统 | 规范路径 |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%\openwork\desktop-bootstrap.json`（若设置了 `%XDG_CONFIG_HOME%`，以它为准） |
+| macOS / Linux | `$XDG_CONFIG_HOME/openwork/desktop-bootstrap.json`，找不到时回退到 `~/.config/openwork/desktop-bootstrap.json` |
+
+```json
+{
+  "baseUrl": "https://openwork.example.com",
+  "apiBaseUrl": "https://openwork.example.com/api/den",
+  "requireSignin": true,
+  "brandAppName": "Example Corp OpenWork",
+  "writtenAt": "2026-08-20T12:00:00.000Z"
+}
+```
+
+| 字段 | 是否必填 | 含义 |
+| --- | --- | --- |
+| `baseUrl` | 是 | 你的 Den web 源站。桌面应用通过该源站的 `/api/den` 代理推导出 API 和 MCP 路径。 |
+| `apiBaseUrl` | 否 | 单独的 Den API 基址，仅在你确实对外发布了它时才需要。单源站拓扑下请省略，或改用 `/api/den` 代理路径。 |
+| `requireSignin` | 是 | 应用是否要求先登录组织账户才能使用。企业版构建无论该值是什么都会强制登录。 |
+| `requireActivation` | 否 | 企业版构建会忽略它，因为企业版始终要求激活。公开构建可以用它来选择启用激活这道关卡。 |
+| `brandAppName`、`brandLogoUrl`、`brandIconUrl` | 否 | 在应用内展示的组织品牌信息。 |
+| `writtenAt` | 是 | ISO 8601 时间戳。存在多个引导文件时，取其中时间最新的有效配置生效。 |
+
+部署上值得知道的细节：
+
+- 较早的构建在所有操作系统上都会读取遗留的 `~/.config/openwork` 路径。当前构建出于兼容仍会读它；最终由 `writtenAt` 最新的那个文件生效。
+- 在应用里清除云端配置会把引导文件整个删除，因此下次启动时 MDM 新下发的配置会生效。
+- `OPENWORK_DESKTOP_BOOTSTRAP_PATH` 可以让某台机器指向一个隔离的引导文件用于测试；遗留的全局配置永远不会越过这条边界。
+
+## 不该通过 MDM 下发的东西
+
+- **激活。** 只有在签名的激活声明校验通过后，应用才会把 `enterpriseActivation` 写进 `desktop-bootstrap.json`。不要自行写入这条记录；手写的条目不能证明租户已经开通，应用会把它当作未完成来处理。
+- **证书。** 桌面应用的信任链取自操作系统的信任存储 —— Windows 的计算机与用户 Root/CA 存储，以及 macOS 上由管理员控制的 System 钥匙串。按你现有的方式部署企业 CA 即可，OpenWork 没有专属的证书文件。参见 [证书信任与代理](/start-here/certificate-trust-and-proxies)。
+- **允许使用的桌面版本。** 这是登录之后由你的 Den 服务器下发的组织设置；应用的更新器只会安装清单内的版本，不需要 MDM 脚本。请在组织设置里管理它。
+- **桌面策略。** 桌面应用的功能限制在重新设计期间暂不生效，但配置仍然保存在 Den 里。
+
+## 在安装链接与 MDM 之间怎么选
+
+| | 组织安装链接 | 企业二进制包 + MDM |
+| --- | --- | --- |
+| 适合 | 自助上手，不需要设备管理 | 已有软件分发体系的受管设备群 |
+| 二进制包 | 标准公开 installer，由 Den 或 GitHub 分发（见 [installer 分发](/zh/start-here/installer-delivery)） | 企业版产物，由你的 MDM 分发 |
+| 服务器配置 | 安装后通过浏览器深度链接交接 | 装机阶段写入 `desktop-bootstrap.json` |
+| 首次启动 | 用户确认具体的组织和服务器 | 应用已经指向你的 Den 服务器 |
+
+两条路径最终都走到同一个地方：针对你的 Den 部署进行正常的组织登录。对于完全隔离的网络，请把本页与 [离线（air-gapped）部署](/start-here/air-gapped-deployment) 清单一起使用 —— 走 MDM 分发时，installer 的字节甚至完全不需要经过 Den。

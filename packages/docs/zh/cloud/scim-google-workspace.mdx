@@ -1,0 +1,58 @@
+---
+title: "Google Workspace SCIM 开通"
+description: "OpenWork 当前对 Google Workspace SCIM 的支持情况"
+---
+
+当成员应当用 Google 登录 OpenWork 时，请使用 [Google Workspace SAML SSO](/cloud/sso-google-workspace)。Google Workspace 的自定义 SAML 应用目前不暴露可用的通用出站 SCIM 连接器，无法把用户和群组开通到 OpenWork。
+
+## 当前支持情况
+
+OpenWork 支持的 SCIM 开通，来自那些能够带着 bearer token 向 OpenWork SCIM 基础 URL 发送 SCIM 请求的身份提供商。Google Workspace 的自动用户开通是基于应用目录的：Google 会为受支持的应用提供开通设置界面和应用专属指南。
+
+对于为 OpenWork 创建的自定义 SAML 应用，Google 管理控制台提供 SAML 设置、可选的 SAML 属性映射和服务访问控制，但不会显示 OpenWork 需要的 SCIM 字段：
+
+- SCIM 基础 URL 或 tenant URL
+- Bearer token 或 secret token
+- 创建、更新、停用或重新激活用户的操作
+- 群组推送或群组开通操作
+- SCIM 属性映射，例如 `userName`、工作邮箱、名、姓和显示名
+
+在 Google 把 OpenWork 加入受支持的自动开通应用清单，或为自定义应用暴露通用出站 SCIM 设置之前，Google Workspace 可以用于 OpenWork 的 SSO，但不能用于 OpenWork 的 SCIM 生命周期开通。
+
+## 用 Google Workspace 仍然能做到什么
+
+Google SAML SSO 可以为 OpenWork 成员认证身份，并通过 OpenWork 的 SSO 即时开通在首次登录时创建成员。即时开通（JIT provisioning）和 SCIM 不是一回事：
+
+- 它发生在用户成功登录的时候。
+- 它可以在 SAML 认证成功后，用默认的 `Member` 角色创建该用户在 OpenWork 组织里的成员身份。
+- 用同一个已验证域名做的独立邮箱/密码注册，不会把该用户加入组织，也不会替代 SAML 登录要求。
+- 它不会持续同步来自 Google 的资料变更。
+- 当某个 Google 用户被停用或删除时，它不会停用 OpenWork 的访问。
+- 它不会从 Google 群组创建由 SCIM 管理的 OpenWork 团队。
+
+要做生命周期自动化，请使用 OpenWork 的成员管理、邀请功能，或另一个受支持的 SCIM 身份提供商。
+
+## 如何在 Google 管理控制台里确认
+
+设置好 OpenWork 自定义 SAML 应用之后，打开 Google 管理控制台并检查：
+
+1. **Apps → Web and mobile apps → OpenWork**。
+2. 该应用的配置分区和侧向导航。
+3. 任何名为 **Provisioning**、**Auto-provisioning**、**User provisioning** 或 **SCIM** 的设置。
+
+如果这些分区不存在，该应用就无法使用 OpenWork 的 SCIM 基础 URL 和 bearer token。
+
+Google 的通用自动用户开通页面会把管理员指向受支持应用各自的应用专属开通指南。如果将来 OpenWork 出现在那个受支持应用清单里，请按 Google 的应用专属开通指南操作，并填入 **Settings → SCIM** 里的 OpenWork SCIM 值。
+
+## 不要不必要地暴露 SCIM token
+
+只有在你确实有一个能用它的身份提供商时，才创建或轮换 OpenWork SCIM 连接器。bearer token 只显示一次，应当像密码一样对待。除非某个开通界面明确要求，否则不要把它粘贴到 Google、工单、截图、日志或文档里。
+
+## SCIM 生命周期自动化的替代方案
+
+要做成员生命周期和团队同步的自动化，请使用支持 OpenWork SCIM 连接器的身份提供商：
+
+- [Okta SCIM 开通](/zh/cloud/scim-okta)
+- [Microsoft Entra SCIM 开通](/zh/cloud/scim-microsoft-entra)
+
+在你选定的 SSO 与 SCIM 生命周期测试全部通过、并且至少有一位 OpenWork 所有者有可用的恢复路径之前，不要在替代提供商里扩大 SCIM 分配范围。

@@ -1,0 +1,54 @@
+---
+title: "从远程机器连接 OpenWork MCP"
+description: "OpenCode 跑在远程主机上时，用你本机的浏览器完成 OpenWork Connect 的 OAuth 认证"
+---
+
+当 OpenCode 运行在远程机器、SSH 主机或云 VM 上，而 OAuth 浏览器会在你的笔记本或其他本地机器上打开时，用这个做法。在下面的命令里，`<server-name>` 是你 OpenCode 配置里那个 OpenWork MCP 的名字，通常是 `openwork`。
+
+## 远程 OAuth 为什么会超时
+
+在执行 `opencode mcp auth <server-name>` 期间，OpenCode 会在远程主机上监听 OAuth 回调：
+
+```text
+http://127.0.0.1:19876/mcp/oauth/callback
+```
+
+如果你在另一台机器的浏览器里打开打印出来的授权 URL，那个浏览器会把 `127.0.0.1` 解析成浏览器自己所在的机器，而不是 OpenCode 正在监听的远程主机。于是 OAuth 批准在浏览器里成功了，但回调永远到不了 OpenCode，认证命令最终会超时。
+
+## 推荐做法：用本地端口转发开 SSH
+
+从你准备打开浏览器的那台本地机器上，用一个仅绑定 loopback 的本地端口转发加上远程 shell 启动 SSH：
+
+```sh
+ssh -o ExitOnForwardFailure=yes -L 127.0.0.1:19876:127.0.0.1:19876 user@remote-host
+```
+
+在远程主机上那个 SSH shell 里运行：
+
+```sh
+opencode mcp auth <server-name>
+```
+
+在你本地的浏览器里打开打印出来的授权 URL。保持 SSH 会话开启，直到 OpenCode 报告认证成功。
+
+`-L` 选项让本地浏览器的 `http://127.0.0.1:19876/...` 回调经 SSH 到达远程主机上的 `127.0.0.1:19876`。回调在两台机器上都始终只绑定 loopback。
+
+## 可选：从第二个终端加一条隧道
+
+如果你已经在一个终端里连到了远程主机，就保留那个终端给 OpenCode，另外开一个本地终端专门跑隧道：
+
+```sh
+ssh -N -o ExitOnForwardFailure=yes -L 127.0.0.1:19876:127.0.0.1:19876 user@remote-host
+```
+
+然后在你已有的远程 shell 里运行 `opencode mcp auth <server-name>`，在本地打开打印出来的 URL，并保持两个终端都开着，直到认证成功。
+
+## 问题排查
+
+- **超时或 URL 已失效**：保持 SSH 隧道开着，停掉那个已超时的认证命令，再次运行 `opencode mcp auth <server-name>`，并打开新打印出来的 URL。OAuth 的 URL 在一次失败的尝试后可能就会过期。
+- **端口已被占用**：本地或远程机器上有别的东西在用 `19876` 端口。停掉那个进程，或者配置一个不同的 OpenCode `oauth.callbackPort`，并把 SSH 转发的两端都改成同一个端口。
+- **自定义回调端口**：如果你的 OpenCode MCP 配置设置了 `oauth.callbackPort`，两个转发端点必须与它一致。例如端口为 `34567` 时，用 `-L 127.0.0.1:34567:127.0.0.1:34567`。
+- **无法访问远程主机**：SSH 必须能从本地/浏览器所在机器连到 `user@remote-host`。请用你平时打开远程 shell 所用的同一个主机名、跳板机、VPN 或 SSH 配置条目。
+- **没有 device-code 降级方案**：OpenCode 目前还没有面向 MCP 的 OAuth device-code 流程，所以基于浏览器的认证仍然需要 loopback 回调能到达 OpenCode。
+
+请把回调保持在 loopback 上。不要把回调监听器暴露到 `0.0.0.0`，不要把它改成公网回调地址，也不要把授权码粘贴到聊天或终端里。

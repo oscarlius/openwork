@@ -1,0 +1,45 @@
+---
+title: "部署到 AWS"
+description: "在 Amazon EKS 或 ECS Fargate 上搭配 Amazon RDS for MySQL 运行 OpenWork。"
+---
+
+推荐的 AWS 方案是用 Helm 部署到 Amazon EKS，数据库用 Amazon RDS for MySQL。想用最省事的初次部署，就用 EKS Auto Mode 加 Kubernetes 的 `LoadBalancer` Service，让 AWS 给 Den web 和 Den API 各配一个 Network Load Balancer。当你需要共享的七层路由、WAF 策略或更复杂的证书处理时，再换成 ALB 或已有的 ingress 平台。
+
+## AWS 负责哪些部分
+
+- EKS 控制面、计算、Pod 网络和负载均衡器集成
+- VPC、子网、路由、安全组和 IAM
+- RDS for MySQL、加密、备份和故障切换
+- 你使用这些服务时，还包括 Route 53 DNS 和 ACM 证书
+
+OpenWork chart 负责 Deployments、Services、ConfigMaps、Secret 引用、探针以及数据库迁移 Job。
+
+## AWS 清单
+
+1. 用 `eksctl` `0.195.0` 或更新版本创建 EKS Auto Mode 集群。
+2. 在私有子网里创建一个兼容 MySQL 8 的 RDS 数据库。
+3. 数据库端口 `3306` 只允许来自 EKS 工作负载或节点安全边界的访问。
+4. 把 `DATABASE_URL`、`BETTER_AUTH_SECRET` 和 `DEN_DB_ENCRYPTION_KEY` 存进一个 Kubernetes Secret。
+5. 从 chart 的 `values.aws-load-balancer.yaml` 示例开始改。
+6. 安装 chart，校验迁移和就绪状态，然后把 DNS 指向生成的负载均衡器。
+7. 创建第一位管理员之前，先启用可信 HTTPS。
+
+具体的 CLI 命令、values、DNS/TLS 选择、迁移排障、验证和清理，请看 [AWS EKS 运维手册](https://github.com/different-ai/openwork/blob/dev/docs/aws-eks-helm.md)。
+
+## 用 Terraform 部署 ECS Fargate（草稿）
+
+如果你的容器跑在 ECS Fargate 而不是 Kubernetes 上，有一个草稿状态的 Terraform 模块能不带集群地部署同样这两个服务：Den API 和 Den web 作为 Fargate 服务，前面放一个 HTTPS 的 Application Load Balancer（新建一个，或者用你已有的 ALB、HTTPS 监听器），数据库用 RDS for MySQL，可选配 ElastiCache for Redis，密钥放在 AWS Secrets Manager。每次部署时，数据库迁移在 Den API 启动之前执行。
+
+<Warning>
+  这个模块还是早期草稿。它在一个测试账号里端到端跑通过，但输入项可能变动。请把它固定到某个 commit，遇到在你环境里失败的地方就开 issue 或提 PR。
+</Warning>
+
+由你提供 VPC、两个域名（web 域名，以及 `api.` 加上 web 域名），还有一张 ACM 证书、或者一个模块能用来签发证书的 Route 53 zone。HTTPS 是必需的：Den API 不会在明文 HTTP 的公网 URL 下启动。初始设置和登录时邮箱可选，但邀请成员和重置密码需要 SMTP 或 Resend。
+
+这个模块也能跑 OpenWork Web，让成员在浏览器里聊天，每个工作区放在一个 [Daytona](https://www.daytona.io) 沙箱里：设置 `openwork_web_enabled = true`，并提供 Daytona API 密钥和沙箱 snapshot。
+
+它还能跑无头 runner，让 Slack 助手、无头 Automations 和 Workbot（一个聊天应用，域名用 `chat.` 加上你的 web 域名）在你的部署上、用你自己的模型提供商工作：设置 `headless_runner`、`workbot` 和 `slack_assistant_enabled`。
+
+输入项、完整示例和费用说明见[模块 README](https://github.com/different-ai/openwork/tree/dev/infra/terraform/modules/openwork-aws-ecs)。
+
+下一步：[创建第一位管理员](/zh/self-host/deploy-to-your-cloud/first-administrator)。

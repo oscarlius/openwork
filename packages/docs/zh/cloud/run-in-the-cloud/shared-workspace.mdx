@@ -1,0 +1,38 @@
+---
+title: "OpenWork Web"
+description: "在浏览器里运行一个完整的 OpenWork 工作区，由 OpenWork 托管"
+---
+
+<Warning>
+**托管访问。** 只有当 OpenWork 托管的部署明确启用时，OpenWork Web 才对所有组织可用。在部署级可用性处于关闭状态时，Den `/admin` 里的平台管理员也可以为某一个特定组织授予免费访问。必须先配置好 Web 计费，所有者或管理员才能购买。费用为 **每位已加入的组织成员每月 $50**；待接受的邀请在被接受之前不计费。
+</Warning>
+
+OpenWork Web 给你的团队一个浏览器里的完整 OpenWork 工作区，由我们托管并维护 —— 什么都不用装。组织所有者或管理员可以直接在组织仪表盘里购买。
+
+## 开启 OpenWork Web
+
+1. 以组织所有者或管理员身份打开你的组织仪表盘，进入 `OpenWork Web`。
+2. 点击 `Purchase OpenWork Web — $50 per member/month`。
+3. 完成 Stripe 结算。
+
+如果平台管理员已经为你的组织授予了免费访问，你就不需要购买 OpenWork Web。
+
+## 打开你的工作区
+
+任何已登录的成员都可以打开组织仪表盘，进入 `OpenWork Web`，并点击 `Open OpenWork Web`。第一次打开时，OpenWork 会自动为你的实例完成开通。
+
+每位成员在每个组织有一个实例。成员实例之间的工作不共享。30 分钟无活动后，你的实例会自动停止，下一次打开时再唤醒。你的文件在唤醒前后都会保留。
+
+## OpenWork Web 与桌面应用
+
+OpenWork Web 在浏览器里运行，不是从桌面应用打开的。桌面应用的 `Add workspace -> Connect custom remote` 流程是给自托管的 `openwork-server` 用的；见[自托管 OpenWork](/start-here/self-host)。
+
+## 什么时候用 OpenWork Web
+
+适合不需要装任何东西的同事、长时间运行的任务，或者在一台没有桌面应用的机器上工作。
+
+## 说明
+
+- `DEN_OPENWORK_WEB_ENABLED=true` 让 OpenWork Web 对所有组织可用。缺失或为 false 时仍然失败关闭，唯一例外是有平台管理员明确授予免费访问的那个组织；组织模式、Stripe 变量是否存在，以及普通的组织元数据都不作为放量信号。
+- 每位成员在每个组织只有一个 OpenWork Web 实例；没有增加实例的选项。
+- 如果你更想自己托管运行时，请运行 `openwork-server`，然后把桌面应用连到那个服务器 URL。

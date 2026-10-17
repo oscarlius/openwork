@@ -1,0 +1,77 @@
+---
+title: "AI Gateway"
+sidebarTitle: "概览"
+description: "一次性接入 OpenAI、Anthropic、Vertex、Bedrock、Azure 或任意兼容 OpenAI 的模型提供商。控制谁能使用哪个模型，并跟踪成本。"
+---
+
+在一处接入模型提供商，决定谁能使用哪些模型，并看清花了多少钱。成员只需挑一个模型，永远不会经手密钥。
+
+## 设置
+
+<Steps>
+  <Step title="添加提供商">
+    在 OpenWork Cloud 仪表盘中打开 `AI Gateway` > `AI Providers` > `Add provider`，从目录中选一个。
+    <Frame>
+      <img src="https://b8tgacyg507ru26g.public.blob.vercel-storage.com/docs/ai-gateway/2026-09/add-provider-catalog-hCm3YnlhrYW0BlOcEqNmDfTd0eWnKw.png" alt="添加 Anthropic：共用 API 密钥、谁能使用它、以及哪些模型" />
+    </Frame>
+  </Step>
+  <Step title="选择谁能使用它">
+    保留 `Everyone in the organization`，或加入指定的团队和个人。可以选择全部模型，也可以只选部分。
+    <Frame>
+      <img src="https://b8tgacyg507ru26g.public.blob.vercel-storage.com/docs/ai-gateway/2026-09/provider-ready-Uvj2euKqQpFH9YN0DixyiYgqwBUIEj.png" alt="Anthropic 提供商行：全部模型、所有人、就绪" />
+    </Frame>
+  </Step>
+  <Step title="限制模型（可选）">
+    在 `Who can use models` 下选择 `Only models you provide`，这样成员就无法添加自己的密钥。
+    <Frame>
+      <img src="https://b8tgacyg507ru26g.public.blob.vercel-storage.com/docs/ai-gateway/2026-09/model-policy-7C1rRsSLjiajaokEa8MlBXbnNBNdzR.png" alt="谁能使用模型（Who can use models）设为仅你提供的模型（Only models you provide）" />
+    </Frame>
+  </Step>
+  <Step title="设置花费上限">
+    在 `Limits` 中为某个团队或个人设置每日、每周或每月的 USD 额度。用尽时暂停或告警。
+    <Frame>
+      <img src="https://b8tgacyg507ru26g.public.blob.vercel-storage.com/docs/ai-gateway/2026-09/new-spend-limit-MVlmRqN5nFVJM5LcyTW7iFvPSo80Ox.png" alt="新建花费上限：设计团队，每日 20 美元、每月 300 美元" />
+    </Frame>
+  </Step>
+  <Step title="测试一下">
+    成员在桌面应用或 OpenWork Web 中选好模型，发出一条提示。已授权的模型会自动同步。
+  </Step>
+</Steps>
+
+自托管？请先[启用 OpenWork 网关](/self-host/gateway)。
+
+## 你能得到什么
+
+<CardGroup cols={2}>
+  <Card title="密钥留在服务端" icon="key">
+    每个提供商一份组织凭据；或者每位成员用自己的账户登录：Google 用于 [Vertex AI](/zh/ai-gateway/google-agent-platform)、AWS IAM Identity Center 用于 [Amazon Bedrock](/zh/ai-gateway/amazon-bedrock)、Microsoft Entra ID 用于 [Microsoft Foundry](/zh/ai-gateway/microsoft-foundry)。
+  </Card>
+  <Card title="按团队授权" icon="users">
+    先把模型分组，再把每个组授权给整个组织、某个团队或某个人。
+  </Card>
+  <Card title="花费上限" icon="gauge">
+    以 USD 计的额度，带硬性上限，并可选申请提额。
+  </Card>
+  <Card title="按人统计用量" icon="chart-column">
+    成员各自的密钥可归集 token 与费用。参见[用量统计](/zh/ai-gateway/counting-usage)。
+  </Card>
+</CardGroup>
+
+已经在跑 LiteLLM 或 Bifrost？不用换掉。参见 [AI Gateway 与 LiteLLM、Bifrost 对比](/zh/ai-gateway/compare-litellm-bifrost)。
+
+## 常见问题
+
+<AccordionGroup>
+  <Accordion title="支持哪些提供商？">
+    OpenAI、Anthropic、Google、Google Vertex AI（包括 Vertex 上的 Claude）、Azure、Microsoft Foundry（Claude）、Amazon Bedrock、Mistral、OpenRouter，以及提供兼容 OpenAI API 的目录提供商。模型来自 models.dev 目录。
+  </Accordion>
+  <Accordion title="它和 OpenWork Models 或自带密钥有什么不同？">
+    **AI Gateway** 让你的提供商经由 OpenWork 路由，并加上访问规则、上限和用量跟踪。**OpenWork Models** 是无需密钥的托管订阅，单独计费。**Bring your own keys** 把一个组织提供商同步给成员，由应用直接调用它；参见[托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。[MCP 网关](/start-here/connect-openwork-mcp)是另一回事：它共享的是技能和连接，不是模型。
+  </Accordion>
+  <Accordion title="成本视图有多准确？">
+    费用是基于已上报的 token 和公开价格得出的估算，或在提供商返回费用时采用提供商报告的数值。它们不是你提供商的账单。参见 [Token 费用](/zh/ai-gateway/token-costs)。
+  </Accordion>
+  <Accordion title="这需要花多少钱？">
+    共用密钥属于 Team 套餐，花费可观测性属于 Enterprise，云端和自托管都一样。模型用量由提供商计费。参见[定价与授权](/start-here/pricing-and-licensing)。
+  </Accordion>
+</AccordionGroup>

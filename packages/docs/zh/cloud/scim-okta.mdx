@@ -1,0 +1,158 @@
+---
+title: "Okta SCIM 开通"
+description: "从 Okta 开通 OpenWork 成员与团队"
+---
+
+用 Okta Lifecycle Management 来创建、更新、停活动和重新激活 OpenWork 成员。Okta 群组也可以成为由 SCIM 管理的 OpenWork 团队。
+
+## 开始之前
+
+你需要：
+
+- 一条可用、域名已验证、经过测试且已启用的 [Okta SAML SSO](/cloud/sso-okta) 连接。
+- 该 OpenWork 组织的所有者。
+- 一位能配置该 SAML 应用开通功能的 Okta 管理员。
+- 一个支持你打算使用的开通与群组推送功能的 Okta 套餐。
+
+在 SAML 和范围收窄的 SCIM 测试都通过之前，不要扩大 SCIM 的分配范围。请确认至少有一位 OpenWork 所有者能通过 Okta 登录，并且当前的 SSO 配置已通过 OpenWork 的 **Test SSO before enabling it** 流程。
+
+## 1. 创建 OpenWork 的 SCIM 连接器
+
+在 OpenWork 里选择该组织，然后打开 **Settings → SCIM**。确认页面报告 SAML/SSO 处于 active 状态，然后：
+
+1. 选择 **Create connector**。
+2. 复制 **SCIM base URL**。
+3. 立即复制 bearer token。OpenWork 只在创建或轮换连接器之后显示完整 token。
+4. 在用户开通跑通之前，保持 **Create teams from SCIM groups** 关闭。
+
+请把 bearer token 像密码一样对待。不要把它放进工单、截图、日志或文档里。轮换它会让前一个 token 失效，所以要在同一个维护窗口内更新 Okta。
+
+<Note>
+请使用 OpenWork 显示的那个基础 URL。在分离主机的 Helm 部署里，即使同时存在独立的 Den API 来源，它也可能使用 web 认证的来源。不要改写主机名。
+</Note>
+
+## 2. 在 Okta 应用上启用 SCIM
+
+请使用与 SAML SSO 同一个 Okta 应用：
+
+1. 打开 **Applications → Applications → OpenWork**。
+2. 打开 **General** 并编辑 **App Settings**。
+3. 在 **Provisioning** 下启用 **SCIM**，然后保存。
+4. 打开新的 **Provisioning** 标签页。
+5. 选择 **Configure API Integration**。
+6. 启用 **API Integration**。
+
+填入：
+
+| Okta 字段 | 值 |
+| --- | --- |
+| SCIM connector base URL | OpenWork 的 **SCIM base URL** |
+| Unique identifier field for users | `userName` |
+| Supported provisioning actions | Push new users 和 push profile updates。用户开通跑通后再添加 push groups |
+| Authentication mode | HTTP Header |
+| Authorization | OpenWork 的 SCIM bearer token |
+
+根据你的 Okta 界面，选择 **Test API Credentials** 或 **Test Connector Configuration**。只有在 Okta 报告 **Connector configured successfully** 之后才保存。在最初的仅用户配置下，Okta 应当能探测到 **Create Users** 和 **Update User Attributes**。当你尚未选择导入和群组功能时，它们保持未被探测到是预期情况。
+
+## 3. 配置到 OpenWork 的开通
+
+打开 **Provisioning → To App**，然后启用：
+
+- **Create Users**
+- **Update User Attributes**
+- **Deactivate Users**
+
+不要启用密码同步。SCIM 创建的是联合身份的成员关系；它不会创建 OpenWork 的密码凭据。
+
+请审阅属性映射。至少要保证这些身份值保持一致：
+
+| Okta 的值 | SCIM 属性 |
+| --- | --- |
+| 稳定的工作邮箱或 Okta 用户名 | `userName` |
+| 主工作邮箱 | `emails[type eq "work"].value` |
+| 名 | `name.givenName` |
+| 姓 | `name.familyName` |
+| 显示名 | `displayName` |
+
+SAML 的 NameID 与 SCIM 的 `userName` 必须标识同一个人。两者不一致可能创建重复的 OpenWork 成员，而不是把 SSO 与 SCIM 关联起来。
+
+## 4. 开通一个测试用户
+
+只有当某个已有的 OpenWork 账户在该连接器所属组织里已经有有效成员身份时，SCIM 才能收编它。收编会保留原有的用户 ID、组织成员身份和角色，并把该身份纳入 SCIM 管理，以便后续的更新与停用。新用户开通流程不受影响。
+
+仅邮箱或域名匹配还不够。已被移除的成员身份、待接受的邀请、在本组织没有有效成员身份的个人账户，以及只属于另一个组织的成员身份，都无法被收编；此时创建会返回 `409` 并带 `scimType: uniqueness`。不绑定组织的 token 同样不能收编已有账户。请在开通已有账户之前先完成正常的组织加入流程；不要用 SCIM 绕过它。
+
+最干净的首次测试，请使用一位从未被分配或开通到这个 Okta 应用的用户：
+
+1. 打开该 Okta 应用的 **Assignments** 标签页。
+2. 分配一位测试用户，并确认他的应用用户名与 SAML NameID 和 SCIM `userName` 使用的是同一个邮箱。
+3. 等待 Okta 的自动开通任务完成。任务运行期间不要反复编辑分配或反复触发开通。
+4. 打开 Okta 的 **Reports → System Log**，确认有一条 **Push new user to external application** 事件成功。
+5. 在 OpenWork 里打开 **Members**，确认出现的是同一位成员，而不是第二个带密码的账户。
+
+如果这位用户在此前的 SAML 测试中就已经被分配，Okta 可能在你启用开通后显示一个 **Provision User** 动作。只选择它一次，然后等待并检查 System Log 再决定下一步。第二次请求会与第一次成功的创建竞争，并返回 `409 User already exists`。
+
+在测试用户的创建、更新、停用和重新激活这条生命周期全部跑通之前，不要扩大分配范围。
+
+## 5. 验证用户生命周期
+
+针对那位已分配的测试用户，验证：
+
+1. 在 Okta 里修改资料名会更新 OpenWork 的成员。
+2. 取消分配或停用该用户会移除有效的组织访问。
+3. 当 SCIM 把该身份标记为 inactive 时，该用户无法通过密码注册重新获得访问。
+4. 重新激活并重新分配该用户，会恢复同一个 OpenWork 身份。
+5. 整个测试过程中，一位无关的 OpenWork 成员保持不变。
+
+OpenWork 会保留一条已断开的成员记录用于组织历史。只有在该用户最后一个有效的组织成员身份被移除之后，全局用户才会被删除。
+
+## 6. 把 Okta 群组推送为 OpenWork 团队
+
+用户开通跑通之后：
+
+1. 在 OpenWork 的 **Settings → SCIM** 里启用 **Create teams from SCIM groups**。
+2. 在 Okta 里打开该应用的 **Push Groups** 标签页。
+3. 选择 **Push Groups**，按名字或规则选择一个小的测试群组。
+4. 确认 Okta 创建了该群组并推送了它当前的成员。
+5. 在 OpenWork 里打开 **Members → Teams**，确认出现一个标注为 **Managed by SCIM** 的团队，且成员符合预期。
+6. 在 Okta 里添加并移除一位成员，确认 OpenWork 的团队跟着变化。
+
+推送的群组请在 Okta 里管理，而不是在 OpenWork 里。手动创建的 OpenWork 团队保持独立。
+
+### 可选：通过一个 Okta 群组授予组织 Admin
+
+验证完推送的成员后，OpenWork 组织所有者可以批准该团队去授予组织 `Admin`。无论是 Okta 的群组名还是 SAML 群组属性，本身都不授予更高权限。复选框、成员控制，以及团队同步被关闭或重新启用时的重新批准规则，请按[团队 Admin 权限](/zh/cloud/members-and-rbac)操作。
+
+测试时请选一位没有直接 Admin 角色、也没有其他 Admin 团队授权的用户：确认 `Admin via {team name}`，把他从 Okta 群组移除，等待一次成功的群组推送，然后确认继承的权限已经消失。如果变更还没到达，请检查 Okta 的 **System Log** 和 OpenWork 的 SCIM 健康状态。
+
+## 7. 扩大范围并强制 SSO
+
+生命周期与群组测试都通过后：
+
+1. 把预期的 Okta 用户和群组分配到该应用。
+2. 审阅 Okta 的开通事件有无失败。
+3. 审阅 OpenWork 的 SCIM 健康状态和未解决失败计数。
+4. 确认至少有一位所有者能通过已启用、已测试的 OpenWork SSO 配置获得可用的 Okta SAML 访问。
+5. 在放量稳定之前，保留密码或其他恢复访问方式可用。
+
+## 什么时候运行对账
+
+使用 **Settings → SCIM → Run reconciliation** 来检查 OpenWork 本地由 SCIM 管理的身份，看是否存在不一致的组织成员身份或缺失的提供商账户状态。OpenWork 会记录未解决的漂移，以便重试或人工审阅。
+
+对账不会从 Okta 导入用户，不会强迫 Okta 开通某个已分配用户，也不会清除某个 Okta 应用分配错误。出站开通请使用 Okta 的 Assignments 页面和 System Log。当 OpenWork 本地没有待处理的漂移时，对账可能在不产生可见成员变化的情况下完成。
+
+## 问题排查
+
+| 症状 | 可能的原因 | 解决办法 |
+| --- | --- | --- |
+| **Create connector** 不可用 | OpenWork 没有看到已启用的 SSO 提供商 | 先完成并测试 Okta SAML；如果 SAML 返回 `invalid_saml_configuration`，升级后再次保存该连接 |
+| **Test API Credentials** 失败 | 基础 URL 不正确、token 已过期、带上了空白字符，或主机名被改写 | 重新从 OpenWork 复制这两个值，并原样使用它公布的基础 URL |
+| Okta 报告 `409 User already exists` | 已有账户在该连接器所属组织里没有有效成员身份，或该提供商账户已存在 | 检查所选组织里的成员身份并查看 System Log。已被移除或仅有邀请的成员无法被收编。如果一次成功的创建紧挨在这次冲突之前，请停止触发 **Provision User**。清洁的生命周期测试请改用一位从未被开通过的用户 |
+| Okta 创建了重复成员 | SAML NameID 与 SCIM `userName` 不一致 | 把两者都映射到同一个稳定的工作邮箱 |
+| 分配成功但没有出现成员 | To App 开通处于禁用状态，或该用户在分配范围之外 | 启用 **Create Users**，并确认此人已被分配到该应用 |
+| **Run reconciliation** 没有开通某个已分配用户 | 对账只检查 OpenWork 本地的 SCIM 身份状态 | 改为在 Okta 里触发并检查出站开通 |
+| 停用后访问并未移除 | **Deactivate Users** 处于禁用状态，或 Okta 尚未发送该事件 | 启用它，并检查 Okta 的 System Log 与 OpenWork 的 SCIM 健康状态 |
+| 推送了群组但没有创建团队 | OpenWork 的团队同步处于关闭状态 | 启用 **Create teams from SCIM groups**，然后重试 Okta 的群组推送 |
+| 群组被推送但没有成员 | 该群组的成员尚未被分配或开通到该应用 | 请先分配并开通这些用户，再验证群组归属 |
+
+关于开通之后的成员与团队行为，见[成员与 RBAC](/zh/cloud/members-and-rbac)。

@@ -1,0 +1,143 @@
+---
+title: "添加自定义 LLM 提供商"
+description: "在 OpenWork Cloud 中把 OpenAI 兼容端点（例如 Azure AI Foundry、LiteLLM、vLLM）共享给你的组织。"
+keywords: ["custom provider", "OpenAI-compatible", "Azure AI Foundry", "LiteLLM", "vLLM", "base URL", "custom endpoint", "legacy provider", "自定义提供商", "模型提供商", "基础 URL", "自定义端点", "旧式提供商"]
+---
+
+当目录里没有你要用的提供商时（Azure AI Foundry、LiteLLM、vLLM 或内部网关），用这条路：在 OpenWork Cloud 里添加一次端点和密钥，它就会同步到成员的桌面应用。
+
+自定义端点属于旧式提供商（legacy provider），密钥会同步到成员的应用，而且没有用量跟踪。如果你的提供商在目录里，[AI 网关提供商](/ai-gateway/overview)会把密钥留在服务端。两者的对比见[添加托管 LLM 提供商](/zh/cloud/share-with-your-team/managed-llm-provider)。
+
+## 创建自定义提供商
+
+1. 在 OpenWork Cloud 中打开 **AI Gateway › AI Providers**。
+2. 滚动到 **Legacy Providers**，点击 **Add legacy provider**。
+3. 切换到 **Custom provider**。
+4. 把共享密钥粘贴到 **API key / credential**。
+5. 填入 OpenAI 兼容端点的 **Base URL**，它通常以 `/v1` 结尾。Azure AI Foundry 的地址形如 `https://my-resource.openai.azure.com/openai/v1`。
+6. OpenWork 会检查该端点并列出它提供的模型，勾选要共享的那些。如果某个模型没在列表里，点击 `My model isn't listed — enter IDs manually`，然后在 **Model IDs** 中每行填写一个模型 ID。在 Azure AI Foundry 上，这些就是你的部署名称。
+7. 填入一个简短的 **Provider ID**，例如 `azure-foundry`。或者点击 **Name** 旁的 **Rename** 输入名称，**Provider ID** 会据此自动填写。如果不改名，名称基于端点生成，例如 `my-resource.openai.azure.com — key 1`。
+8. 在 **Who can use it** 下，保留 **Everyone in** *(你的组织名称)*，或者选择指定的 **Teams** 和 **People**。
+9. 点击 **Create Provider**。
+
+<Frame>
+  ![自定义提供商表单：Provider ID、API key / credential、Base URL 与 Model IDs](/images/cloud-custom-llm-provider-form.png)
+</Frame>
+
+为 OpenAI 兼容端点写配置不需要手写 JSON。
+
+保存之后，提供商页面会显示它的配置、密钥是否已保存，以及你共享的模型：
+
+<Frame>
+  ![Acme LLM Gateway 提供商详情：Credential saved、provider ID、API base 与两个已选模型](/images/cloud-custom-llm-provider-detail.png)
+</Frame>
+
+### 高级：原始 JSON 配置
+
+如果提供商需要的东西超出表单覆盖的范围（另一个 AI SDK 包、按模型的限制或多模态、自定义选项），点击 **Advanced: edit as JSON**，把 models.dev 风格的定义粘贴到 **Custom provider JSON / JSONC** 中。想退回表单，点击 **Use the guided form instead**。JSON 必须包含 `id`、`name`、`npm`、`env` 和 `models`；`api` 可选，但多数 OpenAI 兼容提供商都会用它。编辑器要求 JSON 合法、至少一个环境变量、至少一个模型。
+
+```json
+{
+  "id": "custom-provider",
+  "name": "Custom Provider",
+  "npm": "@ai-sdk/openai-compatible",
+  "env": [
+    "CUSTOM_PROVIDER_API_KEY"
+  ],
+  "doc": "https://example.com/docs/models",
+  "api": "https://api.example.com/v1",
+  "models": [
+    {
+      "id": "custom-provider/example-model",
+      "name": "Example Model",
+      "attachment": false,
+      "reasoning": false,
+      "tool_call": true,
+      "structured_output": true,
+      "temperature": true,
+      "release_date": "2026-01-01",
+      "last_updated": "2026-01-01",
+      "open_weights": false,
+      "limit": {
+        "context": 128000,
+        "input": 128000,
+        "output": 8192
+      },
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    }
+  ]
+}
+```
+
+## 成员会看到什么
+
+成员不需要导入任何东西。他们的桌面应用会自动同步该提供商，模型出现在模型选择器里。成员可以在 **Settings › AI Providers › Cloud providers** 查看状态。参见[成员会看到什么](/zh/cloud/share-with-your-team/managed-llm-provider)。
+
+### 完整示例：LLM 网关（Infron）
+
+LLM 网关是一个 OpenAI 兼容端点，背后分发到许多模型提供商。如果你想自己掌握路由，[LiteLLM](https://infron.ai/docs/frameworks-and-integrations/litellm) 是个不错的起点。[Infron](https://infron.ai) 是托管方案：一个 API 密钥就能用到它[模型市场](https://infron.ai/models)里的全部模型，自带提供商自动回退和一张账单，所以往 OpenWork 里新增一个 LLM，只是在 `models` 里多加一项。
+
+从 [API 密钥控制台](https://infron.ai/dashboard/apiKeys)取一个密钥。如果你还没有账户，在 [infron.ai/login](https://infron.ai/login) 注册，然后按他们的[快速上手](https://infron.ai/docs/overview/quickstart/text)走一遍首个请求。
+
+添加一个旧式提供商，切换到 **Custom provider**，把密钥粘贴到 **API key / credential**。然后点击 **Advanced: edit as JSON**，使用这段 JSON：
+
+```json
+{
+  "id": "infron",
+  "name": "Infron",
+  "npm": "@ai-sdk/openai-compatible",
+  "env": [
+    "INFRON_API_KEY"
+  ],
+  "doc": "https://infron.ai/docs/frameworks-and-integrations/openwork",
+  "api": "https://llm.onerouter.pro/v1",
+  "models": [
+    {
+      "id": "deepseek/deepseek-v3.2",
+      "name": "DeepSeek V3.2",
+      "attachment": false,
+      "reasoning": true,
+      "tool_call": true,
+      "structured_output": true,
+      "temperature": true,
+      "release_date": "2025-09-29",
+      "last_updated": "2025-09-29",
+      "open_weights": true,
+      "limit": {
+        "context": 128000,
+        "input": 128000,
+        "output": 8192
+      },
+      "modalities": {
+        "input": ["text"],
+        "output": ["text"]
+      }
+    }
+  ]
+}
+```
+
+同步完成后，Infron 的模型会和其余模型一起出现在 Chat 的模型选择器里：
+
+<Frame>
+  ![OpenWork Chat 模型选择器中经由 Infron 提供的 DeepSeek V3.2](/images/infron-model-picker.png)
+</Frame>
+
+选中该模型后，它会显示在会话底栏：
+
+<Frame>
+  ![在 OpenWork 会话中选中 Infron · DeepSeek V3.2](/images/infron-model-active.png)
+</Frame>
+
+如果网关还支持其他路由，继续在 `models` 下添加条目即可开放它们（例如 `openai/gpt-5.4`、`google/gemini-2.5-flash`）。
+
+## 什么时候用云端提供商
+
+当整个组织或团队要共用这套配置时，用云端提供商。只在自己电脑上用的话，改为[在桌面应用中添加提供商](/start-here/connect-your-stack/add-a-custom-llm)。

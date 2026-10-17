@@ -1,0 +1,76 @@
+---
+title: "证书信任与代理"
+description: "为桌面应用、本地运行时、Den 以及严格的 MySQL TLS 配置私有 CA 和出站代理。"
+---
+
+OpenWork 有好几个彼此独立的网络信任面。给其中一个面装了私有根证书，并不会自动把其他几个也配好。
+
+## 四个信任面
+
+### 1. 桌面应用的 HTTPS
+
+桌面应用发出的外部 HTTPS 请求应当走 Electron 的 Chromium 网络栈。这条路径用的是 Chromium/Electron 的证书信任，以及系统代理配置。内置浏览器面板是另一个面：它为浏览流量单独提供显式的代理设置。
+
+企业根证书应装入操作系统的信任库，Windows 和 macOS 都是如此。在 Linux 上，还要按你的发行版要求，把根证书导入 Chromium/Electron 兼容的 NSS 或用户信任数据库。不要以为只配 `/etc/ssl` 就能让所有 Linux 镜像上的 Electron 都信任它。
+
+真机验证恰好发现了这个区别：一次 Daytona Linux 上的 Electron E2E 把私有 CA 装进了 Debian 的 `/etc/ssl`。`curl` 和带 `--use-system-ca` 的 Node 都信任它；裸 Node 的 `fetch` 报 `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 失败；Electron 的 `net.fetch` 返回 `ERR_CERT_AUTHORITY_INVALID`，因为在那台镜像上 Chromium 走的是它的 NSS/用户信任库路径。
+
+裸 Node 的 `fetch` 不是桌面外部请求的合规通路。桌面外部调用守卫会把新的桌面外部调用改走 `electronNet.fetch`，但这消除不了 Linux 上 Chromium/NSS 信任库与系统信任库的差异。
+
+### 2. 被拉起的本地运行时与 sidecar
+
+桌面应用还会启动内嵌的 OpenWork 服务器，外加本地运行时和 sidecar。每次启动时，OpenWork 会在用户数据目录里生成一个增量式的 `system-ca-bundle.pem`，把它能读到的每一个操作系统信任源都合并进去：Node 的系统存储、Windows 的 LocalMachine 和 CurrentUser 的 `Root`/`CA` 证书存储，以及 macOS 上由管理员控制的 System 和 SystemRoot 钥匙串。桌面应用会先合并去重，再通过 `NODE_EXTRA_CA_CERTS` 把这份 bundle 传给子进程。
+
+- 如果用户或启动器已经设置了 `NODE_EXTRA_CA_CERTS`，以用户提供的值为准，OpenWork 不会覆盖它。
+- Electron 主进程在运行时支持的情况下，会用同一批生成的补充证书扩展 Node 的默认 CA 列表，因此内嵌服务器自身的出站 TLS 诊断和探测用的是同一套企业根证书。
+- 生成的这份 bundle 是给被拉起的 Node 兼容运行时用的，它不会配置 Electron 的 Chromium 信任库。
+- 不要假设每个 sidecar 都普遍认 `HTTP_PROXY` 或 `HTTPS_PROXY`。请按该运行时或 sidecar 自己文档里写明的代理设置来配。
+
+#### 已激活组织服务器的自动链修复
+
+启动时，桌面应用会检查已激活的组织服务器是否只下发了叶子证书构成的 TLS 链。如果叶子证书通过 AIA 指向一个缺失的中间证书，OpenWork 会取回那个中间证书，校验叶子签名，并确认该中间证书能链到内置的公网根证书，然后才把它加进生成的 `system-ca-bundle.pem`。它会拒绝私有或企业根证书，也拒绝任何非“仅缺中间证书”的 TLS 故障。修复阶段默认上限 20 秒，可用 `OPENWORK_CHAIN_REPAIR_TIMEOUT_MS` 调整。把 `OPENWORK_DISABLE_CHAIN_REPAIR=1` 设上即可关闭这层容错行为。服务器本身仍然应该修正为下发完整证书链；诊断也会继续报告服务器实际下发了什么。
+
+### 3. Den 容器与 Helm
+
+对于 Kubernetes 上的 Den 安装，当 Den 需要为出站 TLS 或严格的数据库校验而信任某个私有 CA 时，请使用 Helm chart 的 `customCa` 支持。该 chart 会把选定的 Secret 或 ConfigMap 键挂载到：
+
+```text
+/etc/openwork/custom-ca/ca-bundle.pem
+```
+
+它会把 `NODE_EXTRA_CA_CERTS` 指向这个文件，作用于 `den-api`、`den-web`、已启用的 OpenWork Gateway（即保留的 `inference` 工作负载）以及迁移 Job。轮换 CA 后需要重启正在运行的工作负载，Node 才会重新加载该文件。Gateway 的内部源和桌面可达源是分开的两个；生产环境的 HTTPS 要求见 [Gateway 配置](/self-host/gateway#internal-and-public-origins)。
+
+底层的 values 及冲突规则在 Helm README 的 [Custom CA certificates](https://github.com/different-ai/openwork/blob/dev/packaging/helm/openwork-ee/README.md#custom-ca-certificates) 一节。
+
+### 4. 严格的 MySQL TLS
+
+对于兼容 MySQL 的数据库，加密和证书身份校验是两个独立的决定。
+
+- `sslaccept=accept` 保持 TLS 开启，但不校验证书链。只用于冒烟测试或过渡期配置。
+- `sslmode=require`、`sslmode=verify-ca`、`sslmode=verify-full` 和 `sslaccept=strict` 在 OpenWork 里都属于校验证书的 modes：Den 的 MySQL 客户端对这几者都会拒绝不受信的链并校验主机名，所以 `verify-ca` 的表现和 `verify-full` 一样。服务器证书的 SAN 里必须包含数据库主机名。请优先用 `sslmode=verify-full`，并配上正确的 CA bundle，通常通过 Helm 的 `customCa` 提供。
+
+## 代理指引
+
+### 桌面应用
+
+- 桌面外部网络请求通过 `electronNet.fetch` 走 Chromium/系统代理行为。
+- 内置浏览器为浏览器流量单独提供显式的代理控件。
+- 如果企业代理会重新签发 TLS，就要为对应的那个信任面安装企业根证书。在 Linux 的 Electron 上，需要时把证书同时放进 Chromium/NSS 存储。
+
+### Den 的 Node 运行时
+
+对于跑在 Node.js 24.5 或更新版本上的 Den，请在进程启动之前就把代理配置好：
+
+```dotenv
+NODE_USE_ENV_PROXY=1
+HTTPS_PROXY=http://proxy.example.internal:8080
+NO_PROXY=localhost,127.0.0.1,.svc,.cluster.local,openwork-ee-den-api
+```
+
+当 TLS 拦截使用私有信任根时，请用 `NODE_EXTRA_CA_CERTS` 或 Helm 的 `customCa`。这些都是进程启动时的设置，对 Den 来说，在浏览器里或应用内的环境变量编辑器里再设就太晚了。
+
+## 如何验证
+
+- 需要 Windows 桌面的可达性和 TLS 链证据时，用[网络诊断](/start-here/network-diagnostics) 里的 PowerShell doctor。
+- 需要检查 Den 的运行时通路时，用[网络诊断](/start-here/network-diagnostics) 里的 Den 出站诊断。
+- 需要梳理目标域名清单时，用[出站网络访问](/start-here/outbound-network-access)。

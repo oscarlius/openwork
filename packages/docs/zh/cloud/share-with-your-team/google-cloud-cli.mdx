@@ -1,0 +1,133 @@
+---
+title: "连接 Google Cloud CLI"
+description: "让团队用自己的 Google 账户在 OpenWork 中使用 Google Cloud。"
+keywords: ["Google Cloud", "GCP", "gcloud", "BigQuery", "MCP", "OAuth", "谷歌云", "云命令行", "连接", "BigQuery 查询"]
+---
+
+把 Google 官方托管的 Cloud CLI MCP 服务器连接进 OpenWork，你就能在对话里查看项目、操作云资源，
+不必在每台计算机上安装 Google Cloud CLI。
+
+由 OpenWork 的所有者或管理员配置一次连接，之后每位团队成员用自己的 Google 账户登录。
+
+## 连接你的账户
+
+如果你的管理员已经添加了 **Google Cloud CLI**：
+
+1. 在 OpenWork Cloud 中打开 **Your Connections**。
+2. 找到 **Google Cloud CLI**，点击 **Connect**。
+3. 选择你的工作 Google 账户，并核对请求的访问权限。
+4. 完成登录后返回 OpenWork。
+5. 确认连接显示 **Connected as you**。
+
+在桌面应用中，改为打开 **Settings › Library**，选择 **Connectors**，在 Google Cloud CLI 上点击 **Sign in**。
+
+你的智能体使用的是你本人的 Google Cloud 权限。登录不会让你访问原本无权访问的项目。如果连接显示 `Waiting for an admin to finish setup`，请让管理员完成下面的步骤。
+
+## 在对话中试用
+
+先用一个只读取信息的请求，把 `YOUR_PROJECT_ID` 换成你的 Google Cloud 项目 ID：
+
+> 用 Google Cloud CLI 描述 `YOUR_PROJECT_ID`。这个项目既作为 Cloud CLI 的执行项目，也作为命令的目标项目。把你查到的内容展示给我。
+
+你也可以这样问：
+
+- “列出这个项目中已启用的 API。”
+- “展示这个项目里的 Cloud Run 服务。”
+- “说明完成这项任务需要哪些权限。”
+
+在让智能体创建或修改资源之前，先确认它会使用哪个项目。创建资源可能产生 Google Cloud 费用。连接这个 MCP 不会申请或使用云代金券。
+
+## 为团队设置连接
+
+你需要一个 OpenWork 所有者或管理员账户，以及配置 Google Cloud 项目和 OAuth 应用的权限。
+
+### 1. 准备 Google Cloud
+
+选一个已开通结算的项目，启用 **Cloud CLI Execution API**（`cloudcli.googleapis.com`），以及团队要用到的各服务的 API。
+
+确保调用方在执行项目上具备 **MCP Tool User**（`roles/mcp.toolUser`），以及访问目标资源所需的权限。
+
+### 2. 创建 Google OAuth 应用
+
+在 **Google Cloud Console › Google Auth Platform** 中配置应用名称、支持邮箱和开发者联系方式。如果只允许你的 Google Workspace 组织内的用户登录，选择 **Internal**；需要支持组织外账户时选择 **External**，并按 Google 的测试与验证要求操作。
+
+在接受 Google 的政策之前先通读一遍。
+
+在 **Clients** 下点击 **Create client**：
+
+1. 选择 **Web application**。
+2. 起一个名称，例如 **OpenWork Google Cloud CLI**。
+3. 在 **Authorized redirect URIs** 中添加 OpenWork 精确的 OAuth 重定向 URL。
+4. 点击 **Create**，保留 client ID 和 client secret 供下一步使用。
+
+OpenWork Cloud 的新连接使用：
+
+```text
+https://api.openworklabs.com/v1/mcp-connections/oauth/callback
+```
+
+自托管部署和较早的连接，请使用[对应部署或连接的重定向 URL](/zh/cloud/share-with-your-team/shared-mcp-connections)。不要用桌面端的回调地址或网页控制台地址替代。
+
+不要把 client secret 留在对话、截图或版本库中。
+
+### 3. 在 OpenWork 中添加 Google Cloud CLI
+
+1. 打开 **Manage › Connectors**，点击 **Add connector**。
+2. 点击 **Add any MCP**，或把服务器 URL 粘贴到筛选框。
+3. 使用下面的设置。
+
+| 设置项 | 值 |
+| --- | --- |
+| Name | Google Cloud CLI |
+| MCP server URL | `https://cloudcli.googleapis.com/mcp` |
+| Authentication | OAuth |
+| Requested OAuth scope | `https://www.googleapis.com/auth/cloud-platform` |
+| Client ID 与 client secret | 你创建的 Google Web 客户端 |
+| 成员登录方式 | 每个人各自登录 |
+
+<Frame caption="组织连接页面示例。添加自定义 MCP 服务器，用 URL 连接一个服务。">
+  ![OpenWork 组织中添加自定义 MCP 服务器的页面示例](/images/cloud-mcp-connections-admin.png)
+</Frame>
+
+当 OpenWork 要求填写该提供商的 OAuth 应用时，输入 client ID 和 secret，然后点击 **Save app**，并完成登录校验。
+
+在 **Who can use it** 下选择需要访问的人员或团队，或者开启 **Everyone in the organization**，然后点击 **Add Google Cloud CLI**。
+
+Cloud Platform 作用域覆盖 Google Cloud 的各项服务；每个登录者具体能做什么，仍由 Google IAM 控制。
+
+### 4. 验证是否可用
+
+先连接你自己的账户，再试一次上面的只读项目请求。管理员也可以在连接器的 **⋯ › Test tools** 菜单里逐个试用它的工具。
+
+每个请求中，执行项目和命令的目标项目是两个独立的选择，请在提示词里同时写明。仅登录成功并不能证明你对所有资源操作都有权限。
+
+一次只读请求成功后，就可以让团队各自连接自己的账户。访问设置以及在别的 MCP 客户端中使用，见[共享 MCP 连接](/zh/cloud/share-with-your-team/shared-mcp-connections)。
+
+## 问题排查
+
+### OpenWork 要求预先注册的 OAuth 客户端
+
+先完成 Google OAuth 应用的配置，再把 client ID 和 secret 保存到连接器的 **Settings**。让成员反复登录并不能补上缺失的管理端配置。
+
+### Google 提示重定向 URI 不匹配
+
+把 Google 中登记的地址与该连接对应的 OpenWork 回调地址逐项比对。协议、主机名、路径和结尾斜杠都必须完全一致。
+
+### Google 不接受我的账户
+
+**Internal** 类型的 OAuth 应用只接受其 Google Workspace 组织内的账户。请确认选择的是工作账户，或与管理员确认是否需要支持组织外账户。
+
+### 工具返回权限被拒
+
+请你的 Google Cloud 管理员检查执行项目、MCP Tool User 权限、资源权限、已启用的 API 以及组织策略。
+
+### 某条命令不支持
+
+托管服务器只支持 `gcloud` 和 `bq` 命令的一部分。让智能体先确认 Google 支持的命令清单，再尝试替代方案。
+
+## Google 官方文档
+
+- [Cloud CLI 远程 MCP 服务器、权限与支持命令](https://docs.cloud.google.com/sdk/use-gcloud-mcp)
+- [配置 Google MCP 认证](https://docs.cloud.google.com/mcp/set-up-authentication-mcp-servers)
+
+这个连接管理的是云资源。要把 Gemini 或 Vertex AI 作为对话模型，见[使用 Gemini 和 Vertex AI](/start-here/connect-your-stack/use-gemini-and-vertex-ai)。

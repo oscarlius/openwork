@@ -1,0 +1,119 @@
+---
+title: "安全升级 Gateway"
+description: "在启用 Gateway 之前规划好数据库和写入方的切换，并且能在不做不安全 schema 降级的前提下关闭管理功能。"
+---
+
+把已有的 Den/Models 或 Gateway 安装迁到支持 Gateway 的那个版本时，用这篇指南。全新部署的配置和环境参考，请看[启用 OpenWork Gateway](/zh/self-host/gateway)。
+
+<Warning>
+  迁移 `0097_gateway_access_matrix` 会重命名线上正在使用的表和列。它不是在线、原子或可滚动兼容的迁移。迁移之前要让所有读方和写方停下来，并保持停止状态，直到 schema 校验和配套镜像的发布全部完成。Helm 当前的 pre-upgrade 钩子并不能自动让这次切换变得安全。
+</Warning>
+
+## 锁定一个自洽的版本
+
+使用 `0.2.0` 引入的、支持 Gateway 的 chart 实现（或包含它的更新版本），并且** Den API、Den Web 和 Gateway 的镜像都要与本版本配套**。它实现了经过认证的部署能力约定 `version: 1`。不要凭 chart 的数字更新、某个旧的稳定 tag，或者仓库里作为占位的 `appVersion: "0.1.0"` 去推断镜像支持什么。
+
+把共享的 `image.tag` 钉好，并检查所有组件级覆盖：`denApi.image.tag`、`denWeb.image.tag`，以及实际生效的 `gateway.image.tag`/`inference.image.tag`。非空的组件 tag 优先于共享 tag；共享 tag 优先于 `Chart.appVersion`。空的规范组件 tag 会清掉它的旧覆盖，但仍然需要一个兼容的共享 tag。保留任务用的也是实际生效的那个 Gateway 镜像。
+
+保留已安装的 release 名称、`*-inference` 的 Service/Deployment/容器名和选择器，以及 `ghcr.io/different-ai/openwork-inference` 仓库。产品名改成了 OpenWork Gateway；已安装的资源标识符没有变。`den-gateway` 是那个独立的 Web 代理，不是用来替换的镜像。
+
+## 为什么默认的钩子不够用
+
+chart 默认使用一个 `pre-install,pre-upgrade` 的迁移 Job，它运行：
+
+```text
+node /app/ee/packages/den-db/dist/scripts/bootstrap.js
+```
+
+只要 chart 的迁移 Job 是启用的，它就会通过已有的 `secret.keys.databaseUrl` 映射拿到 TCP MySQL 的 `DATABASE_URL`，并通过 `secret.keys.denDbEncryptionKey` 拿到 `DEN_DB_ENCRYPTION_KEY`，与 `config.databaseMode` 无关。即使运行时用的是 PlanetScale HTTP，配了 `DATABASE_HOST`、`DATABASE_USERNAME` 和 `DATABASE_PASSWORD`，预先创建的那个 Secret 也必须为**同一个数据库**额外提供映射好的 TCP URL。这个 URL 要包含数据库名、TCP 端口和经过验证的 TLS 选项；bootstrap 的另一种 `DATABASE_NAME`/`DATABASE_PORT` 配置没有新的迁移值或 chart 输入项可用。光有运行时凭据，满足不了迁移连通性、TLS 信任或 DDL 权限。
+
+pre-upgrade 钩子**在更新后的 Deployment 应用之前**运行，此时旧 Pod 可能仍在读写。它不会排干模型请求、OAuth 回调、刷新工作进程、后台写入方或保留任务。把 `migrations.hook: false` 也不是解决办法：普通 Job 同样建立不起「先迁移再发布」这道屏障。Helm 的超时、重试和自动回退选项都撤不回 MySQL 的 DDL。
+
+生产环境的 bootstrap 还有一个基线隐患。对于**没有** `__drizzle_migrations` 的已有 schema，当前 bootstrap 会把所有已提交的迁移记录成一个基线，而不检查现有 schema 是否已经包含它们的改动。因此它可能把 `0097` 及其后续标记为已应用，却没有真的执行它们。钩子成功、或者台账有记录，都不能证明 schema 是对的。未经核实的旧数据库不要走这条路。
+
+针对这次已有数据库的切换，请关闭自动 Job，改用由外部掌控、经过审阅的迁移流程：
+
+```yaml
+migrations:
+  enabled: false
+```
+
+这会跳过 chart 的 Job 以及它针对迁移的 TCP 配置校验；外部流程仍然要自己提供经过审阅的迁移连接。这是一种编排选择，**不是允许你跳过迁移**。外部流程跑完、并且它的执行凭据和 schema 都检查过之前，不要发布新的运行时。备份/恢复和流量屏障都要在运维人员掌控之下，不要靠 `helm upgrade --atomic` 那种盲目的恢复。
+
+## 维护窗口之前的准备
+
+1. 清点共享数据库的所有读方/写方、已安装的镜像、当前的 values、数据库版本/模式、迁移台账和真实 schema。要包括 Den API、Gateway/旧的 inference、OAuth 回调和刷新工作进程、管理脚本以及保留调用方。确认切换期间没有旧副本或旧控制器能被重新拉起。
+2. 备份数据库，并安全地保留**现有**的加密密钥。验证一次恢复到隔离环境。保留行数、schema/台账证据以及加密的凭据/用量历史，同时不暴露密钥列。
+3. 在一个隔离的恢复副本上演练迁移，使用完全相同的版本 SQL 和经批准的执行器。迁移脚本本身存在、或台账里登记过，都不算生产数据通过了预检。
+4. 审阅完整的 `0096` 前置 schema 和已登记的迁移 `0097`、`0098`、`0099`，以及所选版本随带的任何更新迁移。只有做过完整 schema 校验之后，schema-push 的数据库才可以打基线；绝不靠表是否存在来猜。
+5. 准备一套完整、经过审阅的 values，包含 `migrations.enabled: false`、预先创建的 Secret 引用、显式的目标地址、配套的镜像，以及对组件保留和能力启用的明确选择。要移除已保存的规范条目，就用 `--reset-values` 配合那套完整配置，而不是最后一个空的覆盖文件，也不是 `--reset-then-reuse-values`。校验最终渲染结果，同时不显示任何密钥。
+
+对于迁移 `0097`，执行器必须使用**一条专用的 MySQL 连接**，按顺序在 `--> statement-breakpoint` 边界处执行语句，并在第一个错误处停止。它要求 MySQL `8.0.16+`（包括 8.4）、支持强制 CHECK 约束、严格 SQL 模式（`STRICT_TRANS_TABLES` 或 `STRICT_ALL_TABLES`）、`CREATE TEMPORARY TABLES` 权限，以及常规的迁移 DDL/DML 权限。明确不接受 MariaDB 和 TiDB。无法保留连接级临时表的 serverless/HTTP 通道不够用；请选择经审阅的迁移连接，而不是绕过预检。仅靠运行时的 `planetscale` 模式无法验证这一点。
+
+内嵌的预检会在任何持久化 DDL 之前，检查完整的前置 schema、索引、ID、归属、凭据主体和授权受众。它遇到重复或双受众的授权会拒绝，而不是悄悄合并或删除。确切的哨兵和保留规则见该版本的 [0097 迁移约定](https://github.com/different-ai/openwork/blob/dev/ee/packages/den-db/drizzle/0097_gateway_access_matrix.md)；请使用你锁定那个版本里的副本，不要用未经审阅的移动分支。
+
+## 静默式切换
+
+1. 建立维护屏障。在 ingress 和其他调用方处拦住新请求，排干活跃的流和 OAuth 工作，停掉所有相关的应用读方/写方，暂停保留/后台任务。光靠数据库迁移锁挡不住应用写入方。
+2. 确认备份和迁移起点。旧 schema 必须先达到经过验证的 `0096`，才能应用 `0097`；已经迁移过或只迁移了一半的 schema 需要明确检查，而不是重放。真正空的数据库可以从配套的当前 schema 快照初始化，但不要把它和「有数据却缺台账」的数据库搞混。
+3. 执行经批准的迁移流程。先带内嵌预检和连接要求执行 `0097`，再按顺序执行已登记的 `0098_gateway_provider_model_universe` 和 `0099_gateway_credential_set_creator`，以及该版本的其余前置项。旧写入方保持停止：`0098` 还会回填旧代码不会维护的模型策略。
+4. 校验真实 schema、保留下来的数据和执行凭据。每条迁移都要在它的全部 SQL 成功之后才登记。检查规范的 Gateway 表和选定列、`gateway_providers.model_ids`、`gateway_credential_sets.created_by_org_membership_id`，而不是只看 `select 1` 或台账时间戳。
+5. 流量仍保持关闭，发布配套的 Den API、Den Web 和 Gateway 镜像。这次由外部完成迁移的发布要保持 `migrations.enabled: false`。稀疏 values 和必需的 Secret 引用按[部署配置指南](/zh/self-host/gateway)审阅。
+6. 校验存活/就绪状态，然后跨所有 API 副本校验经过认证的 `GET /v1/org` 顶层 `deploymentCapabilities` 约定。配置了 Gateway 的部署应当返回 `{ "version": 1, "aiGateway": true }`。确认组织管理员能以全新会话访问；所有组织都有 Gateway 权限，不需要平台管理员授权。就绪状态和能力响应都不是 schema 证明。
+7. 用不含敏感信息的测试数据走一遍被允许的提供商流程，验证面向桌面的公网路由和内网路由，并检查用量归属。这些检查都通过后才重新放开流量；最后恢复经批准的保留和后台工作。
+
+如果内嵌预检在第一条持久化 DDL 之前就失败了，关闭这条连接以丢弃它的临时表，调查那个被点名的检查，并按经批准的保留方案解决它。如果执行在**第一次重命名之后**失败，停止启动并检查残留的中间状态。MySQL 的 DDL 是自动提交的：Job 失败或进程重启都撤不回它。不要盲目重试、schema-push、打基线，也不要带着不完整的表启动任何一个不兼容的运行时。
+
+### 预期保留下来的状态
+
+- 已有的提供商、凭据身份、加密的凭据值、授权和用量历史，都由迁移显式的回填/重命名保留下来。`DEN_DB_ENCRYPTION_KEY` 保持不变。
+- 已有的提供商授权会拿到迁移的默认分组/集合映射；历史用量的选定字段仍保持未知/null，而不是归到凭空编造的选项上。
+- 未使用的旧 OAuth 状态因为缺少新的集合/客户端绑定，会被标记为已使用。成员要重新发起那些登录流程；已有的凭据不会因此被删除或吊销。
+- Gateway 的 `gateway_keys` 起始为空。成员通过正常的连接/开通流程各自拿到 `ow_gw_` 密钥；已有的 Models `ow_inf_` 密钥不会复制进去。
+- Models 密钥、订阅计费、限额、用量桶和台账仍然各自独立。`OPENWORK_INFERENCE_BASE_URL`、`STRIPE_INFERENCE_PRICE_ID` 和 `config.inference.*` 这些旧约定保持完整。
+
+## 关闭管理功能而不降级 schema
+
+组织级的 `gatewayDashboard` 开关已经退役：部署配置好之后，Gateway 对每个组织的管理员都正式可用。管理 API 上那个废弃的输入项是个空操作，而响应字段对旧客户端恒为 `true`，它不是真正的功能开关。已保存的值——包括 `false`——都会被忽略；退役这件事不需要数据库迁移或回填。但这并不免除上文那一步版本 schema 的切换。没有按组织的管理页开关。
+
+按你的意图选择操作。下面这些开关都会保留已持久化的 Gateway 数据；它们既不是吊销凭据的控制项，也不是 schema 回滚。
+
+| 意图 | 操作 | 后果 |
+| --- | --- | --- |
+| 保留组件，但不再接纳新的 Gateway 管理请求 | 原生部署：在 Den API 和 Gateway 上设置 `GATEWAY_ENABLED=false`，然后重启配套版本。Helm：保留 `inference.enabled: true`，并从生效的 values 里**省略** `gateway.enabled`，如下文所示。 | 能力变为 false；管理的读取/写入被拦住。这个开关不会关掉已授权成员 usable/connect/OAuth/revoke 路径和运行时路由。 |
+| 移除由 Helm 管理的组件 | 设置 `gateway.enabled: false`。 | 规范值 false 覆盖旧值 true：升级时 Gateway 的 Deployment、Service 和 chart 的保留任务会被省略/删除。依赖那个 Service 的流量随之中断。 |
+
+Helm 保留组件的那种情况，相关的最终 values 是：
+
+```yaml
+inference:
+  enabled: true
+gateway: {}
+migrations:
+  enabled: false
+```
+
+这段片段只演示启用状态，不能替代你完整的生产 values。请保留经批准的 Gateway 镜像/设置、公网/内网目标地址、数据库和加密引用，以及任何有意保留的 token/保留任务配置。`gateway` 根节点缺失这种情况，对旧的复用 values 也是支持的，含义是没有规范覆盖。可是 `gateway.enabled` 或其他规范条目一旦保存过，Helm 保存的 values 或更早的输入文件就可能把空的根节点或嵌套映射重新填上。请使用 `--reset-values`，配合一份完整、经过审阅、省略了 `gateway.enabled` 和不需要的规范条目、并显式写入所需空映射的 values 文件，同时保留部署的其余部分。一个空的最终覆盖文件或 `--reset-then-reuse-values` 都替代不了它。渲染出完整的期望 values，确认 `*-inference` 组件仍然存在，并且两个服务都拿到了 `GATEWAY_ENABLED=false`。
+
+不要用 `gateway.enabled: false` 搭配 `inference.enabled: true` 来试图保留组件：规范值的存在优先，所以组件会被移除。不要把 `GATEWAY_ENABLED` 从 `denApi.env`、`gateway.env` 或 `inference.env` 注入，chart 会拒绝这种覆盖。保留其他规范键、只省略 `enabled`，是支持的。
+
+在这种只保留旧服务的模式下，环境差异还有几处。要校验渲染出来的 Pod 环境，而不只是保留下来的 values：
+
+- 保留 `config.public.gatewayPublicBaseUrl`，并把旧的 Models 公网来源留在 `config.internal.inferenceProxyBaseUrl` 里。关闭管理功能时 chart 会保留这些目标地址；运行时选择不依赖那个管理开关，而是先看有效的旧 Models 公网来源，再看有效的 Gateway 公网来源。已有关闭模式下按应用设置的 `GATEWAY_PUBLIC_BASE_URL` 覆盖仍会被采纳，也不会产生重复的 env 条目，但重新启用之前要移除它们，改用共享的公网配置。两个公网目标都不可用时，历史的 Models 兜底仍可能是私网或回环地址；格式有误的可选配置在关闭模式下不会变成新的启动前置条件。成员已有的 Gateway 配置载荷仍保留它配置的公网 URL。切换这个开关不会自动修复此前保存的提供商 URL。
+- 只在启用状态下才要求的那些数据库/加密 `secretKeyRef` 条目也会一并消失。旧 Pod 通过 `envFrom` 使用共享 Secret；要确认里面确实含有运行时的真实变量名（`DATABASE_URL`，或 PlanetScale 那几个变量，以及 `DEN_DB_ENCRYPTION_KEY`）。在只有服务的模式下，光有重映射过的数据键不再提供这些运行时变量。请通过预先创建的 Secret 解决，而不是写字面的 env 值。
+- 保留任务之外，规范的管理员/webhook token 覆盖不再输出。要重新核对共享 Secret 里实际生效的别名，以及任何旧的 env 设置。如果保留了保留任务，它仍会从自己那份专用引用中提供两个管理员 token 别名。
+
+不再接纳新的管理请求，不等于停掉所有新的模型请求、成员连接或 OAuth 操作。目标是安全吊销凭据时，请用对应的提供商/授权/密钥控制项，或者明确切断流量。如果组件、它的依赖或 ingress 已经停止，**不要仅仅因为关闭开关本身不吊销凭据，就承诺现有流量会继续**。
+
+OpenWork Models 仍然对合格的托管管理员可用，与 Gateway 并存，无论部署的 Gateway 管理功能有没有启用；已有的单组织自定义提供商行为保持不变。退役组织级开关、改动部署的管理配置，既不会取消也不会创建任何订阅，也不吊销 Models 或 Gateway 密钥。
+
+关闭时要用 schema 兼容的镜像。**不要 `helm rollback` 回一个迁移前的旧镜像去对接已重命名的 schema。** 恢复要靠向前修复并配上兼容的镜像，或者用一次单独批准的、静默状态下从已验证备份做的「数据库加镜像」恢复。恢复可能丢失备份之后的写入，还要考虑凭据、用量和账务的对账。在 schema 和所有读方/写方重新一致之前，保持流量关闭。
+
+## 版本参考
+
+- [Gateway chart values 与兼容性](https://github.com/different-ai/openwork/blob/dev/packaging/helm/openwork-ee/README.md#gateway-compatibility-chart-020)
+- [0097 迁移约定](https://github.com/different-ai/openwork/blob/dev/ee/packages/den-db/drizzle/0097_gateway_access_matrix.md)
+- [0098 模型策略回填](https://github.com/different-ai/openwork/blob/dev/ee/packages/den-db/drizzle/0098_gateway_provider_model_universe.md)
+- [0099 凭据集合创建者](https://github.com/different-ai/openwork/blob/dev/ee/packages/den-db/drizzle/0099_gateway_credential_set_creator.md)
+
+这些源码链接有助于定位文件。请核对你正在部署的那个确切版本里的对应内容；README、渲染出的 chart、健康的 Pod 或登记过的迁移，都不是生产迁移的执行凭据。

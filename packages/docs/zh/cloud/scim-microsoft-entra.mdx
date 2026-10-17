@@ -1,0 +1,145 @@
+---
+title: "Microsoft Entra SCIM 开通"
+description: "从 Microsoft Entra ID 开通 OpenWork 成员与团队"
+---
+
+用 Microsoft Entra ID 的开通功能自动创建、更新和停用 OpenWork 成员。Entra 安全群组还可以变成由 Entra 管理成员的 OpenWork 团队。
+
+## 开始之前
+
+你需要：
+
+- 一个使用企业版套餐（SCIM）并已设置好 SSO 的 OpenWork 组织。
+- 该 OpenWork 组织的所有者。
+- 一条可用、域名已验证、经过测试且已启用的 OpenWork SAML 连接。请先完成并测试 [Microsoft Entra SAML SSO](/cloud/sso-microsoft-entra)。
+- 一个能管理企业应用和开通功能的 Microsoft Entra 角色。
+- 若要同步群组，还需要一个支持把群组分配给企业应用的 Entra 套餐。
+
+在 SAML 登录和 SCIM 都测试通过之前，不要扩大 SCIM 的分配范围。在把 Entra 当作身份来源依赖之前，请确认至少有一位 OpenWork 所有者能通过 SAML 登录，并且当前的 SSO 配置已通过 OpenWork 的 **Test SSO before enabling it** 流程。
+
+## 1. 取得 OpenWork 的连接值
+
+在 OpenWork 里选择你要连接的组织，然后打开 **Settings → SCIM**。
+
+确认页面显示 **SAML/SSO active**，然后：
+
+1. 选择 **Create connector**。如果连接器已存在，只有在你确实要替换它当前的密钥时才选择 **Rotate token**。
+2. 复制 **SCIM base URL**。
+3. 立即复制 **SCIM bearer token**。OpenWork 只在创建或轮换之后显示完整 token。
+4. 要把 Entra 群组同步为 OpenWork 团队，请在 **Create teams from SCIM groups** 下选择 **Enable team sync**。
+
+这些值要填进 Entra：
+
+| Entra 字段 | 从哪里取值 |
+| --- | --- |
+| Tenant URL | OpenWork 的 **Settings → SCIM → SCIM base URL**。它通常以 `/api/auth/scim/v2` 结尾。 |
+| Secret Token | 你创建或轮换连接器之后一次性显示的 **SCIM bearer token**。 |
+
+请把 bearer token 像密码一样对待。不要把它放进工单、截图或共享的设置笔记里。轮换它会立即让前一个 token 失效，所以要同时更新 Entra。
+
+## 2. 在 Entra 里配置开通
+
+在 [Microsoft Entra admin center](https://entra.microsoft.com)：
+
+1. 打开 **Entra ID → Enterprise apps**。
+2. 选择用于 OpenWork SAML SSO 的同一个企业应用。
+3. 打开 **Provisioning**。
+4. 选择 **Get started**，然后选择 **Automatic** 开通方式。
+5. 根据你租户显示的 Entra 界面，打开 **Connectivity** 或 **Admin Credentials**。
+6. 把 OpenWork 的 **SCIM base URL** 粘贴到 **Tenant URL**。
+7. 把 OpenWork 的 **SCIM bearer token** 粘贴到 **Secret Token**。
+8. 选择 **Test Connection** 并等待成功结果。
+9. 保存配置。
+
+如果 **Test Connection** 失败，请确认 URL 没有多余的尾部路径或文字，并确认 token 自复制以来没有被轮换过。
+
+## 3. 审阅映射与范围
+
+在开通配置里打开 **Attribute mapping**。Entra 应当同时显示 **Users** 和 **Groups** 的映射。
+
+要做受控放量，请把 **Scope** 设为 **Sync only assigned users and groups**。这样开通范围就被限制在企业应用 **Users and groups** 页面下已分配的标识。
+
+SCIM 用户名请使用一个稳定且唯一的邮箱地址。如果你的 Entra 用户主体名使用 `onmicrosoft.com` 域名，但用户在 OpenWork 上用另一个邮箱域名登录，请核实哪个 Entra 属性被映射到了 `userName`。保持 SAML NameID 与 SCIM 身份一致，以免 Entra 为同一个人再创建第二个 OpenWork 成员。
+
+### 已有的 OpenWork 账户
+
+只有当该用户已经是对应连接器所在组织的有效成员时，SCIM 才能关联一个匹配的已有账户。账户保留它原有的用户 ID；开通不会授予新的组织角色。
+
+在某组织没有有效成员身份的已有账户，仅凭邮箱匹配不会被关联，而是返回 `409 Conflict`。属于另一个组织、已被移除的成员身份或待接受的邀请都不符合条件。必须由有权限的管理员先通过常规入职流程建立有效成员身份，然后才能重试。全新的账户走标准的 SCIM 开通流程。
+
+## 4. 分配测试用户与群组
+
+在企业应用里打开 **Users and groups** 并选择 **Add user/group**。
+
+从这些开始：
+
+- 一到两位能通过已配置的 SAML 应用登录的测试用户。
+- 一个包含这些用户的已分配安全群组。
+
+当开通设为 **Sync only assigned users and groups** 时，分配关系决定哪些对象在范围内。只在 Entra 别处创建群组是不够的；还要把它分配到 OpenWork 的企业应用上。
+
+## 5. 用 Provision on demand 测试
+
+打开 **Provisioning → Provision on demand**。
+
+先测一个用户：
+
+1. 搜索并选择一个已分配的测试用户。
+2. 选择 **Provision**。
+3. 确认导入、范围评估、匹配和最终动作全部成功。
+4. 在 OpenWork 里打开 **Members**，确认该成员以预期的邮箱出现。
+
+然后测一个群组：
+
+1. 确认测试群组里已经至少包含一位已分配的测试用户。
+2. 搜索并选择那个已分配的群组。
+3. 在 **Selected users** 下明确勾选最多五位成员，纳入这次按需测试。
+4. 选择 **Provision**。
+5. 打开结果的 **Group membership operations** 标签页，确认每位成员都显示 **Add member — Success**。
+6. 在 OpenWork 里打开 **Members → Teams**，确认该群组作为一个由 SCIM 管理的团队出现，并且成员符合预期。
+
+<Note>
+Entra 的按需群组流程在群组为空、或没有勾选任何成员时，可能返回一个笼统的内部服务器错误。这可能发生在 Entra 向 OpenWork 发出创建群组请求之前。请为按需测试添加成员并明确勾选他们。Entra 常规的后台开通周期仍然能同步空的已分配群组。
+</Note>
+
+## 6. 启动定时开通
+
+按需测试通过后：
+
+1. 回到 **Provisioning → Overview**。
+2. 把 **Provisioning Status** 设为 **On**，或在较新的 Entra 界面里选择 **Start provisioning**。
+3. 保存变更。
+4. 第一个周期跑完后检查 **Provisioning logs**。
+5. 刷新 OpenWork 的 **Members** 与 **Teams** 以确认最终状态。
+
+常规开通是增量的。新分配的对象可能要等到下一个周期才出现；请用 Entra 的开通日志区分「周期还没跑」和「操作失败」。
+
+## 验证生命周期变更
+
+在扩大分配范围之前，请验证完整的生命周期：
+
+1. 把一个测试用户从 Entra 群组移除，确认 OpenWork 也把他从该 SCIM 管理的团队里移除。
+2. 停用或取消分配一个测试用户，确认 OpenWork 的撤销开通行为符合预期。
+3. 再添加一个已分配的群组，确认 OpenWork 创建了第二个 SCIM 管理的团队。
+
+请在 Entra 里修改 SCIM 管理的团队，而不是在 OpenWork 里。OpenWork 会把手动创建的团队与身份提供商管理的团队保持分开。
+
+### 可选：通过一个 Entra 群组授予组织 Admin
+
+验证完同步后的成员后，OpenWork 组织所有者可以批准该团队去授予组织 `Admin`。Entra 的群组名和 SAML 群组属性本身不会授予更高权限。复选框、成员控制，以及团队同步被关闭或重新启用时的重新批准规则，请按[团队 Admin 权限](/zh/cloud/members-and-rbac)操作。
+
+测试时请选一位没有直接 Admin 角色、也没有其他 Admin 团队授权的用户：确认 `Admin via {team name}`，把他从 Entra 群组移除，等待开通成功，然后确认继承的权限已经消失。如果变更仍在等待处理，请查看 **Provisioning logs**。
+
+## 问题排查
+
+| 症状 | 可能的原因 | 解决办法 |
+| --- | --- | --- |
+| **Test Connection** 失败 | Tenant URL 不正确、token 已过期或被轮换、复制时带上了空白字符 | 重新从 OpenWork 复制基础 URL 和一个当前 token，然后重测 |
+| 在 **Provision on demand** 里找不到用户或群组 | 该对象在开通范围之外 | 把它分配到企业应用的 **Users and groups** 页面下 |
+| Entra 不允许分配群组 | 租户套餐不支持把群组分配给企业应用 | 启用合适的 Entra 套餐，或改用直接分配的用户测试 |
+| 按需群组开通报告内部服务器错误，但 OpenWork 没有收到请求 | 群组为空，或本次按需运行没有勾选任何成员 | 添加成员，在 **Selected users** 下勾选最多五位，然后重试 |
+| 群组开通了但没有出现 OpenWork 团队 | OpenWork 的团队同步处于禁用状态 | 打开 **Settings → SCIM** 并启用 **Create teams from SCIM groups** |
+| Entra 创建了重复的 OpenWork 成员 | SAML 与 SCIM 使用了不同的邮箱标识 | 让 SAML NameID 与 SCIM 的 `userName` 映射保持一致 |
+| Entra 报告成功但 OpenWork 仍显示旧状态 | 界面或增量周期还没刷新 | 刷新 OpenWork，检查 Entra 的 **Provisioning logs**，并审阅 OpenWork 的 SCIM 健康状态 |
+
+关于开通之后的成员与团队行为，见[成员与 RBAC](/zh/cloud/members-and-rbac)。

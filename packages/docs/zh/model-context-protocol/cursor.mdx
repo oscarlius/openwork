@@ -1,0 +1,33 @@
+---
+title: "连接 Cursor"
+sidebarTitle: "Cursor"
+description: "一键把 OpenWork MCP 加入 Cursor，或把 https://api.openworklabs.com/mcp/agent 作为远程 MCP 服务器粘贴进去，然后用 OAuth 登录。"
+---
+
+把组织的 OpenWork 技能、插件和连接提供给 Cursor。
+
+<Steps>
+<Step title="添加服务器">
+[一键添加 OpenWork 到 Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=openwork&config=eyJ1cmwiOiJodHRwczovL2FwaS5vcGVud29ya2xhYnMuY29tL21jcC9hZ2VudCJ9)。在 Cursor Web 或 Cursor Agents 中，改为把下面这个地址粘贴为远程 MCP 服务器：
+
+```text
+https://api.openworklabs.com/mcp/agent
+```
+
+</Step>
+<Step title="登录">
+从 Cursor 的连接提示中发起 OAuth，登录 OpenWork，并选择你的组织。
+</Step>
+<Step title="试一试">
+试着问：“我当前连接的是哪个 OpenWork 组织？”
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="切换组织">
+    删除已保存的 `openwork` token，然后重新连接并选择另一个组织。
+  </Accordion>
+  <Accordion title="支持状态与 OAuth 回调">
+    仅为安装步骤：原生的端到端验证尚未完成。Cursor Desktop 使用回调 `cursor://anysphere.cursor-mcp/oauth/callback`，OpenWork 用精确匹配的允许列表接受它，并强制校验 PKCE S256。Cursor Web 和 Agents 使用 HTTPS 回调。参见 [MCP 网关参考](/cloud/run-in-the-cloud/cloud-mcp#reference)。
+  </Accordion>
+</AccordionGroup>

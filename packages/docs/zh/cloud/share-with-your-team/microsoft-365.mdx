@@ -1,0 +1,117 @@
+---
+title: "连接 Microsoft 365"
+description: "为你的 OpenWork 组织配置 Outlook、日历、OneDrive 和 Teams"
+keywords: ["Microsoft 365", "Outlook", "Teams", "OneDrive", "Entra", "client secret", "admin consent", "AADSTS7000215", "微软", "管理员同意", "客户端密钥", "连接设置"]
+---
+
+管理员在 OpenWork Cloud 中把 Microsoft 365 配置一次。之后每位成员用自己的工作账户登录，其智能体使用该账户的权限。
+
+## 开始之前
+
+你需要 OpenWork 的管理员权限，以及在公司 Microsoft Entra 租户中管理应用注册的权限。组织级同意还需要一位有权限的 Entra 管理员，例如 Cloud Application Administrator 或 Global Administrator。仅有 Azure 订阅的 Owner 权限并不等于这个授权。
+
+请使用公司现有的租户和登录配置。连接 Microsoft 365 不需要改动你的域联合或 SSO 设置。
+
+## 1. 打开连接设置
+
+在 OpenWork Cloud 中打开 **Manage › Connectors › Microsoft 365 › Settings**。如果列表里没有 Microsoft 365，选择 **Add connector** 并添加它。
+
+复制 OpenWork 显示的 **Redirect URI**。托管版 OpenWork 使用：
+
+```text
+https://api.openworklabs.com/v1/oauth-providers/microsoft-365/connect/callback
+```
+
+自托管部署请使用该部署自身显示的地址。
+
+## 2. 找到或注册你的 Microsoft 应用
+
+打开 [Microsoft Entra 管理中心](https://entra.microsoft.com)，选择你公司的目录，进入 **Entra ID › App registrations › All applications**，选中已有的 OpenWork Microsoft 365 应用。
+
+如果是全新配置，选择 **New registration**，命名为 **OpenWork Microsoft 365 Connector**，并选择 **Accounts in this organizational directory only**。把 OpenWork 的回调地址作为 **Web** 类型的 Redirect URI 添加进去。
+
+<Frame caption="Microsoft 文档中的应用注册表单示例。请使用你自己的租户，以及 OpenWork 显示的回调地址。">
+  ![Microsoft Entra 应用注册表单，展示应用名称、账户类型与 Redirect URI](https://learn.microsoft.com/en-us/entra/identity-platform/media/howto-create-service-principal-portal/create-app.png)
+</Frame>
+
+在应用的 **Overview** 页面复制这几个值：
+
+| Microsoft Entra 字段 | OpenWork 字段 |
+| --- | --- |
+| Directory (tenant) ID | Directory (tenant) ID |
+| Application (client) ID | Client ID |
+
+**Object ID** 是另一个标识符，不要把它当作 Client ID 使用。参见 Microsoft 的[应用注册说明](https://learn.microsoft.com/en-us/entra/identity-platform/howto-create-service-principal-portal)。
+
+## 3. 创建并保存 client secret
+
+在同一个应用注册中：
+
+1. 打开 **Certificates & secrets › Client secrets**。
+2. 选择 **New client secret**。
+3. 填写描述，并按公司策略选择有效期。
+4. 选择 **Add**，并立刻复制完整的 **Value**。
+5. 回到 OpenWork 的 Microsoft 365 设置，填入租户 ID、Client ID 和 secret 的 Value。如果是已有连接，选择 **Replace credentials** 才会显示这些字段。
+6. 用 OpenWork 显示的按钮保存凭证。
+
+<Warning>
+复制的是 secret 的 **Value**，不是 **Secret ID**。Microsoft 只在创建后立即展示 Value。如果没保存就离开了，请从公司批准的密钥管理服务中取回，或在同一应用里再创建一个 secret。
+</Warning>
+
+不要把 Value 出现在截图、对话或工单里。请记录它的到期时间，以便在过期前替换。Microsoft 的[凭据指南](https://learn.microsoft.com/en-us/entra/identity-platform/how-to-add-credentials)说明了可选的凭据类型与密钥生命周期。
+
+## 4. 选择智能体能做什么
+
+在 **What your AI can do** 下，开启组织需要的能力，然后选择 **Save permissions**。
+
+| 服务 | 可选范围 |
+| --- | --- |
+| Outlook | 读邮件、创建草稿、管理邮箱项目，或发送邮件 |
+| Calendar | 读取日程，或创建并管理日程 |
+| OneDrive | 读取或更新文件，包含成员可访问的更大范围文件 |
+| Teams | 读取会话，或在已有会话中发送消息 |
+
+草稿权限需要邮箱读写权限，但它不会同时启用 **Send Outlook email** 这个独立选项。提到「all files」的文件权限，可能包含成员除自己网盘之外还能访问的共享文件。
+
+授予同意之前，请先阅读 Microsoft 对这些权限的说明。一项权限可能覆盖多个 OpenWork 动作。
+
+## 5. 授予管理员同意
+
+由有权限的 Entra 管理员在 OpenWork 连接上选择 **Sign in**，并核对该应用精确请求的权限。要为整个组织批准，请选择 **Consent on behalf of your organisation** 并点击 **Accept**。
+
+成员仍需各自登录。OpenWork 通过每个成员的账户使用委托访问（delegated access）。
+
+已保存的同意可以在 **Entra ID › Enterprise apps › 你的应用 › Permissions** 中复核。
+
+<Frame caption="Microsoft 文档中企业应用 Permissions 页面的示例。批准之前请核对你的应用的真实权限。">
+  ![Microsoft Entra 企业应用 Permissions 页面，展示 Grant admin consent 操作](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/media/grant-tenant-wide-admin-consent/grant-tenant-wide-admin-consent.png)
+</Frame>
+
+如果你改为通过 **App registrations › API permissions** 授予同意，请先确认声明的权限与 OpenWork 已开启的功能一致。只批准默认的 `User.Read` 并不覆盖邮件、日历、文件或会话访问。参见 Microsoft 的[管理员同意指南](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/grant-admin-consent)。
+
+## 6. 连接并测试一个成员账户
+
+每个人在 OpenWork Cloud 中打开 **Your Connections › Microsoft 365 › Connect**，选择公司账户并完成登录。在桌面应用中，则打开 **Settings › Library**，选择 **Connectors** 筛选，再为 Microsoft 365 选择 **Sign in**。
+
+确认账户显示已连接，然后对一个已启用的服务发起只读请求：
+
+> 展示我明天的 Outlook 日历日程，不要改动任何内容。
+
+日历读取成功即验证了日历访问权限。其他服务可能还需要各自的 Microsoft 365 许可证、成员开通以及已启用的权限。
+
+## 问题排查
+
+| 现象 | 检查项 |
+| --- | --- |
+| `AADSTS7000215`：client secret 无效 | 保存同一个应用注册中完整的 secret **Value**。Secret ID、被打码的值，或别的应用的密钥都不管用。 |
+| 看不到 secret Value | Microsoft 无法再次展示它。请从密钥管理服务取回原值，或再创建一个新的 secret。 |
+| 目录或账户被拒 | 把 OpenWork 的租户 ID 和 Client ID 与应用 Overview 页面逐一比对，并使用该租户内的工作账户。 |
+| 需要管理员批准 | 必须由有权限的 Entra 管理员批准所请求的权限。如果其角色需要通过 PIM 激活，请先激活。 |
+| Redirect URI 不匹配 | 在 **Web** 平台下登记 OpenWork 显示的那个精确回调地址。 |
+| 已连接，但调用某个服务失败 | 检查已启用的功能、同意情况，以及成员的邮箱、OneDrive 或 Teams 的开通与许可证。 |
+
+## 替换即将到期的 secret
+
+在同一应用里再创建一个 secret，并通过 OpenWork 的 **Replace credentials** 保存它的 Value。在停用旧 secret 之前先用新连接测试一次，并确认是否有其他服务仍在使用旧 secret。
+
+例行的 secret 替换不会改变 Client ID 和租户 ID。

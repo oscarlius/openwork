@@ -1,0 +1,69 @@
+---
+title: "跨会话记忆"
+description: "OpenWork 如何回答关于过往会话的问题。"
+---
+
+OpenWork 目前的跨会话记忆来自已保存的会话历史。它不是一个独立的长期记忆数据库，也不会把每个旧对话自动塞进每一条新提示词。
+
+当智能体运行在 OpenWork 应用内部时，它可以用 OpenWork 的语义化 UI 动作去查过去的对话：
+
+- `session.list_sessions` 会列出该应用已知的所有工作区中已加载的每一个会话（置顶的排前面，其余按最新排序）。传 `limit` 可以限制条数，传 `workspaceId` 可以把范围收窄到某个工作区。
+- `session.search` 按标题或对话记录文本查找会话。
+- `session.read` 按 ID 读取任意会话的近期消息，无需打开它。
+- `session.open` 在你要求查看某个会话时，把它展示给你。
+
+也就是说，你可以这样问：
+
+- `What did I say in the customer migration session?`
+- `Find the session about the pricing page redesign and remind me what we decided.`
+- `Open the onboarding bug chat and summarize the next steps.`
+- `What did I ask you to do in session ses_abc123?`
+
+## 会发生什么
+
+1. 智能体列出或搜索会话，用你给的会话 ID、标题、工作区或主题词来匹配。
+2. 如果只有一个明确匹配，智能体按 ID 读取那个会话的对话记录，并根据返回的消息作答。
+3. 如果有多个可能的匹配，智能体会反问你说的是哪一个会话。
+4. 如果你要求打开这个对话，智能体会在读完之后把它打开。
+
+读取一个会话（`session.search`、`session.read`）永远不会改变你屏幕上显示的内容。只有你要求查看时，智能体才会打开另一个会话（`session.open`）。
+
+## 智能体如何管理其他会话
+
+智能体用 id 来指向其他会话，默认情况下你屏幕上不会有任何变化。把东西展示给你，是一个单独的、需要明确表达的步骤。
+
+- **读取**：`session.search` 和 `session.read` 返回对话记录，不打开任何东西。
+- **对话**：`session.send { sessionId, text }` 按 id 把一条提示词追加到已有会话。这条消息会立刻写入；如果那个会话正在跑一轮，它的 run 会在下一步处理这条新消息（不会被拒绝，也不会丢失）。`session.create` 以同样的方式开启新会话。
+- **展示**：只有 `session.open` 和 `workbench.session.focus` 会移动你的面板。`session.send { reveal: true }` 是先发送，然后替你打开那个会话。
+- **整理**：`session.rename`、`session.pin` 和 `session.archive` 都按 id 操作，并且不会打开该会话（归档你正在查看的那个会话会关掉它的标签页）。
+
+`composer.set_text`、`composer.send` 和 `composer.stop` 不一样：它们操作的是*你*当前聚焦的那个输入框——往里打字、从中发送、或者让它停止。它们只用于“帮我在当前位置输入这段”，绝不能用来触达另一个会话——如果智能体正在打字时你切换了面板，文字就会落到你切过去的那个面板。已经明确要求智能体改用 `session.send`。
+
+## 智能体如何管理其他会话
+
+智能体可以开启会话（`session.create`），也可以把闲置的会话归档（`session.archive`）。规则是先查状态、再归档，而且警告一定会回到发起请求的那个渠道：你收到的是一个对话框，智能体收到的是它自己会话里的一条结构化结果。
+
+1. **先查状态。** `session.list_sessions` 和 `session.read` 会为每个会话返回 `status` 和一个 `working` 布尔值。只要某一轮、子任务、权限请求或提问还没结束，`working` 就是 true。
+2. **确认闲置后再归档。** 归档一个 `working: false` 的会话会立即完成，并保留它的上下文。如果智能体试图归档一个仍在工作的会话，应用里不会发生任何事：智能体会收到 `target_working`，并附带建议——想关掉就请你在应用里停止它，否则就让它继续跑。在某一轮内部试图归档自己或自己父级的会话，会收到 `self_archive_while_working`：它应当先把这一轮跑完，好让结论可被复核；由复核方来归档。恢复一个已归档的会话，不会重启已停止的工作。
+
+停止会话这件事归你：用那个对话里的 Stop 按钮。当你自己从侧边栏归档一个正在工作的会话时，OpenWork 会弹出一个简短的确认，里面会点出会话名（“Stop the current task and archive?”），并提供 **Keep session open** 和 **Stop and archive** 两个选项。
+
+### 模型与推理强度
+
+每个会话都绑定一个模型，智能体无需打开会话、也无需读取 OpenWork 的存储就能看到并设置它：
+
+- `session.list_sessions` 的条目和 `session.read` 的结果都带有 `model: { providerId, modelId, variant }`。`variant` 就是你在输入框上看到那个行为胶囊（behavior pill）的推理强度，例如 `low`、`medium`、`high`；当走提供商默认值时它是 `null`。在会话还没有绑定模型之前（创建时没给 `model`，也还没跑过任何一轮），`model` 是 `null`。
+- `session.create` 接受与 `model` 相同的结构，既可以对本次调用里的每个会话统一给一次，也可以逐条给。这个模型会在会话创建时生效一次，并在它的第一轮再生效一次，所以会话从一开始就按你要求的强度运行，读回来时也带着这个 `model`。创建时没给 `model` 的会话，使用引擎默认值。
+
+按 id 修改已有会话的模型，目前还没有开放给智能体；由输入框上的模型选择器对你打开的那个会话来做这件事。
+
+## 当前限制
+
+- 会话查找基于 OpenWork 在当前应用和工作区上下文中已经加载的那些会话。
+- 读取对话记录返回的是被打开会话中一组有上限的近期消息。如果一段长对话里较早的部分没有被返回，智能体应当如实说明，而不是猜测。
+- 这还不是对每一条消息做语义搜索。清晰的标题、会话 ID、工作区名称或主题线索，都能帮助智能体找到对的对话。
+- 智能体只能读取当前 OpenWork 应用和当前用户可访问的会话。
+
+## 应该怎么问
+
+把你手上任何线索都给出去：会话 ID、标题、人名、项目名、工作区，或者大致的主题。例如：`Use the OpenWork app UI to find the customer migration chat and tell me what I said about customer references.`

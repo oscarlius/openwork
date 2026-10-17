@@ -1,0 +1,102 @@
+---
+title: "部署到你自己的云"
+description: "在你自己的账号里，用托管 MySQL 加上 Kubernetes 或 Cloud Run，把 OpenWork 跑在 AWS、Azure 或 Google Cloud 上。"
+---
+
+OpenWork 私有的主力云形态，是用已发布的 Helm chart、一个托管 Kubernetes 集群，再加你自己账号里一个兼容 MySQL 的数据库。Google Cloud 还有一份 Cloud Run 起步方案，覆盖 Den Web 和 Den API。网络、DNS、证书、数据库、备份、身份提供商和密钥都由你掌控。
+
+<CardGroup cols={3}>
+  <Card title="AWS" icon="cloud" href="/zh/self-host/deploy-to-your-cloud/aws">
+    在 EKS 或 ECS Fargate 上部署，数据库用 Amazon RDS for MySQL。
+  </Card>
+  <Card title="Azure" icon="cloud" href="/zh/self-host/deploy-to-your-cloud/azure">
+    在 AKS 上部署，数据库用 Azure Database for MySQL。
+  </Card>
+  <Card title="Google Cloud" icon="cloud" href="/zh/self-host/deploy-to-your-cloud/google-cloud">
+    在 GKE 或 Cloud Run 上部署，数据库用 Cloud SQL for MySQL。
+  </Card>
+</CardGroup>
+
+## 从托管的 OpenWork 发起安装
+
+默认关闭的 **Deployments** 功能，让工作区所有者批准一个 AWS 安装器跑在自己的账号里，并跟踪它的健康状况和已批准的更新。GCP 的实现还额外依赖默认关闭的 `managedDeploymentsGcp` 功能和经客户批准的 Google Cloud Shell。它要求一个专门的、已开通计费的项目、公开的 Cloud DNS，以及由运维人员发布的不可变安装器版本。本地测试不等于一次真实部署的凭据；在拿到真实版本并验证过一次经批准的安装之前，GCP 这条功能必须保持关闭。托管安装器目前不支持 Azure。
+
+安装器被锁定后提示的信息，属于服务端发布/配置环节，而不是向你要云账号密钥。在你的 Mac 上登录 AWS 或 Google Cloud，没法发布安装器。运维人员按[托管部署 runbook](https://github.com/different-ai/openwork/blob/dev/docs/managed-deployments.md)操作；下文书写的手工部署与这条功能无关。
+
+## 通用架构
+
+每家云厂商的指南都使用同样的 OpenWork 边界：
+
+- Den web 监听 `3005` 端口，提供浏览器里的体验。
+- Den API 监听 `8788` 端口，负责认证、组织、策略和控制面 API。
+- 一个兼容 MySQL 8 的数据库存放共享的控制面状态。
+- 默认的迁移 Job 是 pre-install/pre-upgrade 钩子，不是一套自动就能安全滚动切换 schema 的机制。
+- OpenWork Gateway 可选，默认关闭；它沿用 `openwork-inference` 镜像和 `*-inference` 的资源名。它不是另一个独立的 `den-gateway` Web 代理。
+- 通过各厂商的负载均衡层，用 HTTPS 域名对外提供 web 和 API 流量。
+
+生产环境请使用私有数据库网络。公网应用流量要求 TLS，存储和备份要加密，数据库和认证密钥放在厂商的密钥存储或 Kubernetes Secret 里，而不是 Helm values 文件里。
+
+## 反向代理后的客户端地址
+
+在 Den API 上设置 `DEN_TRUSTED_PROXIES`，值是你各台反向代理的 IP 地址或 CIDR，用逗号分隔（例如 `192.0.2.10,192.0.2.11`）。Better Auth 用这份名单解析转发过来的客户端地址，给认证限流使用。不设置的话，多个客户端会共用同一个兜底限流桶。
+
+名单里只放你自己运维的代理，不要放把客户端也包含进去的大范围网段。你的源站必须只接受来自这些代理的流量，而且这些代理要覆盖或安全地追加转发头。这个设置只是解读转发链，它没法核实直接发送方。没有可信代理时就不要设置。生产环境要保持限流开启。
+
+## 部署顺序
+
+1. 在互相兼容的网络里创建 Kubernetes 集群和私有 MySQL 数据库。
+2. 预留公网地址或负载均衡入口。
+3. 创建数据库、数据库用户和 Kubernetes 命名空间。
+4. 生成彼此独立的数据库、Better Auth 和 Den 加密密钥。
+5. 针对 web 和 API 两个域名准备各厂商的 Helm values。
+6. 全新数据库就安装配套的 chart 和镜像，先验证初始化再放开流量。已有数据库要按该版本专用的迁移和发布流程走；Gateway 需要[静默式升级指南](/zh/self-host/gateway-upgrade)，不能靠无人值守的滚动升级。
+7. 把 DNS 指向负载均衡器，验证 HTTPS 可信。
+8. [创建第一位管理员](/zh/self-host/deploy-to-your-cloud/first-administrator)。
+9. 配置 SAML 或 OIDC 单点登录，邀请或开通成员。
+
+## 开始之前
+
+你需要：
+
+- 一个云账号，且有权限创建 Kubernetes、网络、负载均衡、托管 MySQL、DNS、证书和密钥；
+- `kubectl` 和 Helm，外加厂商的 CLI 与 Kubernetes 认证插件；
+- 两个 DNS 名称，通常一个给 Den web、一个给 Den API；
+- 一个真实邮箱，给最初的负责人；
+- 一份备份、恢复、升级和回退方案。
+
+<Note>
+  各厂商页面给出受支持的架构，并把具体命令指向仓库里详细的运维 runbook。生产环境要固定 chart 版本，并使用与之配套的版本或分支里的 runbook。
+</Note>
+
+## 部署之后
+
+要配置 Gateway，请按[启用 OpenWork Gateway](/zh/self-host/gateway)操作。这需要 `0.2.0` 或更新版本引入的、支持 Gateway 的 chart 实现，配套的版本镜像，以及一次认证过的 capability-version-1 响应。配置好之后，Gateway 对每个组织的管理员都已正式可用：不需要平台管理员给组织授权，也不需要组织级的 API 开关。`GATEWAY_ENABLED` 和 `deploymentCapabilities.aiGateway` 仍然属于安装配置检查。旧的推理服务开关和既有的 OpenWork Models 计费，都不会让部署自动接入。
+
+## 定时维护任务
+
+有两项维护任务按时间表运行，而不是每个请求都跑一次，这样繁忙的写入路径就不会排在一个共享合计行后面。其他后台工作（SCIM 清理、Automations、工作进程对账、提供商 token 刷新）跑在 Den API 或 Gateway 内部，不需要额外配置。
+
+| 任务 | 它做什么 | 托管环境的排期 | Helm values | 端点与 token |
+| --- | --- | --- | --- | --- |
+| Gateway 用量汇总 | 把超过两天的 Gateway 请求日志折叠成按小时的用量汇总，并删掉已折叠的行；超过 90 天的按小时汇总再折叠成按天的。 | 每小时，`5 * * * *` | `gateway.retention.*`（默认关闭） | Gateway 的 `POST /internal/rollups/run`，`GATEWAY_ADMIN_TOKEN` |
+| 审计用量刷新 | 重新计算每个组织的审计用量合计（保留的操作数、事件数、字节数）。 | 每天 | `denApi.auditUsage.*`（默认关闭，`30 3 * * *`） | Den API 的 `POST /internal/audit/usage/refresh`，`DEN_MAINTENANCE_TOKEN` |
+
+这两个端点在没配 token 时都返回 `404`，token 不对时返回 `401`。两者重跑都是安全的。
+
+用 Helm 时，按[启用 OpenWork Gateway](/zh/self-host/gateway)里「可选的管理员、webhook 与保留策略」一节和 chart README 中“审计用量刷新”一节，分别启用每个任务和它的 token。在 Cloud Run、ECS Fargate 或 Docker Compose 上，就用 Cloud Scheduler、EventBridge Scheduler 或机器上的 cron 自己安排这些调用，从一个能访问内网服务的网络位置发起：
+
+```sh
+# Hourly, only when Gateway is enabled
+curl -fsS -X POST -H "Authorization: Bearer $GATEWAY_ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"maxBucketsPerRun":48,"maxSourceRowsPerBucket":5000}' \
+  http://<gateway-internal-host>:8791/internal/rollups/run
+
+# Daily
+curl -fsS -X POST -H "Authorization: Bearer $DEN_MAINTENANCE_TOKEN" \
+  http://<den-api-internal-host>:8788/internal/audit/usage/refresh
+```
+
+没有汇总任务，Gateway 的请求日志就永远不会压缩，会无限增长。没有审计刷新，审计用量页面会一直显示它上一次测到的合计。
+
+只有 VPN 或私有网络能访问 Den 时，用[私有网络部署](/start-here/private-network-deployment)。在收紧出网规则之前，先看[出站网络访问](/start-here/outbound-network-access)、[证书信任与代理](/start-here/certificate-trust-and-proxies)和[隔离网络部署](/start-here/air-gapped-deployment)。

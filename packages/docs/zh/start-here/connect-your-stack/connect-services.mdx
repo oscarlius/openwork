@@ -1,0 +1,156 @@
+---
+title: "连接你的服务"
+description: "登录 OpenWork，为智能体接上它可以使用的各类账户"
+keywords: ["connect services", "connectors", "Gmail", "Google Calendar", "Google Drive", "Google Workspace", "Microsoft 365", "Outlook", "Slack", "Notion", "Linear", "sign in", "Library", "连接服务", "连接器", "登录"]
+---
+
+<Info>
+**OpenWork Cloud 组织配置。** 这条路径需要登录 OpenWork Cloud，并且你所在的组织已经把服务开放给你。想完全留在本地，就继续免费使用 OpenWork，并给工作区[添加自定义 MCP 服务器](/zh/start-here/connect-your-stack/add-an-mcp-server)。管理员可以用[连接器](/cloud/share-with-your-team/shared-mcp-connections)管理团队连接。
+</Info>
+
+组织开放给你的服务，都在 **Settings › Library**（**Connectors** 筛选器）里处理，
+包括 Gmail、Google Calendar、Google Drive、Slack、Notion 和 Linear。
+日常集成推荐用这套配置。
+
+## 开始之前
+
+Connect 需要你先登录 OpenWork 账户，并加入一个已启用 Connect 的组织。
+这和登录 ChatGPT 之类的 LLM 提供商是两回事。
+
+1. 打开 OpenWork 桌面应用。
+2. 点击 **Sign in to OpenWork Cloud**。
+3. 在浏览器里完成登录，然后回到 OpenWork。
+4. 如有提示，选择你要使用的 OpenWork 组织。
+
+## 连接一个账户
+
+1. 打开 **Settings › Library**，选择 **Connectors** 筛选器。
+2. 找到状态为 **Sign in** 的那个服务。
+3. 点击 **Sign in**，并在提供商的登录页面上批准授权。
+4. 回到 OpenWork。该连接的状态会自动更新。
+
+有些连接由你的组织托管。显示 **Set up** 的服务表示还没就绪，
+通常是有待管理员把它配完。如果列表里找不到某个服务，请让组织管理员在
+OpenWork Cloud 的 **Manage › Connectors** 下添加并授权给你。
+
+## Google Workspace
+
+在 OpenWork Cloud 里，Gmail、Google Calendar 和 Google Drive 只通过
+Google Workspace 这一个连接来使用。按上面的**连接一个账户**操作，
+选择你所在组织开放给你的那个 Google 连接。如果需要管理员配置，
+由管理员在 OpenWork Cloud 的 **Manage › Connectors** 下完成；成员随后
+为自己的账户点击 **Sign in**（桌面端）或 **Connect**
+（OpenWork Cloud 里的 **Your Connections**）。Google Workspace 不会出现在
+桌面端的 **Add to library** › **Connector** 列表中。
+
+不存在本地 Google Workspace 扩展、桌面端 OAuth 客户端表单，或环境变量配置路径。
+此前存放在本地的 Google 凭据不会被删除，也不会迁移到 Cloud，
+它们无法启用本地的 Google API 访问。已有的 Cloud Google 连接可以继续正常使用，
+不会因为本地集成被移除而需要重新连接。
+
+**AI Providers** 下的 Google 和 Gemini 是另一回事，它们属于模型提供商集成，
+保持不变。自定义 MCP 服务器和其他连接器同样不受影响。
+
+### 启用你的权限所对应的 Google API
+
+Google Workspace 连接器使用的是你组织自己的 Google Cloud OAuth 客户端。
+在拥有该客户端的那个 Google Cloud 项目里，打开 **APIs &
+Services › Library**，为你开启的每一项权限启用对应的 API：Gmail
+API、Google Calendar API、Google Drive API、Google Sheets API 和 Google Chat
+API。在某个 API 被启用之前，它对应的操作都会失败，报错类似
+`Google Sheets API has not been used in project … or it is disabled`，
+重新连接也没有用。
+
+## 让智能体去用它
+
+Microsoft 365 的管理员配置、client secret 和授权同意，见
+[连接 Microsoft 365](/cloud/share-with-your-team/microsoft-365)。
+
+你不需要知道 MCP 服务器的名字或工具的名字。直接说出你想要的结果，
+例如：
+
+- “总结一下我最新的五封邮件。”
+- “在 Notion 里找到 Q3 发布页。”
+- “我明天有哪些会议？”
+
+智能体会在你当前登录账户可用的实时能力中检索，然后精确匹配并执行。
+如果某个账户还需要你处理，它应当把你带回 **Settings › Library**
+并告诉你下一步做什么，而不是让你去添加一个 MCP 服务器。
+
+### 带附件的 Gmail 草稿
+
+让它用工作区里的文件生成草稿，例如：“写一封邮件草稿，附上
+`report.pdf` 和 `summary.csv`，先不要发送。” 同一个 Gmail 草稿能力接受可选的
+`attachments` 路径；由支持的 OpenWork 宿主用你选定的 Google 连接上传这些文件。
+文件内容不会进入模型的上下文。发送前请先检查返回的 Gmail 草稿链接。
+
+附件数量限 1–10 个文件，总计最多 4 MiB。文件必须位于运行该对话的宿主上某个
+已授权的工作区或文件夹内。远程工作区无法读取只存在于你桌面上的文件。
+
+附件的落地处理需要由兼容的 OpenWork 宿主发起直接的能力调用。
+Code Mode、已保存的 Workflows，以及不具备该宿主支持的 MCP 客户端会返回
+`file_input_requires_host`，并且不会创建草稿。缺少所请求的附件时不要重试。
+如果某次上传的结果不确定，请先去 Gmail 的草稿箱确认，再考虑重新创建。
+
+## 管理已连接的服务
+
+Google Workspace 和 Microsoft 365 连接既能取信息，也能执行服务侧的操作。
+由管理员选择启用哪些权限；每个成员为自己的账户授权。
+额外的发送、邮箱管理和电子表格权限默认**关闭**。
+已有的“仅草稿”访问不会自动开启发送能力。
+
+| 服务 | 可用操作 |
+| --- | --- |
+| Gmail | 搜索/读取邮件和附件；创建/读取/更新草稿；发送已有草稿（含其回复串联和附件）；归档/取消归档、标记已读/未读、加星标、删除/恢复，以及管理用户标签。 |
+| Google Calendar | 列出/创建日程；读取、编辑/改期，以及取消所选日历中的日程；为已有日程添加 Meet。 |
+| Drive | 搜索/列出（支持按日期、文件夹和分页）；读取文件、上传/共享、创建文件夹、重命名/移动，以及删除/恢复。 |
+| Sheets | 创建电子表格、查看其中的工作表、读取单元格区域、写入单元格、追加行。写入默认按字面值处理；解析公式需要明确批准。 |
+| Outlook | 读取邮件、创建草稿和回复草稿、发送已有草稿、修改已读状态/类别，以及在收件箱/归档/已删除项之间移动邮件。 |
+| Outlook Calendar | 列出/创建、编辑/改期、取消和删除日程。 |
+| OneDrive | 搜索/读取、写入文本文件、创建文件夹，以及重命名/移动项目。 |
+
+要管理 Gmail 邮箱，请启用 **Manage Gmail: send, archive, read status, labels, and trash**；
+只要发送、不要邮箱管理，请启用 **Send email drafts after confirmation**。
+Google 对编辑草稿和发送草稿用的是同一个 OAuth 授权，
+但 OpenWork 会分别强制执行管理员选择的操作开关。对于 Sheets，
+请启用电子表格的读取或写入权限，或者使用相应的、已选定文件的 Drive 访问权限。
+Microsoft 的邮件发送和邮箱管理也是分开的权限选项。
+
+启用新的提供商权限后，需要重新连接并授予所请求的访问权限。
+即使旧的提供商 token 仍带有那份授权，在 OpenWork 里关闭某个写权限
+也会阻止新的管理类操作。选定的连接永远使用该成员选定的账户，
+而不是其他可用的账户。
+
+请直说你要的结果，例如“把这个会话归档并标为已读”、
+“把明天的会议挪到下午 3 点”，或者“把这些行追加到预算表”。
+发送邮件、删除内容、通知会议受邀人，以及启用电子表格公式解析，
+都需要明确的请求和相应的确认操作。创建或选中一个连接器并不构成授权。
+如果某次写入超时，请先去服务侧确认再重试：它可能已经完成了。
+Microsoft 对发送是异步受理的，所以它返回的“已接收”代表
+**accepted**，不代表已投递。
+
+Drive 的通用文件读取器会把第一个工作表导出为 CSV。要处理其他工作表，
+请使用 Sheets 的元信息和区域操作。单元格操作单次上限为 5,000 个单元格；
+更大的工作量请拆成明确的区域。这些操作并不覆盖提供商的全部功能：
+Docs/Slides 的富文本编辑、电子表格格式与数据透视，
+以及邮箱/文件的永久删除，都不属于上面的操作。外部 MCP 连接器暴露的是其
+提供商实际提供的工具，并且仍然受该提供商的账户、套餐和审批规则约束。
+
+## Connect、连接器和连接
+
+- **Connect** 是用于发现和使用连接的 Cloud 服务。在桌面应用里，
+  **Settings › Library**（**Connectors** 筛选器）会展示各个账户及其就绪状态。
+- **连接器（connector）**是你的组织自行添加的一个 MCP 服务，
+  不需要把它包装成插件。组织管理员在 OpenWork Cloud 的 **Manage › Connectors**
+  下添加连接器，并授权给成员或团队。
+- **连接（connection）**是你自己对某个连接器的已登录实例——
+  一个连接器，按用户各自用其账户实例化。
+- **MCP 网关**是那个托管端点，它让外部 MCP 客户端能够使用
+  OpenWork 组织的能力。见 [OpenWork MCP 网关](/cloud/run-in-the-cloud/cloud-mcp)。
+- **添加 MCP 服务器**是高级路径，用于组织没有通过 Connect 提供的
+  自定义或本地服务器。
+
+如果你在做自定义集成，请继续看
+[添加自定义 MCP 服务器](/zh/start-here/connect-your-stack/add-an-mcp-server)。
+如果你是组织管理员，请看
+[与团队共享 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)。

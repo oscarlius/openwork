@@ -1,0 +1,32 @@
+---
+title: "连接 ChatGPT"
+sidebarTitle: "ChatGPT"
+description: "把 OpenWork MCP 加入 ChatGPT：在 `Settings > MCP servers` 中粘贴 https://api.openworklabs.com/mcp/agent，然后用 OAuth 登录。"
+---
+
+把组织的 OpenWork 技能、插件和连接提供给 ChatGPT。
+
+<Steps>
+<Step title="打开 MCP 设置">
+在 ChatGPT 中打开 `Settings > MCP servers`（[打开设置](https://chatgpt.com/#settings/Connectors)）。
+</Step>
+<Step title="粘贴 URL">
+
+```text
+https://api.openworklabs.com/mcp/agent
+```
+
+</Step>
+<Step title="登录">
+从连接提示中发起 OAuth，登录 OpenWork，并选择你的组织。
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="切换组织">
+    在 `Settings > MCP servers` 中断开 `OpenWork`，然后重新连接并选择另一个组织。
+  </Accordion>
+  <Accordion title="支持状态">
+    仅为安装步骤：以下步骤遵循 OpenWork 的 OAuth profile，但原生的端到端验证尚未完成。参见 [MCP 网关参考](/cloud/run-in-the-cloud/cloud-mcp#reference)。
+  </Accordion>
+</AccordionGroup>

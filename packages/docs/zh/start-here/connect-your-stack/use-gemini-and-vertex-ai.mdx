@@ -1,0 +1,72 @@
+---
+title: "使用 Gemini 与 Google Vertex AI"
+description: "用 Gemini API 密钥把 Google Gemini 接到 OpenWork，或者通过 Google Vertex AI（Agent Platform）给团队提供 Gemini 和 Claude。"
+---
+
+OpenWork 支持 Google 的 Gemini 模型。自己用的话，把 Gemini API 密钥粘贴到 `Settings > AI Providers > Connect provider`，选择 `Google` 即可。团队在 Google Cloud 上的场景，则由 OpenWork 管理员通过 OpenWork AI 网关一次性接入 Vertex AI（现已改名为 Gemini Enterprise Agent Platform），每位成员用自己的 Google 账户登录。
+
+## 选择你的路径
+
+| 你的需求 | 使用哪种方式 |
+| --- | --- |
+| 自己用 Gemini，账单走你自己的 Google AI Studio 密钥 | 见下文“选项 1：Gemini API 密钥” |
+| 团队用 Gemini 或 Claude，账单走你们的 Google Cloud 项目 | 见下文“选项 2：通过 AI 网关接入 Vertex AI” |
+| Gemini 走你自己架在 Vertex AI 前面的网关 | 见下文“选项 3：自有网关前置 Vertex AI” |
+
+## 选项 1：Gemini API 密钥
+
+1. 在 [Google AI Studio](https://aistudio.google.com/apikey) 创建一个 API 密钥。它只显示一次，复制好并保密。
+2. 在 OpenWork 里打开 `Settings`，选择 `AI Providers`。
+3. 点击 `Connect provider`。
+4. 在 `Search providers` 里输入 `google`，选中 `Google`。
+5. 把密钥粘贴到 `API key` 字段并保存。
+6. 打开聊天的模型选择器，选一个 Gemini 模型。
+
+不需要 OpenWork Cloud 账户。用量由 Google 向持有该密钥的账户计费。
+
+## 选项 2：团队使用 Vertex AI
+
+适用于组织本身已经在为 Google Cloud 付费、希望成员使用 Gemini（以及 Google Cloud 上的 Claude）却不想分发 API 密钥的情况。
+
+1. OpenWork 组织管理员按 [Google Agent Platform (Vertex AI)](/ai-gateway/google-agent-platform) 启用相应 API、授予 IAM 访问权限，并创建一个 Google OAuth 应用。
+2. 在 OpenWork AI 网关里，管理员添加 `google-vertex` 提供商（Gemini）或 `google-vertex-anthropic`（Claude），填入 Google Cloud 项目 ID 和区域，并选定成员可以使用的模型。
+3. 每位成员在该提供商的连接页面上用自己的 Google 账户登录。
+4. 成员在 OpenWork 的模型选择器里挑选被分配到的模型。
+
+请求会计到你的 Google Cloud 项目上，由 Google IAM 决定谁能跑推理。自托管部署需要先[启用 OpenWork Gateway](/self-host/gateway)。
+
+## 选项 3：自有网关前置 Vertex AI
+
+如果你的团队已经在跑一个 OpenAI 兼容网关（例如 LiteLLM），并且它会把请求转发给 Vertex AI，那么请连这个网关，而不是直连 Google：
+
+1. 拿到网关的 base URL、它对外暴露的 Gemini 模型名，以及一把密钥。
+2. 自己用时，把它作为自定义提供商加进工作区的 `opencode.jsonc`。团队用时，由管理员在 OpenWork Cloud 里一次性添加为[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)。
+3. 如果网关给每人发一把单独的密钥，请使用[成员各自的 LLM 凭据](/cloud/share-with-your-team/per-member-llm-credentials)。
+
+配置格式见[添加自定义 LLM 或 AI 网关](/zh/start-here/connect-your-stack/add-a-custom-llm)。
+
+## 常见问题
+
+<AccordionGroup>
+  <Accordion title="OpenWork 里用 Gemini 是免费的吗？">
+    OpenWork 本身免费。Gemini 的用量由 Google 按你的 API 密钥或 Google Cloud 项目上的套餐来计费或限流。
+  </Accordion>
+  <Accordion title="Vertex AI 和 Gemini Enterprise Agent Platform 是同一个东西吗？">
+    是的。Google 把 Vertex AI 改名为 Gemini Enterprise Agent Platform。OpenWork 仍在使用 `google-vertex` 和 `google-vertex-anthropic` 这两个提供商 ID。
+  </Accordion>
+  <Accordion title="成员需要 gcloud 或 service-account 密钥吗？">
+    用选项 2 就不需要。每位成员通过 OpenWork 用 Google 登录，访问权限由 Google IAM 控制。
+  </Accordion>
+  <Accordion title="能通过 Google Cloud 用 Claude 吗？">
+    可以。先在 Model Garden 里启用 Claude 模型，然后在选项 2 中添加 `google-vertex-anthropic`。
+  </Accordion>
+  <Accordion title="连了 Gemini 是不是就同时连上了 Gmail 或 Drive？">
+    不是。模型访问和 Google Workspace 数据是两回事。要让智能体读取 Gmail、Calendar 或 Drive，请按[连接你的服务](/zh/start-here/connect-your-stack/connect-services)操作。
+  </Accordion>
+</AccordionGroup>
+
+## 相关文档
+
+- [添加自定义 LLM 或 AI 网关](/zh/start-here/connect-your-stack/add-a-custom-llm)
+- [使用本地模型（Ollama、LM Studio）](/zh/start-here/connect-your-stack/use-local-models)
+- [从 Claude Cowork 迁移](/start-here/migrate-from-claude-cowork)

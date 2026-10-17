@@ -1,0 +1,103 @@
+---
+title: "在 OpenCode 中使用 OpenWork"
+sidebarTitle: "OpenCode 插件"
+description: "在 OpenCode 2 中安装 `opencode-openwork` 插件并只登录一次，每次启动都能拿到你所在组织的 AI Gateway 模型和 OpenWork MCP 连接，无需桌面应用。"
+---
+
+OpenWork 的 OpenCode 插件把组织的 AI Gateway 模型和 OpenWork MCP 带进一个普通的 OpenCode 安装。你只需登录一次；OpenCode 每次启动都会加载它们。
+
+[`opencode-openwork`](https://www.npmjs.com/package/opencode-openwork) 包已发布，可以直接安装。你不需要 OpenWork 桌面应用。
+
+## 环境要求
+
+- OpenCode 2，且具备 integration、provider 和 MCP 插件 API。该插件在 2.0.26 上测试过；不支持 OpenCode 1。
+- 一个 OpenWork 账户和组织的成员身份。由管理员授予你能使用的模型、技能和连接。
+
+先确认你已安装的版本：
+
+```sh
+opencode --version
+```
+
+安装该插件不会安装或升级 OpenCode。
+
+## 安装并登录
+
+<Steps>
+<Step title="安装插件">
+
+```sh
+opencode plugin add opencode-openwork
+```
+
+</Step>
+<Step title="登录">
+
+```sh
+opencode auth login openwork
+```
+
+选择 **Browser**。登录 OpenWork，选择你的组织并批准。OpenCode 会自行完成登录。
+
+在 SSH 或没有浏览器的机器上，改用 `opencode auth login openwork --method code`，在任意设备上打开链接并确认代码。
+
+</Step>
+<Step title="查看得到了什么">
+
+```sh
+opencode auth list
+opencode models | grep ipr_
+opencode mcp list
+```
+
+你的 AI Gateway 模型会以 `ipr_…/gwm_…` 的形式列出。`openwork-cloud` 会把组织的技能、插件和连接交给智能体。管理员在其他应用中开放的连接会显示为 `openwork-direct-<name>-<id>`。
+
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="退出登录或切换组织">
+
+```sh
+opencode auth logout openwork
+opencode auth login openwork
+```
+
+退出登录同时会结束 OpenWork 会话，并移除该插件添加的模型和 MCP 服务器。重新登录时，在批准页面选择另一个组织即可。
+
+  </Accordion>
+  <Accordion title="自托管或企业版 OpenWork">
+
+在 `~/.config/opencode/opencode.json` 中把插件指向你的 OpenWork API：
+
+```json
+{
+  "plugins": [
+    { "package": "opencode-openwork", "options": { "apiBaseUrl": "https://api.openwork.example.com" } }
+  ]
+}
+```
+
+  </Accordion>
+  <Accordion title="只要模型，或只要 MCP">
+
+在插件选项里设置 `"providers": false` 或 `"mcp": false`。
+
+  </Accordion>
+  <Accordion title="没有列出任何 AI Gateway 模型">
+
+该插件只显示组织授予你的 AI Gateway 提供商。请让管理员在 OpenWork Cloud 中检查 **AI Gateway**。目录中标记为已弃用的模型会被隐藏。
+
+  </Accordion>
+  <Accordion title="不用插件，只用 MCP">
+
+直接把 OpenWork MCP 加入 OpenCode：[连接 OpenCode](/zh/model-context-protocol/opencode)。
+
+  </Accordion>
+</AccordionGroup>
+
+## 相关集成
+
+- [集成概览](/zh/integrations/overview)
+- [MCP 集成如何在各类客户端之间工作](/zh/integrations/mcp)
+- [专用插件：OpenCode 已就绪，Cursor 和 Codex 开发中](/zh/integrations/client-plugins)

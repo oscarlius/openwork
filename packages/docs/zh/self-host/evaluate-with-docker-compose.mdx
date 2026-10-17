@@ -1,0 +1,131 @@
+---
+title: "用 Docker Compose 做评估"
+description: "不克隆、不构建仓库，直接用已发布的镜像跑起 OpenWork 控制面。"
+---
+
+用这套只需拉取镜像的 Docker Compose 组合，在一台机器上评估 Den web、Den API 和组织管理。它会下载已发布的 OpenWork 镜像和 MySQL，执行数据库迁移，并在 `http://localhost:3005` 提供浏览器里的体验。
+
+<Warning>
+  这套组合只用于评估。它的 HTTP 端口绑定在回环地址上，但默认放开公开注册，使用开发用途的凭据，MySQL 只放在本地一个 Docker 卷里，并且用一个占位的 worker 开通器。不要把端口绑定改成对外暴露，也不要拿它跑生产数据。
+</Warning>
+
+## 开始之前
+
+安装 Docker Engine，或者带 Docker Compose v2 的 Docker Desktop。这台机器要能从 GitHub Container Registry 和 Docker Hub 拉取镜像。
+
+## 启动这套服务
+
+1. 把 Compose 文件下载到一个空目录里：
+
+   ```bash
+   curl -fsSLo docker-compose.eval.yml \
+     https://raw.githubusercontent.com/different-ai/openwork/79636623bfbed3e2e5daff48b8550cb2ba220d77/packaging/docker/docker-compose.eval.yml
+   printf '%s  %s\n' \
+     '7b94efe1ac4be68d56b8ecb91206e9c005360b0f7954ba36c6f6ae7bd87a9430' \
+     'docker-compose.eval.yml' | shasum -a 256 --check
+   ```
+
+   只有在校验和命令打印出 `docker-compose.eval.yml: OK` 时才继续。这个绑定到具体 commit 的 URL 和校验和，保证你运行的是经过审阅的那份 Compose 定义，而不是一个可变分支上的最新内容。
+
+2. 启动服务，并等它们的健康检查通过：
+
+   ```bash
+   umask 077
+   printf 'OPENWORK_AUTH_SECRET=%s\nOPENWORK_DB_ENCRYPTION_KEY=%s\n' \
+     "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+   docker compose -f docker-compose.eval.yml up -d --wait
+   ```
+
+3. 打开 [http://localhost:3005](http://localhost:3005) 并创建一个账户。
+
+这套服务把 Den web 暴露在 `127.0.0.1:3005`，Den API 暴露在 `127.0.0.1:8788`。MySQL 只在 Compose 网络内部可达。
+
+## 配置评估环境
+
+在运行 `docker compose` 之前于 shell 里设置变量，或者把它们保存到 `docker-compose.eval.yml` 旁边的 `.env` 文件里。
+
+| 变量 | 默认值 | 作用 |
+| --- | --- | --- |
+| `OPENWORK_WEB_PORT` | `3005` | Den web 的主机端口。 |
+| `OPENWORK_API_PORT` | `8788` | Den API 的主机端口。 |
+| `OPENWORK_AUTH_SECRET` | 必填 | Better Auth 的签名密钥，至少 32 个随机字符。 |
+| `OPENWORK_DB_ENCRYPTION_KEY` | 必填 | 用于加密选定数据库值的密钥，至少 32 个随机字符。 |
+| `OPENWORK_ORG_NAME` | `OpenWork Evaluation` | 那个唯一组织的名称。 |
+| `OPENWORK_ALLOW_SIGNUP` | `true` | 能访问到站点的人是否都可以创建账户。 |
+| `OPENWORK_OWNER_EMAILS` | 空 | 允许在 `/setup` 上认领该组织的邮箱，逗号分隔。留空会关掉私有的首位管理员流程。 |
+| `OPENWORK_SETUP_CODE` | 空 | 在 `/setup` 上配合负责人邮箱一起输入的一次性设置码。留空会关掉私有的首位管理员流程。 |
+
+设置命令会把唯一的密钥写进 `.env`，后续的 Compose 命令就复用它们。这个文件要保密，不要提交。要轮换密钥，就在重建服务之前替换它们的值。
+
+Compose 文件把 MySQL、Den API 和 Den web 的镜像钉在了不可变的 digest 上。要评估更新的版本，请下载更新的 Compose 文件，而不是只改某个镜像 tag。
+
+如果你另外自己创建 `.env`，用这个命令生成唯一密钥：
+
+```bash
+umask 077
+printf 'OPENWORK_AUTH_SECRET=%s\nOPENWORK_DB_ENCRYPTION_KEY=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+```
+
+## 创建一位私有的首位管理员
+
+要评估私有部署的接入流程而不是公开注册，就在首次启动之前关闭注册，并设置负责人邮箱和一个一次性设置码：
+
+```bash
+umask 077
+printf 'OPENWORK_AUTH_SECRET=%s\nOPENWORK_DB_ENCRYPTION_KEY=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+printf 'OPENWORK_ALLOW_SIGNUP=false\nOPENWORK_OWNER_EMAILS=%s\nOPENWORK_SETUP_CODE=%s\n' \
+  'admin@example.com' "$(openssl rand -hex 16)" >> .env
+docker compose -f docker-compose.eval.yml up -d --wait
+```
+
+然后打开 [http://localhost:3005/setup](http://localhost:3005/setup)，输入 `.env` 里的负责人邮箱和设置码，再为这位管理员选择姓名和密码。[首位管理员指南](/zh/self-host/deploy-to-your-cloud/first-administrator)说明了这条流程以及它守住的边界；Compose 和 Helm 之间的差别只在于这些值怎么送达 Den API。
+
+只要数据库里还没有用户，设置页才可用，所以这些变量要在第一次 `up` 之前设好。管理员一旦存在，`/setup` 就会报告设置已完成，那个设置码也创建不了第二个账户。想从头再来，就执行 `docker compose -f docker-compose.eval.yml down -v` 再启动一次。
+
+## 从另一台机器连接
+
+Compose 的端口保持绑定在回环地址上。要评估跑在远端主机上的这套服务，就从本地机器建一条加密的 SSH 隧道：
+
+```bash
+ssh -N \
+  -L 3005:127.0.0.1:3005 \
+  -L 8788:127.0.0.1:8788 \
+  user@docker-host
+```
+
+然后打开 [http://localhost:3005](http://localhost:3005)。认证和 API 流量走的是这条 SSH 隧道，而不是以明文 HTTP 穿过网络。
+
+## 查看或停止这套服务
+
+查看服务状态和日志：
+
+```bash
+docker compose -f docker-compose.eval.yml ps
+docker compose -f docker-compose.eval.yml logs -f
+```
+
+停止服务，同时保留评估用的数据库：
+
+```bash
+docker compose -f docker-compose.eval.yml down
+```
+
+停止服务并永久删除评估用的数据库：
+
+```bash
+docker compose -f docker-compose.eval.yml down -v
+```
+
+## 评估环境的局限
+
+这套服务不提供：
+
+- 生产级的工作进程开通或云沙箱；
+- 事务性邮件或邮箱验证；
+- TLS 终止、私有 ingress 或密钥管理；
+- 数据库高可用、备份或恢复方案；以及
+- 可安全用于生产的认证和数据库默认配置。
+
+生产环境请用[受支持的私有云架构](/zh/self-host/deploy-to-your-cloud/overview)，配 Kubernetes、Helm、托管 MySQL、HTTPS、私有网络、托管密钥，以及安全的[首位管理员流程](/zh/self-host/deploy-to-your-cloud/first-administrator)。

@@ -1,0 +1,214 @@
+---
+title: "与团队共享 MCP 连接"
+description: "在 OpenWork Cloud 中添加一次 Notion、Linear、Slack、Exa 或任意 MCP 服务器，选择成员的登录方式，并决定谁能使用。"
+keywords: ["connectors", "MCP", "add connector", "share connection", "Notion", "Linear", "Slack", "Exa", "GitHub", "OAuth", "API key", "Tool Tester", "Your Connections", "redirect URL", "连接器", "共享连接", "重定向 URL", "成员登录"]
+---
+
+连接器就是你的组织的 AI 可以使用的应用，例如 Notion、Linear 或 Slack。你在 OpenWork Cloud 中添加一次，然后选择大家如何登录、谁能使用它。成员不需要在自己的计算机上配置任何东西。
+
+每个连接器使用两种登录方式之一：
+
+- **Each person signs in.** 每个人用自己的账户。AI 以这个人身份行事，使用这个人的权限。支持登录的应用默认就是这种方式。
+- **One account for everyone.** 你登录一次，或添加一个 API 密钥。所有能使用该连接器的成员都以这个账户身份行事。机器人账户或服务账户适合这种方式。
+
+只有所有者和管理员能在 **Manage** 下添加连接器。
+
+## 添加连接器
+
+1. 在 OpenWork Cloud 中打开 **Manage › Connectors**。
+2. 点击 **Add connector**。
+3. 从列表中挑一个应用。要用其他服务器时，把它的 MCP URL 粘贴进筛选框，或点击 **Add any MCP**。
+4. 在 **Add {name}** 页面上，OpenWork 会跑四项检查：**Finds {name}**、**Knows how you sign in**、**Sign in to {name}** 和 **Has things your AI can do**。哪一项要求补东西就完成哪一项：
+   - 应用需要密钥时，粘贴密钥并点击 **Save key**。
+   - 应用需要自己的 OAuth 应用时，填入 **Client ID** 和 **Client secret**，然后点击 **Save app**。
+   - 点击 **Sign in with {name}**。应用会在新标签页中打开，完成后回到这里。
+5. 在 **How people sign in** 中选择 **Each person signs in** 或 **One account for everyone**。使用 API 密钥的连接器始终是 **One account for everyone**。
+6. 在 **Who can use it** 下开启 **Everyone in the organization**，或点击 **Add person**、**Add team**。刚创建时只有你自己能用。
+7. 点击 **Add {name}**。
+
+你授予权限的人会在自己的资源库（Library）里找到这个连接器。
+
+如果你中途离开，列表中该连接器会显示 **Setup not finished**。点击 **Finish** 就能从上次停下的地方继续。
+
+### 列表中的应用
+
+**Add a connector** 列表包含 Google Workspace、Microsoft 365、GitHub、Notion、Linear、Stripe、Sentry、Granola、Polar、Slack、Exa、Render 和 Context7。
+
+- Exa 需要来自你 Exa 账户的 API 密钥。见[启用 Exa 搜索](/start-here/connect-your-stack/enable-exa-search)。
+- Context7 不需要登录。
+- Slack 需要先创建一个 Slack 应用，见本页「Slack」一节。
+- Gmail、Google Calendar、Google Drive 和 Microsoft 365 的连接方式，见[连接你的服务](/start-here/connect-your-stack/connect-services)。
+
+非管理员成员可以在 **My Library › Add to your Library › Connector** 里为自己添加部分应用。需要 API 密钥、OAuth 应用或共享单一账户的应用，必须由管理员来添加。
+
+## 修改连接器
+
+打开 **Manage › Connectors** 并点击该连接器，在它的页面上你可以：
+
+- 修改 **Who can use it**。
+- 打开 **Settings** 修改名称、地址、登录方式、**How people sign in**、API 密钥、OAuth 应用或请求的作用域，然后点击 **Save changes**。如果你改变了连接器的登录方式，所有人都要重新登录一次。
+- 用 **⋯** 菜单执行 **Edit settings**、**Test tools**、**Sign everyone out** 和 **Remove**。
+
+列表中每行的 **⋯** 菜单只有 **Open** 和 **Remove** 两项。
+
+移除连接器或收回某人的访问权限，会立即在所有设备上生效。
+
+## 测试工具
+
+管理员可以在成员使用之前先试一下连接器的工具：
+
+1. 打开连接器的页面，点击 **⋯ › Test tools**。你也可以在侧栏打开 **Settings › Tool Tester**。
+2. 选择一个连接器，查看它的工具。
+3. 选一个工具，填好输入项并运行。你可以看到发送了什么、返回了什么。
+
+Tool Tester 还能按整个组织的粒度关闭单个工具。在 **Your Connections** 上，管理员同样会看到一个扳手按钮，点开的是同一个测试器。
+
+## 成员会看到什么
+
+### 在 OpenWork Cloud 中
+
+**Your Connections** 会列出你能用的每个连接器，以及它还需要什么：
+
+- **Connect your account**：点击 **Connect**，用你自己的账户登录。
+- **Reconnect required**：点击 **Reconnect**。
+- **Waiting for an admin to connect**：还需要管理员用共享账户登录一次。这一行上，管理员看到的是 **Connect the org account** 和一个 **Connect** 按钮。
+- `Waiting for an admin to finish setup`：还需要管理员把这个连接器配置完。
+- **Connected as you** 或 **Org account connected**：可以使用了。
+
+### 在桌面应用中
+
+1. 在桌面应用中登录 OpenWork Cloud。
+2. 打开 **Settings › Library**，选择 **Connectors** 筛选。
+3. 如果某个连接器显示 **Sign in**，就点击 **Sign in**。浏览器会打开该应用自己的登录页，批准访问后返回 OpenWork。
+
+**Set up** 表示连接器还没就绪，通常意味着还需要管理员把它配置完。
+
+你的登录态保存在 OpenWork Cloud 里，而不是保存在计算机上。登录一次，你使用的每台设备就都连上了。
+
+## 让 AI 使用它
+
+不需要重启任何东西。直接提一个该应用能做到的事：
+
+> 在 Notion 里找到「Q3 launch」页面并做个总结。
+
+AI 会找到合适的工具，并用**你自己的**账户运行它，因此生效的是你的权限。如果某个连接器需要处理，AI 会告诉你是哪个账户需要操作。
+
+<Frame>
+  ![智能体在对话中执行一个组织共享的 MCP 工具](/images/desktop-org-mcp-chat.png)
+</Frame>
+
+## 在其他 AI 应用中使用连接器
+
+你也可以让大家在 Claude、Cursor 或任何支持 MCP 的应用里使用某个连接器。
+
+1. 在 **Manage › Connectors** 中打开该连接器的页面。
+2. 展开 **Use in another app** 并点击 **Turn on**。你也可以在连接器的 **Settings** 里勾选 **Available in other MCP apps**。
+
+开启这项之后，连接器还会作为一个独立的 MCP 服务器出现在成员的桌面应用里。这样 AI 能直接看到该应用的工具，不必先搜索。请对常用的连接器开启它。
+
+### 在另一个 MCP 客户端中使用某个连接
+
+1. 打开 **Your Connections**；管理员也可以打开连接器的页面。
+2. 展开 **Use in another app**，点击 **Copy** 复制地址。
+3. 在你的其他应用里，把这个地址添加为远程 MCP 服务器，选择 OAuth 并登录 OpenWork。
+
+请使用 OpenWork Cloud 中显示的那个地址，而不是应用自身的 MCP 地址。你可能仍需要在 OpenWork 里连接自己的账户。你组织的访问规则和工具设置依然生效。
+
+## 本地 MCP 服务器
+
+Google 托管的云端工具请看[连接 Google Cloud CLI](/zh/cloud/share-with-your-team/google-cloud-cli)。
+
+[添加自定义 MCP 服务器](/start-here/connect-your-stack/add-an-mcp-server)不需要 OpenWork Cloud 账户。本地工具，或你组织并未提供的服务器，就用这种方式。
+
+发布一个连接器，绝不会移除或改动任何人自己的本地 MCP 配置。
+
+## Slack
+
+想在 Slack 里 `@openwork`，或在 Slack 内与助手私信？见[OpenWork in Slack](/zh/slack/overview)（私有 alpha）。该助手会在这个已有的用户连接之上加装一个机器人安装，只向已批准的组织开放。
+
+Slack 的 MCP 服务器不允许应用自行注册。需要由 Slack 管理员创建一次 Slack 应用，OpenWork Cloud 把所有成员都通过这一个应用接入。
+
+1. 在 [Slack API apps](https://api.slack.com/apps) 中创建或打开一个 Slack 应用。
+2. 打开应用设置里的 **Agents** 页签，开启 **MCP** 开关。只有开启它的应用，Slack 才会提供 MCP 请求服务。
+3. 在 **OAuth & Permissions** 中，把你的 OAuth 重定向 URL（见本页「OAuth 重定向 URL」一节）加入重定向 URL 列表。
+4. 添加你希望 AI 使用的 **User Token Scopes**，可参考本页「Slack 作用域」一节。
+5. 为你的 Slack 工作区安装或批准该应用。
+6. 在 OpenWork Cloud 中打开 **Manage › Connectors › Add connector** 并选择 **Slack**。粘贴 Slack 应用 **Basic Information › App Credentials** 中的 **Client ID** 和 **Client secret**，然后点击 **Save app**。
+7. 点击 **Sign in with Slack**，然后完成上文「添加连接器」一节的步骤。
+8. 成员打开 **Your Connections**，或在桌面应用中打开 **Settings › Library**，连接他们自己的 Slack 账户。
+
+这里不需要 Slack 的机器人 token（`xoxb-...` 或 `xapp-...`）。请把 client secret 挡在对话和版本库之外。
+
+### Slack 作用域
+
+Slack MCP 使用 user token 作用域。请选择与团队想让 AI 做的事情匹配的最小集合。Slack 连接器默认请求一组起始作用域，包含搜索、历史记录、`chat:write` 和 `users:read`。你可以在连接器的 **Settings** 下的 **Requested OAuth scopes** 中修改它们。OpenWork 请求的每一个作用域，都必须同时添加到 Slack 应用里。
+
+想要一套实用的「先只读」配置，可以从这些开始：
+
+```text
+search:read.public search:read.private search:read.mpim search:read.im search:read.files search:read.users channels:history groups:history mpim:history im:history users:read users:read.email channels:read groups:read mpim:read
+```
+
+只有你希望 AI 在 Slack 里执行动作时，才添加写入作用域：
+
+```text
+chat:write reactions:write channels:write groups:write im:write mpim:write canvases:read canvases:write
+```
+
+| Slack MCP 能力 | User token 作用域 |
+| --- | --- |
+| 搜索公开与私有的消息/频道 | `search:read.public`、`search:read.private`、`search:read.mpim`、`search:read.im` |
+| 搜索文件 | `search:read.files` |
+| 读取文件 | `files:read` |
+| 搜索表情 | `emoji:read` |
+| 搜索用户 | `search:read.users` |
+| 发送消息 | `chat:write` |
+| 读取频道与话题串 | `channels:history`、`groups:history`、`mpim:history`、`im:history` |
+| 创建会话/频道 | `channels:write`、`groups:write`、`im:write`、`mpim:write` |
+| 添加表情回应 | `reactions:write` |
+| 读写 canvas | `canvases:read`、`canvases:write` |
+| 读取用户资料与邮箱 | `users:read`、`users:read.email` |
+| 列出频道成员 | `channels:read`、`groups:read`、`mpim:read` |
+
+### Slack 问题排查
+
+- **client ID 和 secret 都没错，但成员连不上。** 在 [Slack API apps](https://api.slack.com/apps) 中打开该应用，进入 **Agents** 页签，开启 **MCP** 开关。
+- **Slack 说重定向 URL 无效。** 把你的 OAuth 重定向 URL（见本页「OAuth 重定向 URL」一节）加入 Slack 应用 **OAuth & Permissions** 的重定向 URL 列表。
+- **Slack 说某个作用域无效或不可用。** 把它从 Slack 应用和连接器的 **Requested OAuth scopes** 中删掉，再试一次。Slack 工作区的策略和套餐会限制应用可以请求哪些作用域。
+- **工作区阻止安装应用。** 需要由 Slack 管理员先批准这个应用。
+
+## OAuth 重定向 URL
+
+OAuth 重定向 URL（也叫回调 URL）是用户在提供商处批准访问后，浏览器被送回的那个精确地址。Slack 之类的提供商会在你创建它的 OAuth 应用时要求你登记这个地址。它不是 MCP 服务器 URL。
+
+对于位于 `https://app.openworklabs.com` 的 OpenWork Cloud，请登记：
+
+```text
+https://api.openworklabs.com/v1/mcp-connections/oauth/callback
+```
+
+对于自托管实例，使用你对外的 Den API 地址：
+
+```text
+<DEN_API_PUBLIC_URL>/v1/mcp-connections/oauth/callback
+```
+
+例如，若你对外的 Den API 是 `https://api.openwork.example.com`，就登记 `https://api.openwork.example.com/v1/mcp-connections/oauth/callback`。请采用 `DEN_API_PUBLIC_URL` 中完全一致的协议、主机名、可选路径前缀和端口。各提供商都会精确比对重定向 URL。
+
+用较早的「按连接回调地址」创建的连接，会保留它们当时登记的 URL。不要仅仅为了重新连接就去改它。
+
+如果提供商拒绝登记 OpenWork（成员会看到「*Provider* hasn't approved OpenWork yet」），或者它只接受自己事先注册过的应用，请把 [让你的 MCP 服务器兼容 OpenWork](/zh/cloud/share-with-your-team/mcp-server-compatibility) 发给提供商。其中列出了重定向 URL、客户端元数据文档、OpenWork 支持的注册方式，以及一份可直接发送的申请模板。
+
+<Accordion title="技术细节">
+**发现机制。** 默认情况下，AI 通过两个 OpenWork Connect 工具访问所有连接器：`search_capabilities` 和 `execute_capability`。无论你添加多少连接器，模型看到的工具列表始终是这一小份。开启了 **Available in other MCP apps** 的连接器还会作为各自的服务器出现在 OpenCode 中，名称形如 `openwork-direct-<name>-…`。桌面应用永远不会拿到提供商的 URL 或 token，它用成员自己的 OpenWork 凭证访问 Den 的按连接端点。每次调用都会强制执行访问授权和工具设置。关闭该选项、收回访问权限或移除连接器，都会在下一次同步时从每台桌面端移除这个服务器。成员自行添加的本地 MCP 服务器永远不会被动到。
+
+**按连接的 MCP URL。** 每个 **Use in another app** 地址只服务一个连接器，它不会把该连接器的工具加入 `/mcp/agent` 主网关目录。不要使用 Den 内部的 `/api/den` 代理。自托管部署使用其配置好的公网 API 基地址。
+
+**MCP Apps。** 支持 MCP Apps 的客户端可以在这些连接器上读取与模型可见工具绑定的 App HTML。任意资源和仅供应用使用的辅助工具，对普通外部客户端仍不可用，因此并非每个交互式 App 回调都能工作。渲染效果还取决于客户端自身的 MCP Apps 支持程度。
+
+**Token 作用域。** 调用外部提供商的工具需要调用方的 `mcp:write` 作用域，即使该提供商声明了 `readOnlyHint: true`。发现连接和连接状态检查用 `mcp:read` 即可。见 [MCP token 作用域](/cloud/run-in-the-cloud/cloud-mcp#reference)。
+
+**可用性。** Connect 在所有组织都可用，Cloud 与自托管都是；不存在需要打开的开关。访问仍然遵循每个成员的授权与凭证。凭证缺失时返回 `needs_connection` 和 HTTP `409`。
+
+**已退役的组织开关。** 更早的版本允许平台管理员为单个组织关闭 Connect（`capabilities.mcpConnections`）。这个开关是有意退役的：原本关闭的组织现在也启用了 Connect，包括 Google Workspace 和 Microsoft 365 的原生动作。要限制谁能使用某项服务，请把连接的访问范围设为指定团队，或移除该连接。用较早的组织级 OAuth 客户端配置的 Google Workspace 或 Microsoft 365 会作用于整个组织；要停止成员使用，请移除该配置。
+</Accordion>

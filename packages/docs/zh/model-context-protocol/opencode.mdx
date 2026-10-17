@@ -1,0 +1,56 @@
+---
+title: "连接 OpenCode"
+sidebarTitle: "OpenCode"
+description: "把 OpenWork MCP 加入 OpenCode：在 OpenCode 配置中添加指向 https://api.openworklabs.com/mcp/agent 的远程 MCP 条目，然后运行 `opencode mcp auth openwork`。"
+---
+
+把组织的 OpenWork 技能、插件和连接提供给 OpenCode。OpenCode 是已验证的客户端。
+
+<Tip>
+在 OpenCode 2 上，[OpenWork 插件](/zh/model-context-protocol/opencode-plugin)还会带入你所在组织的 AI Gateway 模型，只需登录一次。
+</Tip>
+
+<Steps>
+<Step title="把服务器加入 opencode.json">
+
+```json
+{
+  "mcp": {
+    "openwork": {
+      "type": "remote",
+      "enabled": true,
+      "url": "https://api.openworklabs.com/mcp/agent",
+      "oauth": {}
+    }
+  }
+}
+```
+
+</Step>
+<Step title="登录">
+
+```sh
+opencode mcp auth openwork
+```
+
+在浏览器中登录 OpenWork，并选择你的组织。
+
+</Step>
+<Step title="试一试">
+试着问：“我当前连接的是哪个 OpenWork 组织？”
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="切换组织">
+
+```sh
+opencode mcp logout openwork
+opencode mcp auth openwork
+```
+
+  </Accordion>
+  <Accordion title="在远程机器或 SSH 主机上使用 OpenCode">
+    请按[从远程机器连接 OpenWork MCP](/cloud/run-in-the-cloud/connect-openwork-mcp-remote-machine)操作。
+  </Accordion>
+</AccordionGroup>

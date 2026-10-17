@@ -1,0 +1,85 @@
+---
+title: "把 OpenWork Connect 作为 Agent Plugin 使用"
+sidebarTitle: "Agent Plugins"
+description: "把 OpenWork Connect 作为一个可移植的 Agent Plugin 安装，或把兼容的 Agent Plugins 导入你所在组织的资源库。"
+---
+
+[Agent Plugins](https://agent-plugins.org/) 是一种开放打包格式，可以把
+Agent Skills 和 MCP 配置一起分发。OpenWork 为 OpenWork Connect 发布了
+符合标准的包，位置在
+[`integrations/agent-plugins/openwork-connect`](https://github.com/different-ai/openwork/tree/dev/integrations/agent-plugins/openwork-connect)。
+
+## OpenWork 的包装了什么
+
+这个包包含：
+
+- `plugin.json`，面向已发布的 Agent Plugins 1.0.0 schema，以获得更广的
+  客户端兼容性；
+- `mcp.json`，指向 OpenWork Connect 的 Streamable HTTP 端点；
+- 一个 `openwork-connect` 技能，教会智能体在执行前先搜索确切匹配的组织能力。
+
+请用你客户端的 Agent Plugins 工作流安装或复制完整的包目录。该标准没有
+定义注册表，也没有一条通用的安装命令，所以最后一步安装方式取决于客户端。
+
+这个包不含凭据，也不含 `Authorization` 请求头。你的
+MCP 客户端会从端点发现 OpenWork 的 OAuth，打开浏览器登录，并把最终获得的
+授权范围限定在你选择的组织上。
+
+该 Agent Plugin 选择的是 `streamable-http` 传输方式；它不锁定
+线路协议版本。OpenWork Connect 会与当前客户端协商无状态的 MCP 2026-07-28，
+同时保留其 MCP 2025-11-25 的兼容路径。
+因此现有客户端在迁移到当前 MCP 协议的过程中，可以继续使用同一个端点。
+
+## 这对一个组织意味着什么
+
+管理员可以在 OpenWork 中统一管理技能、共享的 MCP 连接和已连接的
+服务。成员随后只需在兼容的智能体中安装这一个可移植的 OpenWork
+包，就能获得组织、团队和个人访问规则授予他们的能力，不多不少。
+
+这把分发和访问控制分成了两件事：
+
+1. Agent Plugin 告诉客户端如何连到 OpenWork；
+2. OpenWork 决定已登录成员能发现什么；
+3. `search_capabilities` 返回相关的、已授权的能力；
+4. `execute_capability` 执行选中的能力，或返回可操作的
+   连接状态或权限状态。
+
+结果是一层可在各兼容智能体之间复用的组织能力层，而不必为每个客户端、
+每位同事、每台机器各配一份 MCP 和技能设置。
+
+## 把 Agent Plugins 导入 OpenWork 资源库
+
+OpenWork 的 GitHub 插件导入器能识别发布在仓库根目录或子目录中的
+Agent Plugins 1.0.0 schema，以及与之 schema 相同的 1.1.0 工作草案。它会校验
+`plugin.json`，要求 `mcp.json` 指向同一 schema 版本，只发现紧邻的
+`skills/<name>/SKILL.md`
+入口，并读取包根目录的 `mcp.json`。导入 1.1.0 包时，已有的 1.0.0 包
+仍然有效。
+
+Den 的导入路径当前支持：
+
+- 指令完整写在 `SKILL.md` 中的、符合标准的 Agent Skills；
+- 远程 `streamable-http` MCP 服务器；
+- 由现有连接运行时支持的旧版远程 `sse` 条目；
+- 相互独立的失败上报，因此某个无效的技能或服务器不会掩盖
+  同批有效的其他条目；
+- 在导入后的插件上保留 Agent Plugin 的格式与 schema 版本来源。
+
+Den 的导入路径只上报、不安装：
+
+- 本地 `stdio` 服务器，因为它们需要桌面的执行与信任
+  策略；
+- 带静态请求头的远程条目，因为 OpenWork 还不持久化或
+  转发任意的包请求头；
+- 技能引用的额外脚本或资源。`SKILL.md`
+  入口会被导入，被省略的资源会被上报。
+
+这些限制会在导入预览中明确列出，管理员因此不会把一份不完整的包
+误当成配置齐全的组织插件。
+
+## 身份验证
+
+Agent Plugins 没有定义可移植的 OAuth 字段。不要在包里加 OAuth 对象、
+bearer token 或密钥请求头。OpenWork Connect 使用 MCP
+受保护资源发现、浏览器授权、PKCE，以及客户端的凭据存储，详见
+[OpenWork Connect 参考](/cloud/run-in-the-cloud/cloud-mcp)。

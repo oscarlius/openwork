@@ -1,0 +1,70 @@
+---
+title: "在智能体里使用 OpenWork"
+sidebarTitle: "给智能体用"
+description: "给 Claude Code、Codex、Cursor、ChatGPT 等智能体的确切命令：安装 OpenWork、为团队完成配置，或接入 OpenWork MCP 网关。"
+---
+
+把你的智能体指向 [openworklabs.com/llms.txt](https://openworklabs.com/llms.txt)，它就能安装 OpenWork、为你的团队完成配置，或者把 OpenWork 接入它自己。本页给出同样的步骤。
+
+<Warning>
+不要用 `npx openwork` 或 `npm install openwork`。npm 上那个叫 `openwork` 的包是另一个项目。
+</Warning>
+
+## 只有我：安装桌面应用
+
+免费，不需要账号。
+
+| 操作系统 | 安装方式 |
+|---|---|
+| macOS（Homebrew） | `brew install --cask openwork` |
+| macOS | [Apple Silicon](https://openworklabs.com/download/mac-arm64) 或 [Intel](https://openworklabs.com/download/mac-x64) 的 `.dmg` |
+| Windows | [x64](https://openworklabs.com/download/win-x64) 或 [ARM64](https://openworklabs.com/download/win-arm64) 的 `.exe` |
+| Linux | [x64](https://openworklabs.com/download/linux-x64) 或 [ARM64](https://openworklabs.com/download/linux-arm64) 的 `.AppImage` |
+
+这些链接始终指向最新的正式发布版本。然后[运行你的第一个任务](/zh/desktop-app/first-task)。
+
+## 我的团队：配置 OpenWork Cloud
+
+1. [注册](https://app.openworklabs.com?mode=sign-up) 并给你的团队起个名字，这会同时创建你的组织。前 5 个席位免费。
+2. 在 `Members` > `Add member` 里邀请同事。
+3. 在 `AI Gateway` > `AI Providers` > `Add provider` 里共享模型。
+4. 共享一个技能：**Manage › Plugins › Create a plugin**，把技能加进去，再在 **Who can use it** 下添加团队。
+5. 每个人都安装桌面应用，并点击 `Joining a team? Sign in`。
+
+完整流程见[团队快速上手](/cloud/team-quickstart)。想要无人值守、由智能体执行的配置，请按 [start.md](https://openworklabs.com/start.md) 操作。它使用 `https://openworklabs.com/install.sh` 提供的 `openwork-bootstrap` 命令行工具，需要 Node.js 20 以上，而且不会安装桌面应用。
+
+## 在我的智能体里：接入 MCP 网关
+
+服务器 URL：`https://api.openworklabs.com/mcp/agent`。登录走浏览器里的 OAuth。你需要一个 OpenWork Cloud 账号。
+
+```sh
+# Claude Code
+claude mcp add --transport http openwork https://api.openworklabs.com/mcp/agent
+
+# Codex
+codex mcp add openwork --url https://api.openworklabs.com/mcp/agent
+codex mcp login openwork
+
+# Gemini CLI
+gemini mcp add --transport http openwork https://api.openworklabs.com/mcp/agent
+
+# OpenCode
+opencode mcp add openwork --url https://api.openworklabs.com/mcp/agent
+opencode mcp auth openwork
+```
+
+其他客户端：[连接 OpenWork MCP](/start-here/connect-openwork-mcp)。当你的智能体列出 `search_capabilities` 和 `execute_capability` 这两个工具时，就说明已经接通了。
+
+## 智能体技能与机器可读文件
+
+对于已获批准的私有 alpha 组织，你的智能体还可以配置 Slack 助手。请参照 [OpenWork in Slack 指南](/zh/slack/overview)以及其中可直接复制的设置提示词。机器人由管理员安装，每个成员各自授权自己的 Slack 连接。
+
+| 资源 | URL |
+|---|---|
+| 安装技能 | [install-openwork](https://openworklabs.com/.well-known/agent-skills/install-openwork/SKILL.md) |
+| MCP 技能 | [connect-openwork-mcp](https://openworklabs.com/.well-known/agent-skills/connect-openwork-mcp/SKILL.md) |
+| 团队技能 | [set-up-openwork-team](https://openworklabs.com/.well-known/agent-skills/set-up-openwork-team/SKILL.md) |
+| Slack 助手设置（私有 alpha） | [set-up-openwork-slack](https://openworklabs.com/.well-known/agent-skills/set-up-openwork-slack/SKILL.md) |
+| 技能索引 | [agent-skills/index.json](https://openworklabs.com/.well-known/agent-skills/index.json) |
+| MCP 服务器卡片 | [mcp/server-card.json](https://openworklabs.com/.well-known/mcp/server-card.json) |
+| OpenAPI | [openapi.json](https://api.openworklabs.com/openapi.json) |

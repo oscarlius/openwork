@@ -1,0 +1,70 @@
+---
+title: "网络诊断"
+description: "在管控严格的 OpenWork 部署里排查 DNS、TLS、代理、模型目录以及 Den 出站访问问题。"
+---
+
+当 OpenWork 连到了错误的服务器、无法完成 TLS、被代理挡住，或者你需要证明 Den 能够访问某个已批准的诊断源站时，请看本页。非网络类的运行时、MCP 和工具状态陈旧问题，请用 [诊断提示词](/zh/start-here/troubleshooting/diagnostic-prompts)。
+
+## Windows 桌面网络检查工具
+
+`scripts/support/openwork-doctor.ps1` 是一个兼容 Windows PowerShell 5.1、无需管理员权限、只出报告的检查工具，供客户 IT 使用。它检查 DNS、TCP 443、用 `SslStream` 验证的实时 TLS 证书链、在 `openssl` 可用时读取服务端下发的证书、WinHTTP/.NET 的代理设置、PowerShell/操作系统版本，以及 `NODE_EXTRA_CA_CERTS`。
+
+如果这台机器能访问 GitHub，可以直接从仓库的 raw URL 运行它：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "`$p=Join-Path `$env:TEMP 'openwork-doctor.ps1'; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/different-ai/openwork/dev/scripts/support/openwork-doctor.ps1' -OutFile `$p; & `$p -WebUrl 'https://openwork.example.com' -ApiUrl 'https://api.openwork.example.com' -ExpectedIssuerMatch 'DigiCert'"
+```
+
+如果无法直接下载，请通过你所在组织的合规离线渠道把 `scripts/support/openwork-doctor.ps1` 拷到这台机器上，然后运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\openwork-doctor.ps1 -WebUrl 'https://openwork.example.com' -ApiUrl 'https://api.openwork.example.com' -ExpectedIssuerMatch 'DigiCert'
+```
+
+`-WebUrl` 填你的 Den web 源站。只有当你的部署确实单独发布了 Den API 源站时，才填 `-ApiUrl`；在单源站部署里，API 路径通常位于 web 源站的 `/api/den` 代理之后。
+
+### 常见结论怎么读
+
+| 结论 | 通常意味着什么 | 先检查哪一项修复 |
+| --- | --- | --- |
+| `LIKELY TLS INTERCEPTION` | 叶子证书的签发者是企业内部 CA 或代理 CA，而不是预期的公网签发者。 | 在代理里把 OpenWork 的主机加入放行名单，或者在每一处需要它的 OpenWork 信任面上安装企业根证书。 |
+| `LIKELY MISSING INTERMEDIATE OR UNTRUSTED ROOT` | 服务器可能只下发了叶子证书而缺少中间证书，或者这台机器缺少签发根证书。 | 先修好服务端的 `fullchain`/证书 bundle，再验证客户端信任。 |
+| `MISSING INTERMEDIATE CONFIRMED BY OPENSSL` | OpenSSL 无法用下发的证书拼出完整链路。 | 用完整链路的证书 bundle 替换服务端证书。 |
+| `LIKELY DNS ISSUE` | 该主机名在这台机器上解析不出来。 | 检查 VPN 状态、分离式 DNS，以及这些内部主机名是否真的存在。 |
+| `PROXY DETECTED` | WinHTTP 或 .NET 会把该 URL 走代理。 | 核对代理认证、主机放行名单，以及系统代理的预期行为。 |
+
+## 云端目录诊断的信任设置
+
+设置 → 调试里有一项云端目录诊断，它会探测托管的 `openwork-cloud` MCP 条目，并验证 Cloud 恰好暴露 `search_capabilities` 和 `execute_capability`。
+
+对于自托管的 Den 源站，请在 OpenWork 启动之前设置 `OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS`：
+
+```bash
+OPENWORK_AGENT_DIAGNOSTICS_TRUSTED_ORIGINS=https://openwork.example.com
+```
+
+这个值是逗号分隔的裸源站列表：只包含协议、主机名和可选端口。除回环地址可以用 `http:` 之外，其余条目必须使用 `https:`。
+
+如果某个 Den 源站不在信任列表里，这项诊断会被跳过，不会向该不受信任的源站发送带凭证的请求。Cloud MCP 本身不受影响；这个变量只管诊断探测。请在启动器、MDM 配置、服务包装脚本或 shell 环境里设置它，必须在启动之前完成，因为应用内的环境存储会剥掉 `OPENWORK_*` 和 `OPENCODE_*` 键。
+
+## Den 出站诊断
+
+Den 可以在自己的进程里运行一项可选的、由管理员触发的出站诊断。它走的是容器真实的 DNS、代理、TLS 信任、防火墙、服务网格和 NetworkPolicy 路径。
+
+- 默认的诊断源站是 `https://diagnostic.openworklabs.com`。
+- 由工作区所有者或超级管理员发起检查；它不是 Den 的后台依赖。
+- 诊断令牌必须是合成的，且长度不少于 24 个字符。不要用模型提供商或客户的凭证。
+- 想使用内部的诊断源站，就把诊断应用部署到一个内部可达、且受支持的运行时/源站上，然后为 Den 设置 `DEN_DIAGNOSTICS_ORIGIN` 和 `DEN_DIAGNOSTICS_BEARER_TOKEN`。该服务的 README 目前记录了它的运行时与数据保留模型；除非你的部署路径已经验证过，否则不要假设可以直接套用一个通用的 Kubernetes 包。
+
+```dotenv
+DEN_DIAGNOSTICS_ORIGIN=https://diagnostics.example.internal
+DEN_DIAGNOSTICS_BEARER_TOKEN=<24-or-more-character-synthetic-token>
+```
+
+在 Node.js 24.5 或更新版本上，Den 的代理配置应当放在进程启动环境里，例如 `NODE_USE_ENV_PROXY=1`、`HTTPS_PROXY` 和 `NO_PROXY`。当 TLS 检测使用私有根证书时，请用 `NODE_EXTRA_CA_CERTS` 或 Helm 的 `customCa`。参见 [证书信任与代理](/start-here/certificate-trust-and-proxies)。
+
+## 相关诊断
+
+- [出站网络访问](/zh/start-here/outbound-network-access) 给出目标地址清单，以及某个主机被拦截时会坏掉什么。
+- [私有网络部署](/zh/start-here/private-network-deployment) 说明常见的 VPN/私有 Den 拓扑和内部 MCP 策略开关。
+- [诊断提示词](/zh/start-here/troubleshooting/diagnostic-prompts) 覆盖非网络类的运行时、MCP 与工具状态陈旧排查。

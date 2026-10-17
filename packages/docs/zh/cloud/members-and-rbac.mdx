@@ -1,0 +1,136 @@
+---
+title: "管理成员与 RBAC"
+description: "管理所有者、管理员、成员以及团队继承的 Admin 权限，包括 SCIM 群组"
+keywords: ["members", "roles", "RBAC", "invite member", "teams", "admin team", "permissions", "SCIM groups", "allowed email domains", "成员", "角色", "邀请成员", "团队", "Admin 团队", "权限", "SCIM 群组", "允许的邮箱域名"]
+---
+
+OpenWork Cloud 把组织成员身份和团队归属分开处理。团队用于 Collection 和提供商访问；角色控制一个人能在整个组织里管理什么。一个经过明确批准的团队还可以让它的成员获得组织范围的 `Admin` 权限。
+
+## 角色
+
+OpenWork Cloud 有三个角色：
+
+- `Owner`：完全掌控组织。只有所有者能删除组织或转移所有权。
+- `Admin`：可以邀请 `Member` 用户、管理普通团队、在访问保护规则允许的范围内移除成员、管理共享的 Cloud 资源、连接、提供商与用量上限、发起订阅，以及查看 SSO、SCIM、API 密钥、已批准的 Web 来源和桌面策略等设置。
+- `Member`：可以使用分享给自己的资源，但不能管理组织事务。
+
+`Super Admin` 已经不存在了。每一位原来的超级管理员现在都是 `Admin`，管理员能做的事情和过去完全一样。只有超级管理员才能做的事，现在变成了所有者专属：
+
+- 修改成员角色，或以 `Admin` 身份邀请某人
+- 指定 Admin 团队，以及变更其成员
+- 组织设置、品牌标识与已批准的 Web 来源
+- 管理 SSO、SCIM、组织 API 密钥、桌面策略与网络诊断
+- 打开结算门户
+- 编辑或移除别人添加的连接
+
+自定义角色也一并移除了；原本带有自定义角色的成员按 `Member` 处理。企业版组织可以用 Permissions 把上述任何所有者专属操作授予管理员或某个团队，也可以改变成员和管理员能做什么。
+
+`Owner` 无法通过邀请或角色编辑器指派。所有权只能转移给一位在职的管理员，转移后原所有者变成管理员。
+
+## 邀请成员
+
+1. 打开 **Members**。
+2. 在 **Members** 标签页点击 **Add member**。
+3. 输入同事的 **Email**。
+4. 如果你是所有者，选择初始 **Role**：`Member` 或 `Admin`。管理员只能邀请 `Member` 用户。
+5. 点击 **Send invite**。
+
+<Frame>
+  ![OpenWork Cloud 的成员与 RBAC 仪表盘](/images/cloud-members-and-rbac-dashboard.png)
+</Frame>
+
+邀请是和受邀的邮箱地址绑定的。
+
+## SSO 即时开通
+
+当 SSO 即时开通（just-in-time provisioning）在首次登录时把某人加入组织，OpenWork 会赋予基线角色 `Member`。IdP 的属性，例如 `role`、`groups` 或 `admin`，不会被用来授予 OpenWork 的组织角色。
+
+更高的权限需要明确的 OpenWork 角色指派、所有权转移，或者一个已批准的 Admin 团队（见本页“团队 Admin 权限”一节）。SAML 群组属性或一个名为 `Admins` 的身份提供商群组本身不会授予任何角色。
+
+## 限制谁能加入
+
+如果你只想让特定公司或域名的同事加入：
+
+1. 打开 **Settings › General**（这个页面标题是 **Org settings**）。
+2. 打开 **Restrict allowed email domains**。
+3. 把每个已批准的域名加进 **Domain allowlist**。
+4. 点击 **Save settings**。
+
+开启后，OpenWork Cloud 只允许使用已批准域名邮箱地址的人加入。已有邀请仍然针对具体邮箱地址，所以两项检查都会生效：受邀人必须使用被邀请的那个邮箱地址，并且该地址必须符合允许清单。
+
+## 创建团队
+
+1. 打开 **Members › Teams**。
+2. 点击 **Create Team**。
+3. 填写 **Team name**。
+4. 选择 **Team members**。
+5. 点击 **Create team**。
+
+你可以用团队来控制 Collection 和 LLM 提供商的访问，而不必一个个分配人员。
+
+### 用 SCIM 群组管理团队
+
+使用 SCIM 的组织可以在 **Settings › SCIM** 里开启 **Create teams from SCIM groups**。OpenWork 随后会为每个被开通的 Group 创建一个团队，并从身份提供商持续同步其成员。这类团队标注为 **Managed by SCIM**，必须在身份提供商里修改；手动创建的团队及其成员关系保持独立。
+
+要连接身份提供商，请按
+[Okta SCIM 开通](/zh/cloud/scim-okta)
+或
+[Microsoft Entra SCIM 开通](/zh/cloud/scim-microsoft-entra)
+操作。
+
+当 SCIM 撤销一个用户的开通时，OpenWork 会保留一条已断开的成员记录用于组织历史。只有当该用户不再属于其他任何有效组织时，全局用户才会被删除。要让他重新获得 SAML 访问，请先通过 SCIM 重新激活该用户。
+
+## 团队 Admin 权限
+
+Admin 团队授予的是内置的组织 `Admin` 角色，而不只是该团队的管理权。它可以是一个手动维护的 OpenWork 团队，也可以是从 SCIM Group 同步来的团队。创建或同步一个团队并不会自动启用这项授权。
+
+### 批准一个 Admin 团队
+
+1. 以组织所有者身份登录。
+2. 打开 **Members › Teams**，检查该团队的成员。
+3. 在列表里该团队下方勾选 **`Grant organisation Admin to all members of`** *（团队名称）*。在团队详情页的标题正下方、**Overview** 与 **Access** 之上，也有同一个复选框。
+4. 该复选框会立即保存。在 **Members** 里查看 **Admin via** *（团队名称）*，可以看到继承权限的来源。
+
+只有所有者能启用或取消这个复选框。管理员 —— 包括通过团队继承 Admin 的人 —— 看到的是锁定状态，不能指定另一个 Admin 团队，也不能改变自己所在团队的指定，除非企业版组织把这项权限给了他们。
+
+### 直接角色与继承角色
+
+- **直接角色**是在 OpenWork 里指派给这个人的。团队归属不会改写它。
+- **继承 Admin** 在该人员是一个已批准 Admin 团队的有效组织成员期间生效。他的直接角色和其他授权仍然照常适用。
+- 团队永远不会授予 `Owner`。继承 Admin 提供的访问与直接 `Admin` 角色相同，不会解锁所有者专属操作。
+- 把某人从某个 Admin 团队移除，或取消该团队的勾选，只会移除那一个 Admin 来源。直接 `Admin` 角色或另一个已批准的 Admin 团队仍然会授予 Admin。把直接角色改成 `Member` 不会移除已有的团队授权。
+
+做权限复核时，既要看这个人的直接角色，也要看 **Admin via** 里列出的每一个团队。OpenWork 会在后续请求上检查当前的团队权限；团队成员访问发生变化时，本人不需要重新登录。
+
+### 谁负责管理成员
+
+对于**手动维护的 Admin 团队**，只有所有者能增减成员或删除该团队。无论成员是从团队页面还是成员列表里编辑，规则都一样。管理员也不能移除带有 Admin 团队权限的组织成员，不能刷新或取消携带该权限的邀请。Admin 团队中想退出组织的成员，需要请 owner 先把他从团队里移除。
+
+对于标注为 **Managed by SCIM** 的团队，请在身份提供商里修改它的名称和成员，而不是在 OpenWork 里。所有者仍然控制 OpenWork 里的 Admin 复选框。勾选它，意味着你信任该身份提供商里群组管理权限的持有者来决定谁通过这个群组获得组织 Admin。
+
+SCIM 的变更只有在身份提供商发送、且 OpenWork 成功处理之后才生效。还在 Entra 开通周期或 Okta 群组推送队列里等待的移除，尚未在 OpenWork 撤销访问。请检查提供商的开通日志、OpenWork 的 SCIM 健康状态和 **Admin via**，不要假设 IdP 上的编辑已经生效。SCIM 的用户撤销开通会移除有效的组织访问，而不只是某一个团队的授权。
+
+### SCIM 映射变更与重新批准
+
+当 **Settings › SCIM** 里的 **Create teams from SCIM groups** 被关闭时，OpenWork 会清除受影响团队的 Admin 授权，但保留这些团队及其当前成员，作为手动维护的团队。保留团队不等于保留它的 Admin 批准。所有者必须重新审视保留下来的成员，如果确实要给予手动 Admin 权限，需要再次勾选 Admin 复选框。
+
+在团队同步关闭期间，后续的 SCIM 群组改名、成员更新或群组删除都不会改变被保留的手动团队的名称、成员或重新批准的 Admin 授权。这不会停用 SCIM 的用户撤销开通。再次保存已经停用的映射模式（`metadata_only`）不会清除手动重新批准。
+
+重新启用团队同步会再次清除 Admin 授权，并用 SCIM 群组的成员替换保留下来的手动成员。请先审阅同步后的成员，再重新批准该团队。
+
+在团队同步处于启用状态时，删除 SCIM Group 或连接器同样会清除受影响的 Admin 授权。任何被保留下来的团队都需要所有者明确重新批准，才能作为手动团队授予 Admin。删除 Group 会移除其同步的团队成员关系；不要把保留下来的团队记录当作访问仍然存在的证据。
+
+## 实用的权限模式
+
+一套对多数组织都够用的简单配置：
+
+- 把所有权留在指定的、受保护的 `Owner` 账户上
+- 给值得信任的运维人员直接 `Admin`，或让他们加入已批准的 Admin 团队
+- 大多数人保持 `Member`
+- 用 `Teams` 决定谁能看到特定 Collection 或提供商
+
+## 说明
+
+- 你无法通过普通角色编辑器修改组织所有者的角色，也无法移除所有者；交接控制权时请使用所有权转移。
+- 所有者和管理员可以管理普通团队和成员邀请。Admin 团队的权限规则更严格，见上文。
+- 只有所有者能修改 **Org settings**，包括允许的邮箱域名和 **Allowed Desktop Versions**。管理员看到的是只读状态。

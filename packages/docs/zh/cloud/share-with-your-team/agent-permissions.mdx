@@ -1,0 +1,85 @@
+---
+title: "Agent 权限"
+description: "选择智能体能在成员电脑上做什么：运行命令、编辑文件、打开网站，以及使用本地的技能和 MCP 服务器。"
+keywords: ["agent permissions", "block commands", "allow commands", "allow list", "block list", "approved websites", "block websites", "local skills", "local MCP servers", "team permissions", "enterprise controls", "智能体权限", "阻止命令", "允许命令", "允许清单", "阻止清单", "批准的网站", "屏蔽网站", "本地技能", "本地 MCP 服务器", "团队权限", "企业管控"]
+---
+
+Agent 权限决定智能体在成员的电脑上、在 OpenWork 桌面应用里能做什么。你为组织里的所有人设置一份，然后按团队覆盖。
+
+<Note>
+Agent 权限是一个正在放量中的企业版功能，只作用于应用运行新版 OpenCode v2 引擎的成员。它位于 OpenWork Cloud 的 **Settings** 下、**Permissions** 旁边；如果它显示 **Enterprise** 徽标，请联系我们为你的组织开启。
+</Note>
+
+## 谁能管理 agent 权限
+
+- 带有 **Manage agent permissions** 权限的成员（默认是所有者）可以修改 agent 权限。
+- 带有 **View agent permissions** 的成员（默认是管理员）可以查看。
+- 开启 **Permissions** 后，所有者可以把这两项中的任意一项授予 Admin 权限或某个团队的权限。
+
+## 你能控制什么
+
+| 权限 | 可选项 | 清单 |
+| --- | --- | --- |
+| **Run commands** | **Allow**、**Ask first** 或 **Block** | 命令 |
+| **Edit files** | **Allow**、**Ask first** 或 **Block** | 无 |
+| **Open websites** | **Allow**、**Ask first** 或 **Block** | 网站 |
+| **Search the web** | 允许或阻止 | 无 |
+| **Use local skills** | 允许或阻止 | 无 |
+| **Use local MCP servers** | 允许或阻止 | 无 |
+
+- **Ask first** 会让智能体每次行动前都先询问成员。
+- **Always allowed** 在某个权限被设为 **Ask first** 或 **Block** 时列出例外项，它们运行时不会询问。
+- **Always blocked** 列出任何情况下都被阻止的内容。被阻止的模式总是优先于允许的。
+- **Use local skills** 和 **Use local MCP servers** 覆盖成员电脑上的技能与 MCP 服务器，一次管全部。你组织在 OpenWork Cloud 里的技能和连接不受影响，仍照常工作，包括 OpenWork 为成员加到他们应用里的那些连接。
+
+### 模式写法
+
+- **命令**：`*` 匹配任意文本。`git *` 匹配每条 `git` 命令，包括单独的 `git`。`npm test` 只匹配这一条命令。
+- **网站**：`docs.example.com` 匹配该站点，`*.example.com` 匹配它的子域名，`example.com/docs` 匹配 `/docs` 下的页面。以 `https://` 开头则只匹配安全页面。
+
+## 所有人还是团队
+
+- **Everyone** 的权限适用于每一位成员。
+- 团队对某个权限的选择，会针对该团队成员替换掉 **Everyone** 的设置。团队的清单则会叠加到 **Everyone** 的清单之上。
+- 当一个人在多个团队里时，采用他们各团队中最严格的那个选择：先 **Block**，再 **Ask first**，最后 **Allow**。没有自己选择的团队按 **Everyone** 的设置参与计算。只有当他们每一个「不允许该权限」的团队都列出某个 **Always allowed** 模式时，它才算例外，所以一个团队的清单永远不会抵消另一个团队更严格的选择。
+
+## 设置 agent 权限
+
+1. 打开 [app.openworklabs.com](https://app.openworklabs.com/) 并选择你的组织。
+2. 进入 **Settings › Agent permissions**。列表里会有 **Everyone**，以及每个有自己的 agent 权限的团队。
+3. 打开 **Everyone** 或某个团队的 agent 权限。要给团队单独一份，点击 **Create team agent permissions**，选择团队，然后改动与 **Everyone** 不同的部分。
+4. 修改某个权限的可选项，或往它的清单里添加模式。在团队上，被改过的权限会覆盖 **Everyone** 的；点击它旁边的重置图标即可重新使用 **Everyone** 的设置。
+5. 想检查某次请求会怎样，在 **Try a request** 下选择 **Command**、**Website**、**Local skill** 或 **Local MCP server**，并输入一条。该检查使用的是你尚未保存的改动。
+6. 点击 **Save changes**（新团队则是 **Create team agent permissions**）。保存之后要回退，点击确认提示里的 **Undo**。
+7. 要把一个团队恢复到 **Everyone** 的 agent 权限，打开该团队的那份并点击 **Remove**。
+
+成员的应用会在下一次刷新其组织设置时应用这些变更：应用启动或唤醒时、成员登录时，以及每小时一次。
+
+## 成员会看到什么
+
+有东西被阻止时，智能体会被告知被阻止的内容、由哪条模式阻止，以及它是为谁设置的，例如：*你组织的 agent 权限阻止了命令 `rm -rf build`（`rm *` 对 Contractors 是阻止的）。*
+
+在内置浏览器里，被阻止的网站不会加载，浏览器会显示同样的原因。设为 **Ask first** 的网站在成员批准后打开，并一直保持批准，直到权限发生变化。刚在新电脑上登录后，内置浏览器会等几秒以获取该成员的权限。
+
+## 已知的限制
+
+- **通过变量指定的命令。** 命令规则按命令书写原文匹配。程序名来自 shell 变量、替换或模式的命令，例如 `x=rm; $x -rf build`，无法匹配到某条规则。在命令被阻止的地方它就是被阻止；在只阻止部分命令的地方（例如 `rm *`），它会走询问，成员可以批准。
+- **OpenWork 无法完全读取的命令行。** 嵌套过深或过长、导致 OpenWork 停止读取的行，处理方式相同。只在命令运行时才存在的脚本，例如 `curl … | sh`，按书写原文检查。
+- **看起来像命令的文本。** 命令的每一行都会被检查，包括 heredoc（`cat <<EOF` … `EOF`）里的文本。那里某一行匹配到被阻止的模式就会阻止整条命令，即使它只是被写进文件。
+- **文件编辑的 Ask first。** 它作用于智能体的文件编辑。当命令是允许的，一条会写文件的命令，例如 `echo … > notes.txt`，不会走询问；请把 **Run commands** 也设为 **Ask first** 才能覆盖这类情况。
+- **就地改变地址的页面。** 网站规则适用于内置浏览器发出的每一个请求。一个允许站点上的页面如果不加载就切换到它自己的另一个地址（单页应用就是这样），只有在它向那里发起请求时才会被再次检查。
+- **刚刚登录之后。** 在还没有该成员 agent 权限的电脑上，智能体可以在 OpenWork 从 Den 读到权限之前的几秒内行动。内置浏览器以及添加本地技能或 MCP 服务器则改为等待几秒。
+- **Den 不可达期间。** 桌面应用会继续沿用电脑上最近一次的 agent 权限而不是阻止成员，所以在 Den 里做的改动会在能重新连上 Den 时生效。在 Den 不可达期间登录的成员，会按电脑上最近的权限（如果有的话）工作，直到 Den 响应。
+- **审计日志。** 每次对 agent 权限的改动都会记录该权限改动前后的可选项，以及增删了多少条模式；模式本身不会记录。任何能查看审计日志的人都能看到这些条目。
+
+<Accordion title="技术细节">
+**规则。** Den 把每位成员的权限解析为有序的 OpenCode 权限规则（`action`、`resource`、`effect`），并在 `GET /v1/me/desktop-config` 里以 `agentPermissions.rules` 下发，每条都标注属于 **Everyone** 还是某个团队的名字。最后匹配的那条规则决定结果。除 **Allow** 之外的每个可选项都会变成一条 `*` 规则，它的 **Always allowed** 模式紧随其后，它的 **Always blocked** 模式排在最后。保持 **Allow** 的权限不添加任何规则，因此成员自己的设置生效。
+
+**引擎。** 在 OpenCode v2 上，这些规则成为引擎自身的权限规则，阻止项写成 Ask first，而 OpenWork 的 agent 权限插件在引擎之后裁决每一个权限请求：它会带上被点名的规则进行阻止，工作区自身的配置不能把它放宽。如果插件加载失败，被阻止的操作改为询问成员。OpenCode v1 不会把 agent 权限应用到智能体的行为上：应用仍跑 v1 的成员需要换到新引擎，这些设置对他们才生效。在任一引擎上，内置浏览器都遵循网站规则，而在 OpenWork 里添加被阻止的本地技能或 MCP 服务器会被拒绝。被阻止的本地 MCP 服务器会从任何配置来源被禁用，也不会由 OpenWork 注册；在 OpenWork 里添加它们会被拒绝。被阻止的本地技能不会出现在提供给智能体的内容里，加载它也会被拒绝并点名规则。OpenWork 与你组织的连接，以及它代成员加上的组织连接，会保持开启，你组织的技能在 OpenWork Cloud 里仍通过它可用；本地技能被阻止时，智能体通过 OpenWork Cloud 而不是在自己的技能清单里找到它们。你组织的连接是按 OpenWork 注册它们时使用的名字和地址识别的，所以复用其中某个名字的工作区服务器会被当作本地服务器。在这两项权限变成开关之前保存的设置保留其可选项，而曾经按名字阻止过任何技能或服务器的那一项，现在会阻止全部；它们的清单不再适用。
+
+**网站。** 模式匹配地址的主机部分、`*.` 对应的子域名、当模式写明时的端口与协议（`https://example.com:443` 只匹配 443 端口），以及作为前缀的路径。内置浏览器把它们应用到它加载的每个页面、框架和请求上，无论由谁发起，也包括一个允许的页面所加载的脚本与其他资源；只有页面可以走询问。
+
+**离线。** 桌面应用会保留它最近一次收到的规则，并在 Den 不可达期间把它们应用于智能体、内置浏览器以及添加本地技能或 MCP 服务器，好让成员继续工作。退出登录，或换另一位成员登录，会清掉这些规则。
+
+**API。** `GET /v1/agent-permissions` 列出所有人的以及每个团队的设置。`PUT /v1/agent-permissions/everyone` 和 `PUT /v1/agent-permissions/teams/{teamId}` 会替换它们；`DELETE /v1/agent-permissions/teams/{teamId}` 会移除某个团队的覆盖。
+</Accordion>

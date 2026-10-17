@@ -1,0 +1,88 @@
+---
+title: "连接 OpenWork MCP"
+sidebarTitle: "把 OpenWork MCP 加进你的智能体"
+description: "一条命令就能把 OpenWork MCP 加到 Claude Code、Codex、Cursor、VS Code 或 ChatGPT：https://api.openworklabs.com/mcp/agent。"
+---
+
+把你组织的技能、插件和连接，带进你已经在用的那个智能体。
+
+<Steps>
+<Step title="添加服务器">
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```sh
+    claude mcp add --transport http openwork https://api.openworklabs.com/mcp/agent
+    ```
+
+    然后运行 `/mcp` 并选中 `openwork`。加 `-s user` 可对所有项目生效。[指南](/model-context-protocol/claude-code)
+  </Tab>
+  <Tab title="Codex">
+    ```sh
+    codex mcp add openwork --url https://api.openworklabs.com/mcp/agent
+    codex mcp login openwork
+    ```
+
+    [指南](/model-context-protocol/codex)
+  </Tab>
+  <Tab title="Gemini CLI">
+    ```sh
+    gemini mcp add --transport http openwork https://api.openworklabs.com/mcp/agent
+    ```
+
+    然后在 `gemini` 里运行 `/mcp auth openwork`。[指南](/model-context-protocol/gemini-cli)
+  </Tab>
+  <Tab title="OpenCode">
+    ```sh
+    opencode mcp add openwork --url https://api.openworklabs.com/mcp/agent
+    opencode mcp auth openwork
+    ```
+
+    [指南](/model-context-protocol/opencode)
+  </Tab>
+  <Tab title="Cursor">
+    点一下即可[添加到 Cursor](cursor://anysphere.cursor-deeplink/mcp/install?name=openwork&config=eyJ1cmwiOiJodHRwczovL2FwaS5vcGVud29ya2xhYnMuY29tL21jcC9hZ2VudCJ9)，或者把这个 URL 作为远程 MCP 服务器粘贴进去。[指南](/model-context-protocol/cursor)
+  </Tab>
+  <Tab title="VS Code">
+    ```sh
+    code --add-mcp '{"name":"openwork","type":"http","url":"https://api.openworklabs.com/mcp/agent"}'
+    ```
+
+    或者[一键安装](vscode:mcp/install?%7B%22name%22%3A%22openwork%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fapi.openworklabs.com%2Fmcp%2Fagent%22%7D)，然后依次运行 `MCP: List Servers` > `openwork` > `Start Server`。[指南](/model-context-protocol/vs-code)
+  </Tab>
+  <Tab title="Claude Desktop">
+    `Settings` > `Connectors` > `Add custom connector`，然后粘贴 `https://api.openworklabs.com/mcp/agent`。[指南](/model-context-protocol/claude-desktop)
+  </Tab>
+  <Tab title="ChatGPT">
+    `Settings > MCP servers`，然后粘贴 `https://api.openworklabs.com/mcp/agent`。[指南](/model-context-protocol/chatgpt)
+  </Tab>
+</Tabs>
+
+其他客户端，包括 [Windsurf](/model-context-protocol/windsurf) 和 [Zed](/model-context-protocol/zed)：把 `https://api.openworklabs.com/mcp/agent` 作为带 OAuth 的远程 MCP 服务器使用。
+
+</Step>
+<Step title="登录并选择你的组织">
+你的客户端会打开一个浏览器。登录，或者[创建一个免费账户](https://app.openworklabs.com?mode=sign-up)，然后选择要使用的组织。
+</Step>
+<Step title="问你的智能体">
+试着问“我现在连的是哪个 OpenWork 组织？”或者“用我们团队的每周状态技能处理这个仓库。”
+</Step>
+</Steps>
+
+<AccordionGroup>
+  <Accordion title="怎么切换组织？">
+    在你的客户端里退出 `openwork` 服务器的登录，然后重新登录一次。组织是绑定在 token 上的。
+  </Accordion>
+  <Accordion title="哪些客户端经过验证？">
+    OpenCode 已经端到端验证过。其他客户端遵循 OpenWork 的 OAuth 规范，但只做了配置层面的验证。见 [MCP 网关](/cloud/run-in-the-cloud/cloud-mcp#reference)。
+  </Accordion>
+  <Accordion title="自托管要用什么 URL？">
+    用你自己的 Den API 源，默认形式是 `https://api.<your-den-web-host>/mcp/agent`。
+  </Accordion>
+  <Accordion title="遇到 401 或 invalid_grant 怎么办？">
+    退出登录后重新登录一次。见[问题排查](/cloud/run-in-the-cloud/cloud-mcp#reference)。
+  </Accordion>
+  <Accordion title="怎么共享一个技能，让它出现在这里？">
+    由管理员在 OpenWork Cloud 里发布并授予访问权限。见[把这套配置共享给团队](/zh/start-here/do-work-with-it/share-your-setup)。
+  </Accordion>
+</AccordionGroup>

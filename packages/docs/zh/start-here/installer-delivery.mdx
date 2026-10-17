@@ -1,0 +1,52 @@
+---
+title: "installer 分发"
+description: "选择组织安装链接以何种方式分发标准的 OpenWork 桌面应用 installer。"
+---
+
+组织安装链接帮助成员安装标准版 OpenWork 桌面应用，并把它连接到正确的 Den 组织。Den 不会构建客户专属的 installer，也不会把 installer 再包一层 ZIP。实现与安全细节保留在仓库里的 [Organization Install Links 指南](https://github.com/different-ai/openwork/blob/dev/docs/org-install-links.md#installer-delivery)中。
+
+## 分发方式对照
+
+| 部署形态 | 下载行为 | 客户端需要的访问权限 |
+| --- | --- | --- |
+| 可联网 | Den 校验组织安装令牌，然后把浏览器重定向到 `OPENWORK_INSTALLER_RELEASE_REPO` 下解析出版本对应的具体 GitHub release 资源（见「安装的是哪个版本」）。组织令牌不会被转发。 | Den web/API、`github.com`、`release-assets.githubusercontent.com`，以及用于遗留或回滚路径的 `objects.githubusercontent.com`。 |
+| 半离线 installer 分发 | Den 从 `OPENWORK_INSTALLER_ARTIFACTS_DIR` 流式传输匹配的标准 installer。 | 下载 installer 只需要 Den web/API。桌面运行时依赖若未做镜像或未关闭，仍可能需要联网。 |
+| 完全内网 installer 分发 | 同一套挂载产物路径，Den web/API 与 installer 字节全部在隔离网络内部提供。 | 下载 installer 只需要内网的 Den web/API。要实现完整的产品隔离，仍然需要 [离线（air-gapped）部署](/start-here/air-gapped-deployment) 里那份更完整的清单。 |
+
+## 挂载产物的行为
+
+当 `OPENWORK_INSTALLER_ARTIFACTS_DIR` 指向一个已挂载的目录且预期文件存在时，Den 会直接流式传输该文件。它不会从 GitHub 拉取、不会在首次请求时缓存、不会重新包装、不会打 ZIP，也不会把整个 installer 读进内存。
+
+预期文件名取决于部署形态。自托管的 Den（单组织模式，也是默认模式）分发企业发行版；托管的多组织 OpenWork Cloud 分发云端发行版。安装链接永远不会分发公开的 `openwork-<platform>-<version>` 文件名。文件名里的版本是解析出的 release tag，不带前导 `v`：
+
+- `openwork-enterprise-mac-arm64-<version>.dmg`
+- `openwork-enterprise-mac-x64-<version>.dmg`
+- `openwork-enterprise-win-x64-<version>.exe`
+- `openwork-enterprise-linux-x86_64-<version>.AppImage`
+- `openwork-enterprise-linux-arm64-<version>.AppImage`
+
+在托管的 OpenWork Cloud 上，前缀是 `openwork-cloud-` 而不是 `openwork-enterprise-`。任何其它名字的挂载文件都会被忽略，请求会继续走到 GitHub 重定向。
+
+当 Den 没有找到挂载产物时，`OPENWORK_INSTALLER_RELEASE_REPO` 决定 GitHub 重定向的目标。它不是内部产物仓库的配置项。
+
+## 安装的是哪个版本
+
+每个下载请求，Den 按以下顺序解析出一个 release 版本：
+
+1. 如果该组织设置了 `allowedDesktopVersions` 桌面策略，就取清单里最高的版本。要锁定整个设备群，或让桌面版比 Den 本身更新，都走这里。
+2. 否则，如果 Den API 上设置了 `OPENWORK_INSTALLER_RELEASE_TAG`，就以该 tag 为准。
+3. 否则，运行已发布 release 镜像的自托管 Den 会安装与自身相同的 release 版本（即 Den API 上 `GET /health` 报告的 `version`），因此自托管的控制平面默认永远不会发出比自己更新的桌面版。托管的 OpenWork Cloud，以及没有 release 版本号的 Den 构建，则安装最新的正式发布稳定版本。
+
+挂载产物必须与解析出的版本一致。依赖第 3 步的默认行为时，请放入你正在运行的那个 Den release 的文件；设置了策略或覆盖值时，请放入对应版本的文件。
+
+对于多副本的 Den API 部署，请在每个副本的相同路径挂载同一个只读 PVC。连接授权保存在 MySQL 里，因此预览和接受操作落在不同副本上是安全的，但 installer 的字节必须对每个副本同样可见。
+
+## 单源站的稳态与安装链接交接
+
+对于正常的已登录桌面流量，优先使用一个面向桌面的 Den web 源站。桌面应用通过该源站的 `/api/den` 代理推导出 API 和 MCP 路径。
+
+如果 `DEN_API_PUBLIC_URL` 被配置成另一个独立的 API 源站，那么那一次性的 **Open OpenWork** 安装链接交接也必须能访问到该 API 源站。使用已公布 MCP URL 的外部 MCP 客户端同样需要访问它。在单源站拓扑里，这并不意味着稳态下的每一个桌面请求都要同时访问两个源站。
+
+## 受管设备群：企业二进制包 + MDM
+
+本页讲的是标准 installer 的安装链接分发方式。受管设备群通常会完全跳过安装链接交接：通过 MDM 部署 **OpenWork Enterprise 二进制包**，并在装机阶段写入 `desktop-bootstrap.json`，让首次启动就瞄准你的 Den 服务器。产物名称、引导文件字段说明，以及 MDM 不需要下发哪些内容，见 [企业桌面应用部署](/zh/start-here/enterprise-desktop-deployment)。

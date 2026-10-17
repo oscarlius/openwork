@@ -1,0 +1,82 @@
+---
+title: "OpenWork Cloud 入门"
+description: "把桌面应用连到你的组织，获得共享的技能与插件、托管连接、模型、策略和托管工作区"
+---
+
+<div className="docs-intro">
+  <p className="docs-eyebrow">OpenWork Cloud</p>
+  <h1>把 OpenWork 带到你的团队。</h1>
+  <p className="docs-lead">共享技能、连接、策略和工作流，同时把访问权限留在你自己的控制之下。</p>
+  <div className="docs-actions">
+    <a href="https://app.openworklabs.com/">在浏览器中打开</a>
+    <a href="/cloud/team-quickstart">团队快速上手</a>
+  </div>
+</div>
+
+<Note>
+OpenWork Cloud 是可选的。本地桌面应用始终免费，不需要登录 OpenWork Cloud，也支持你自己的提供商、技能、插件和自定义 MCP 服务器。当某个组织需要为团队分配并管理这些资源时，才使用 OpenWork Cloud。
+</Note>
+
+OpenWork Cloud 在 [app.openworklabs.com](https://app.openworklabs.com/) 提供。它面向这样的团队：需要共享身份、共享技能与插件、托管连接与模型、桌面策略，或者托管工作区。
+
+第一步，创建或加入一个组织，并把桌面应用连到它。
+
+<Frame>
+  ![OpenWork Cloud 的组织设置页，显示组织标识、允许的邮箱域名和允许的桌面版本](/images/cloud-org-settings.png)
+</Frame>
+
+1. 在浏览器中打开 [app.openworklabs.com](https://app.openworklabs.com/)。
+2. 按设置步骤给你的组织命名，并选择一个起点。
+3. 如果 OpenWork Cloud 要求结算信息，就把结算流程走完。
+4. 继续看下面的桌面应用登录步骤。
+
+走到这一步之后，你就可以配置这个组织的各项设置了。
+
+## 配置组织设置
+
+<Note>只有组织所有者能修改这些设置。</Note>
+
+1. 在云应用里打开 **Settings › General**（也就是 [Org settings 页面](https://app.openworklabs.com/dashboard/org-settings)）。
+2. 设置你的组织名称。
+3. 可选：开启 **Restrict allowed email domains** 并添加已批准的域名。
+4. 可选：在 **Allowed Desktop Versions** 下选择哪些桌面应用版本可以登录这个组织。
+
+这些设置对整个组织生效。你还可以创建团队、共享插件和技能、配置 Connectors 与共享模型，以及部署托管工作区。
+
+接下来要确认桌面应用能登录。
+
+## 从桌面应用登录
+
+1. 打开 **Settings › Account**。
+2. 点击 **Sign in**。
+3. 在浏览器里完成登录。
+4. 如果浏览器没有自动回到 OpenWork，点击 **Paste sign-in code**，粘贴来自 OpenWork Cloud 的 `openwork://den-auth?...` 链接或一次性代码，然后点击 **Finish sign-in**。
+
+## 桌面应用使用的 Cloud URL
+
+桌面应用只使用一个 Cloud URL：Den 网页端的 `baseUrl`。托管环境的默认值是
+`https://app.openworklabs.com`。
+
+所有 Cloud API 和 MCP 流量都由这一个 URL 经网页应用代理派生出来：
+
+- Cloud API 请求发往 `<baseUrl>/api/den/v1/...`。
+- OpenWork Cloud MCP 请求发往 `<baseUrl>/api/den/mcp/...`。
+
+桌面应用不会单独存储或读取另一个 API URL。启动时它从 `desktop-bootstrap.json`
+读取 Cloud URL；如果该文件缺失，就回退到 `https://app.openworklabs.com`。
+当你在 **Settings › Account** 里修改 Cloud URL 时，OpenWork 会把新的 `baseUrl`
+写回 bootstrap 文件，让下一次启动使用同一个信息来源。
+
+## 选择你的组织
+
+登录后，在 **Settings › Account** 里选择你的组织。分享给你的插件和技能会出现在
+**Settings › Library** 的 **From OpenWork** 下。
+
+## 下一步做什么
+
+- 把成员送到[连接你的服务](/start-here/connect-your-stack/connect-services)，让他们从桌面应用登录到团队批准的账户。
+- 使用 [Connectors](/cloud/share-with-your-team/shared-mcp-connections) 发布一个托管服务，并授予成员或团队访问权限。
+- 使用[发布与复制技能](/start-here/do-work-with-it/publish-and-copy-a-skill) 把某个技能或插件分享给个人或团队；或者用 [Collections](/zh/cloud/share-with-your-team/collections) 把多个插件归给同一批受众。
+- 使用 [OpenWork Web](/zh/cloud/run-in-the-cloud/shared-workspace) 给成员一个浏览器里的托管 OpenWork 工作区，什么都不用装。
+- 使用 [LLM providers](/cloud/share-with-your-team/managed-llm-provider) 或[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider) 管理共享的模型访问。
+- 使用[成员与 RBAC](/zh/cloud/members-and-rbac) 邀请人员、创建团队并控制访问。

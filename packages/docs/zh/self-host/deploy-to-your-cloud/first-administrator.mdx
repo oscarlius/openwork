@@ -1,0 +1,64 @@
+---
+title: "创建第一位管理员"
+description: "在不放开公开注册的前提下，安全地认领一套新的私有 OpenWork 部署。"
+---
+
+私有部署从一开始就应当关闭公开注册。把某个邮箱写进所有者或平台管理员允许名单，只是在它通过认证之后给这个身份授权；它不会创建账户、不会挑选密码，也不会生成一个默认管理员密码。
+
+带初始管理员引导功能的版本，提供一个专门的设置页：
+
+```text
+https://<your-den-web-host>/setup
+```
+
+<Warning>
+  没有 `/setup` 的 chart 和镜像版本不支持这条私有引导流程。请先升级，再尝试首个用户设置。在普通登录页上输入允许名单里的邮箱，也没法创建一个并不存在的账户。
+</Warning>
+
+## 安装之前
+
+1. 把初始管理员邮箱配置成有资格的单组织所有者（Den API 上的 `DEN_SINGLE_ORG_OWNER_EMAILS`）。
+2. 只有当这个人还需要全部署范围的 `/admin` 权限时，才把同一个邮箱加进平台管理员允许名单。
+3. 生成一个一次性、不重复的设置码。
+4. 通过 Kubernetes Secret 或你所在平台的密钥存储，把设置码以 `DEN_INITIAL_ADMIN_BOOTSTRAP_CODE` 注入；或者挂载成文件，设置 `DEN_INITIAL_ADMIN_BOOTSTRAP_CODE_FILE`。
+5. 保持公开注册关闭。
+
+设置码就是一段普通密钥字符串，不是 OpenWork 生成的哈希或 token。绝不把真实设置码放进提交进仓库的 Helm values 文件、ConfigMap、容器镜像、源码文件、工单、截图、日志或 PR。
+
+### Docker Compose 评估栈
+
+[评估栈](/zh/self-host/evaluate-with-docker-compose)用 `OPENWORK_OWNER_EMAILS` 和 `OPENWORK_SETUP_CODE` 传入同样的那两个 Den API 变量。在 `docker-compose.eval.yml` 旁边的 `.env` 文件里设置它们，同时加上 `OPENWORK_ALLOW_SIGNUP=false`，而且要在第一次 `docker compose up` 之前：
+
+```bash
+printf 'OPENWORK_ALLOW_SIGNUP=false\nOPENWORK_OWNER_EMAILS=%s\nOPENWORK_SETUP_CODE=%s\n' \
+  'admin@example.com' "$(openssl rand -hex 16)" >> .env
+docker compose -f docker-compose.eval.yml up -d --wait
+```
+
+然后打开 `http://localhost:3005/setup`，接着按下面「完成设置」一节继续。`.env` 里存着真实设置码，所以要保密，不要提交。
+
+## 完成设置
+
+1. 等到 Den web、Den API 和迁移 Job 都处于健康状态。
+2. 在 Den web 的域名上打开 `/setup`。
+3. 输入配置好的管理员邮箱和一次性设置码。
+4. 为这位管理员选择姓名和密码。
+5. 确认 OpenWork 让这位管理员登录，并进入那个单组织。
+
+设置流程沿用现有的 Better Auth 密码和会话保护。设置成功时会创建第一个账户，创建或认领那个单组织，授予配置好的所有者和平台管理员角色；此后设置页不再可用，因为部署里已经有了用户。
+
+## 验证这条边界
+
+设置完成之后：
+
+- 再次访问 `/setup`，会报告设置已完成或不可用；
+- 那个一次性设置码没法再创建第二位管理员；
+- 未知用户仍然无法注册；
+- 管理员可以退出登录，然后用普通的密码登录；
+- 重启或扩缩 Den API 都不会重新打开设置页。
+
+如果部署里已经有了用户，即使它的设置 Secret 还在，引导功能仍然不可用。轮换或还原这个 Secret 也不会重开设置页，除非运维人员刻意在 OpenWork 之外改动数据库。
+
+## 接下来配置 SSO
+
+把第一位所有者当成应急账户（break-glass account），然后为日常的员工访问配置 SAML 或 OIDC 单点登录和 SCIM。按你组织的访问控制策略来保护这个应急身份和它的恢复材料。

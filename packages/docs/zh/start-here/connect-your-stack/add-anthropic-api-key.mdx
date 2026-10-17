@@ -1,0 +1,61 @@
+---
+title: "添加 Anthropic API 密钥"
+sidebarTitle: "添加 Anthropic API 密钥"
+description: "在 Anthropic 创建 API 密钥，粘贴到 OpenWork 即可使用 Claude 模型。"
+keywords: ["anthropic", "claude", "api key", "sk-ant", "claude api", "connect provider", "claude pro", "claude max", "密钥", "模型提供商"]
+---
+
+<Note>
+**本地提供商配置。** 这里添加的密钥是给你本机的桌面应用用的。OpenWork 依然免费，你不需要登录 OpenWork Cloud。要为团队统一管理 Anthropic 访问，请使用[托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。
+</Note>
+
+要在 OpenWork 里使用 Claude 模型，先在 Anthropic 创建一个 API 密钥，再把它粘贴进 OpenWork。Anthropic 不允许第三方应用用 Claude 订阅账号登录，所以 OpenWork 是通过 API 密钥连接 Anthropic 的。
+
+## 开始之前
+
+- 你需要一个 [platform.claude.com](https://platform.claude.com) 账户，并且已经配好 API 计费。API 用量与 Claude Pro 或 Max 订阅是分开计费的。
+- 把这个密钥当作密码对待。Anthropic 只在你创建时完整显示一次。
+
+<Tip>
+要给团队配置？管理员可以在 OpenWork Cloud 的 **AI Gateway › AI Providers** 下一次性添加 Anthropic，成员随后就能直接用这些模型，不用各自粘贴密钥。见[添加托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。
+</Tip>
+
+## 在 Anthropic 创建密钥
+
+1. 登录 [platform.claude.com](https://platform.claude.com)。
+2. 打开 **API Keys** 页面。
+
+<Frame>
+  ![Anthropic 的 API Keys 页面](/images/anthropic-key.png)
+</Frame>
+
+3. 点击 **Create Key**。
+4. 给这个密钥起一个你认得出的名字，例如 `OpenWork`。
+
+<Frame>
+  ![Anthropic 的 Create Key 弹窗](/images/anthropic-openwork-key.png)
+</Frame>
+
+5. 立刻复制密钥。它以 `sk-ant-` 开头。
+
+## 把密钥添加到 OpenWork
+
+1. 打开 **Settings › AI Providers**。
+2. 点击 **Connect provider**。
+
+<Frame>
+  ![OpenWork 设置里的 Connect provider 按钮](/images/openwork-providers.png)
+</Frame>
+
+3. 选择 **Anthropic**，你会看到“Paste your API key to connect.”。
+4. 把密钥粘贴到 **API key** 字段。
+5. 点击 **Save key**。
+6. 在聊天中点击输入框下方的模型名称，选一个 Claude 模型。
+
+## 常见问题
+
+- **密钥被拒绝。** 确认你复制的是完整密钥，前后没有多余空格。
+- **找不到 API Keys 入口。** 检查你的 Anthropic 账户是否已开通 API 访问和计费。
+- **密钥丢了。** 在 Anthropic 重新创建一个，然后重复上面的步骤在 OpenWork 里替换掉旧的。
+
+其他大多数使用 API 密钥的提供商流程都一样：在提供商控制台创建密钥、复制一次、粘贴进 OpenWork。

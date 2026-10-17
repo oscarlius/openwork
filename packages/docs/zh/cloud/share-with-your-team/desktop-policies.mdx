@@ -1,0 +1,140 @@
+---
+title: "桌面策略"
+description: "在 OpenWork Cloud 中决定 OpenWork 桌面应用允许成员和团队做什么。"
+keywords: ["desktop policy", "desktop policies", "team access", "app permissions", "restricted mode", "approved websites", "block websites", "block commands", "lock down desktop app", "custom providers", "enterprise controls", "桌面策略", "团队访问", "应用权限", "受限模式", "网站白名单", "企业管控"]
+---
+
+桌面策略是你在 OpenWork Cloud 中为 OpenWork 桌面应用设定的规则，成员登录进你的组织后即生效。你可以为所有人设一个默认策略，为特定成员或团队指定各自的策略，也可以在团队的 **Access** 页签上决定每个团队能做什么。
+
+<Warning>
+**多数桌面策略开关在重新设计期间已暂停生效。** 你仍然可以在 Cloud 中创建并保存策略和团队访问设置，但桌面应用目前不会应用其中大部分。
+
+桌面应用当前会应用的只有这些：
+
+- **模型访问**：成员能否添加自己的 AI 提供商。在 **AI Gateway › AI Providers › Who can use models** 中设置。选择 **Only models you provide** 可把成员限制为你组织的模型。策略里的 **Custom providers** 开关，以及团队 **Access** 页签上的 **Add AI providers** 同样会影响模型访问。
+- **组织提示建议**：见[团队提示卡片](/zh/cloud/share-with-your-team/team-prompt-cards)。
+- **强制登录**：这取决于你组织的桌面应用是怎么安装的，而不是某条策略。
+- **Allowed Desktop Versions**：在 **Settings › General** 中设置。
+
+其余开关都会保存但不生效，包括其他开关（含 **Welcome Page**）、**Restricted** 模式、计算机命令规则、已批准网站及其他浏览限制、以及阻止上传和表单提交。目前不要指望这些能拦截任何行为。
+
+要控制命令、文件编辑、网站以及本地技能和 MCP 服务器，请在可用的位置使用[智能体权限](/cloud/share-with-your-team/agent-permissions)。
+</Warning>
+
+## 谁能管理策略
+
+- 所有者可以创建、编辑、删除策略，并修改团队访问设置。企业版组织可以把这项能力授予管理员或某个带 Permissions 的团队。
+- 管理员可以查看策略和团队访问设置，但不能修改。
+- 桌面策略管理属于企业版（Enterprise）计划。
+
+## 策略能控制什么
+
+策略编辑器里的每个开关都设计为控制桌面应用的一个方面。除 **Custom providers** 外，它们目前都不生效。
+
+- **Custom providers**：添加和使用你组织没有在 OpenWork Cloud 中配置过的模型。
+- **Enable OpenCode Zen Models**：使用 OpenCode 内置模型。
+- **Multiple workspaces**：在同一台计算机上创建多个工作区。
+- **Control Settings**：打开并修改桌面应用的设置。
+- **Manage Extensions**：安装本地扩展、技能和 MCP 服务器。
+- **Built-in Extensions**：使用 OpenWork 的内置扩展，例如浏览器、图像和本地提供商扩展。
+- **Alpha updates**：选择接收实验性的 Alpha 更新。
+- **Welcome Page**：向新用户展示入门页面。
+
+**Commands & browser** 一节将来会控制：
+
+- **Run OS commands** 与 **Blocked command patterns**：智能体能否在计算机上运行命令，以及哪些命令不能运行。
+- **Restrict browsing to approved sites** 与 **Approved websites**：内置浏览器可以打开哪些网站。
+- **Block browser uploads and form submissions**：阻止内置浏览器发送文件或表单数据。
+
+当一个成员命中多条策略时，开关会合并：只要任意一条命中的策略打开了某个开关，它就是开的。而团队 **Access** 页签上的 **Blocked** 选择，优先于任何允许同一件事的策略。
+
+## 配置一条策略
+
+1. 打开 [app.openworklabs.com](https://app.openworklabs.com/) 并选择你的组织。
+2. 进入 **Manage › Desktop policies**。
+3. 点击 **New policy**，或在已有策略上点击 **Edit**。标记为 **Default** 的策略适用于所有人。
+4. 填入 **Policy name** 和 **Priority**。当一个成员命中多条策略时，优先级决定他看到哪一组提示建议。
+5. 在 **Policy mode** 中选择 **Custom** 或 **Restricted**。
+6. 打开或关闭各个开关，按需填写 **Commands & browser**。
+7. 要展示你自己的提示建议，打开 **Organization prompt suggestions**，见[团队提示卡片](/zh/cloud/share-with-your-team/team-prompt-cards)。
+8. 在 **Members** 和 **Teams** 下选择策略适用于谁。
+9. 点击 **Create policy**；已有策略则点击 **Save changes**。
+
+有几点需要知道：
+
+- 默认策略不能改名，也不能设优先级，它始终适用于所有人。
+- 想临时停用一条策略而不删除它，打开它并点击 **Disable**；点击 **Enable** 恢复。
+- 要删除策略，在列表中点击它旁边的 **Delete**。默认策略无法删除。
+- 从团队 **Access** 页签创建的策略，在列表中会显示 **Team access**。点击 **View team access** 可回到该团队页面修改。
+
+## Restricted 模式
+
+**Restricted** 会关闭除 **Welcome Page** 之外的所有开关并锁定，直到你切回 **Custom**。它的设计目标是给成员一个精简版 OpenWork：他们可以对话、使用组织批准的技能，但不能改设置、添加提供商、添加工作区或安装扩展。
+
+由于开关会跨策略合并，只有把 **Restricted** 用在默认策略上才能真正限制成员；一条定向策略设为 **Restricted** 并不会从其他策略那里夺走任何东西。
+
+目前 **Restricted** 唯一生效的部分，是它会关闭 **Custom providers**。
+
+## 已批准网站
+
+已批准网站的设计目标是把内置浏览器限制在你指定的站点上。该控件已暂停，目前不会拦截任何内容。
+
+要为团队设置已批准网站：
+
+1. 进入 **Members › Teams**，打开该团队，选择 **Access** 页签。
+2. 展开 **Browse websites**。
+3. 把 **Website access** 设为 **Approved sites only**。
+4. 输入完整网站地址，例如 `https://portal.example.com`，点击 **Add site**，每个站点重复一次。
+5. 点击 **Review changes**，然后点击 **Save permissions**。
+
+在策略编辑器中，先在 **Commands & browser** 下打开 **Restrict browsing to approved sites**，然后在 **Approved websites** 里每行填一个地址。
+
+记住这几条规则：
+
+- 只填整个网站，不要带页面路径。
+- 子域名和登录站点要分别添加。`https://portal.example.com` 不包含 `https://docs.portal.example.com`。
+- 最多添加 100 个站点。
+- 选择 **Blocked**，或者留空，都会阻止全部浏览。
+
+<Note>
+**Settings › General** 里的 **Approved web origins** 是另一个功能。它让你批准的网站使用成员的 OpenWork 登录态，并不限制成员能浏览哪些站点。
+</Note>
+
+## 团队访问
+
+每个团队都有一个 **Access** 页签，用来决定其成员能做什么。打开方式：进入 **Members › Teams**，打开该团队，选择 **Access**。在 **What this team can do** 下，为每个选项设置 **Allowed** 或 **Blocked**：
+
+- **Browse websites**：**Website access**（**All websites**、**Approved sites only** 或 **Blocked**）以及 **Upload files & submit forms**。
+- **Run computer commands**：**Computer commands**。只想拦截部分命令时，打开 **Advanced: block specific commands**。
+- **Tools & connections**：**Add local tools, skills & MCP servers** 与 **Use built-in extensions**。
+- **AI setup**：**Add AI providers** 与 **Use OpenCode models**。
+- **Settings, workspaces & updates**：**Create more workspaces**、**Change app settings** 与 **Try experimental updates**。
+
+点击 **Preview member experience** 可查看该团队成员能做事项的摘要。设置完成后点击 **Review changes**，核对列表，再点击 **Save permissions**。
+
+在这里放行，并不会覆盖来自其他团队或组织的封禁。这些选项里目前只有 **Add AI providers** 会生效，作为模型访问的一部分。
+
+成员可以在桌面应用的 **Settings › Account › App permissions** 下查看自己的权限。该列表只读，展示的是应用当前实际应用的规则，因此已暂停的控件会显示为 **Allowed**。
+
+同页靠下方的 **Plugins & connections** 列表展示该团队可用的插件和连接。这份列表与桌面策略相互独立，目前是生效的。
+
+<Accordion title="技术细节">
+**生效开关。** 是否强制执行由 `packages/types/src/den/desktop-policies.ts` 中的 `DESKTOP_POLICY_ENFORCEMENT_ENABLED` 控制，当前为 `false`。Den 仍会存储并解析每一条策略。在桌面应用使用这份配置之前，`desktopCapabilityConfig()` 会删掉 `execution` 以及除 `allowCustomProviders` 和 `showWelcomePage` 之外的所有策略键；提示建议和 `allowedDesktopVersions` 会原样透传。桌面应用目前并不读取 `showWelcomePage`。模型访问从不阻断启动、登录或对话：应用使用最后一次已知的设置，在没有已知设置时允许添加提供商。
+
+**模型访问的存储。** **Only models you provide** 以默认桌面策略中的 `allowCustomProviders: false` 存储；`Admins may still add their own keys on their device` 以一条管理员角色策略存储。
+
+**开关如何合并。** 如果组织没有任何策略，所有开关都是开的。否则每个开关都从关闭开始，默认策略或任一命中的成员、团队、角色策略中出现的 `true` 会把它打开。团队访问设置（`access.capabilities`）显式给出的 `false` 在此之后应用，并且优先生效。
+
+**命令与浏览。** 存储在策略文档的 `execution` 下：
+
+- `commands` 取 `allow` 或 `deny`。任何一条命中的策略给出 `deny` 就会封锁命令。
+- `blockedCommands` 是使用 `*` 匹配任意文本的模式；所有命中策略的模式会累加，每条策略最多 100 个。
+- `browserOrigins`：字段缺失时不做网站限制；空列表（`[]`）会封锁所有网站。列表在默认策略与所有命中的成员、团队、角色策略之间取交集，因此一个站点必须出现在每一份存在的列表里。
+- `blockBrowserUploads`：任何一条命中的策略给出 `true` 即开启。
+
+**已批准网站的格式。** 每一项都是精确的 HTTP 或 HTTPS origin：包含协议、主机名和端口。默认端口会被归一化，所以 `https://portal.example.com:443` 等同于 `https://portal.example.com`，而 `http://portal.example.com` 与 `https://portal.example.com:8443` 是不同的 origin。路径、凭证、查询串和片段都会被拒绝，不支持通配符。
+
+**恢复强制执行后的设计行为。** 网站规则覆盖内置浏览器的每个请求，包括导航、重定向、框架、脚本和图片；来自未批准 origin 的资源即使在已批准页面上也会被拦截。设置了已批准站点期间，引擎内置的 `websearch` 与 `webfetch` 工具会被拒绝；第三方 MCP 搜索或抓取工具不在过滤范围内。**Block browser uploads and form submissions** 会拦截 WebSocket（`ws:`/`wss:`）连接、带上传数据的请求，以及除 `GET`、`HEAD`、`OPTIONS` 之外的方法。基于 GET 的表单仍可向已批准站点发送数据。这些控件都不是设备级的数据防泄漏：被放行的计算机命令和第三方连接可以走其他网络路径。
+
+**刷新。** 桌面应用会缓存最后一次收到的配置并在启动时应用；成员登录时、Cloud 账户或当前组织变化时，以及每小时，都会拉取一次新配置。
+</Accordion>

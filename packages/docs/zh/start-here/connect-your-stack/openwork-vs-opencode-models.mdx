@@ -1,0 +1,47 @@
+---
+title: "OpenWork 与 OpenCode 模型的区别"
+description: "分清 OpenWork 推理服务与 OpenCode Go 或 Zen 模型"
+---
+
+OpenWork 和 OpenCode 是两个不同的模型提供商。一个的订阅或 API 密钥，
+不会自动给你另一个的访问权限。
+
+| 提供商 | 在哪里管理 | 它管的是什么 |
+| --- | --- | --- |
+| OpenWork 推理服务 | [OpenWork 推理服务仪表盘](https://app.openworklabs.com/dashboard/inference) | OpenWork 托管的模型访问权限和组织用量限额 |
+| OpenCode Go / Zen | [OpenCode Go](https://opencode.ai/go) 和 [OpenCode auth](https://opencode.ai/auth) | OpenCode 托管的模型、订阅和 API 访问 |
+
+## 怎么判断自己订的是不是 OpenWork 推理服务
+
+打开 [OpenWork 推理服务仪表盘](https://app.openworklabs.com/dashboard/inference)。
+
+- 如果页面上显示 `Subscribe`，说明你还没有订阅 OpenWork 推理服务。
+- 如果页面上显示用量限额和剩余额度，说明你已经订阅了 OpenWork 推理服务。
+
+<Frame>
+  ![OpenWork 推理服务的用量限额](/images/openwork-inference-usage-limits.png)
+</Frame>
+
+## OpenWork 的用量额度是怎么算的
+
+OpenWork 推理服务的用量按相互独立的额度桶来统计。你可能看到这样的桶：
+
+- `5 hour usage limit` — 短期桶，会在当天内重置。
+- `Weekly usage limit` — 每周桶，按页面上标注的日期重置。
+- `Monthly usage limit` — 每月桶，按页面上标注的日期重置。
+
+仪表盘会显示每个桶还剩多少，以及各自什么时候重置。用量是整个 OpenWork
+组织共享的，不只是你个人桌面应用的那一份。
+
+组织额度会随组织内活跃成员的数量提升。例如，新增活跃成员会提高组织共享的总额度，
+而任何成员的用量都从同一批共享额度里扣。
+
+## 其实你想用的是 OpenCode 模型
+
+请在 OpenWork Desktop 里连接 `OpenCode Go` 提供商，而不是使用 OpenWork 推理服务。
+按[接入 OpenCode Zen 与 Go 模型](/zh/start-here/connect-your-stack/using-opencode-zen-go-models)添加该提供商。
+
+管理那个账户可以用这些 OpenCode 链接：
+
+- [opencode.ai/go](https://opencode.ai/go)
+- [opencode.ai/auth](https://opencode.ai/auth)

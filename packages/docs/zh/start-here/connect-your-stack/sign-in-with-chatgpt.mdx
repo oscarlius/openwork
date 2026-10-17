@@ -1,0 +1,56 @@
+---
+title: "使用 ChatGPT 登录"
+description: "在 OpenWork 桌面应用里，把你的 ChatGPT Plus 或 Pro 订阅当作模型提供商来用。"
+keywords: ["chatgpt", "openai", "chatgpt plus", "chatgpt pro", "sign in", "connect provider", "gpt", "subscription", "oauth", "登录", "订阅"]
+---
+
+<Note>
+**本地提供商配置。** 这里是把 ChatGPT 直接连到桌面应用。OpenWork 依然免费，你不需要登录 OpenWork Cloud。要使用由组织管理的模型访问，见[添加托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。
+</Note>
+
+如果你已经在为 ChatGPT 付费，就可以用这份订阅来驱动 OpenWork。你只需要登录一次 OpenAI，之后在任何聊天里选一个 ChatGPT 模型即可。
+
+## 开始之前
+
+- 你需要一个付费的 ChatGPT 套餐，例如 Plus 或 Pro。
+- 登录时请使用持有该订阅的那个邮箱地址。
+
+## 连接 ChatGPT
+
+1. 打开 **Settings › AI Providers**。
+2. 点击 **Connect provider**，**Connect providers** 弹窗会打开。
+
+<Frame>
+  ![OpenWork 设置里的 Connect provider 按钮](/images/chatgpt-connect-provider-settings.png)
+</Frame>
+
+3. 选择 **OpenAI**。你会看到“Choose how you'd like to connect.”。
+4. 选择 ChatGPT 订阅那一项。它的名字和提供商列表里一致，例如 **ChatGPT Pro/Plus**。
+5. 浏览器会打开一个标签页。用持有该订阅的邮箱登录 OpenAI。
+
+<Frame>
+  ![浏览器中的 OpenAI 登录页面](/images/chatgpt-openai-auth-login.png)
+</Frame>
+
+6. 回到 OpenWork。弹窗会显示“Waiting for browser confirmation.”，等 OpenAI 确认登录后它会自动关闭。
+
+如果浏览器标签页没有打开，或者你把它关掉了，点击 **Open browser again**。
+
+## 选择一个 ChatGPT 模型
+
+1. 在聊天中点击输入框下方的模型名称。
+
+<Frame>
+  ![聊天输入框里的模型选择器](/images/chatgpt-model-selector.png)
+</Frame>
+
+2. 从列表里选一个 ChatGPT 模型。这个列表会显示你已连接的所有提供商的模型。
+
+<Frame>
+  ![展示全部已连接提供商模型列表](/images/chatgpt-model-list.png)
+</Frame>
+
+## 常见问题
+
+- **没有 Connect provider 按钮。** 可能是你的组织在统一管模型。请问你的管理员，或见[添加托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。
+- **之前能登录，后来不行了。** 请在 **Settings › AI Providers › Connect provider › OpenAI** 下重新连接。

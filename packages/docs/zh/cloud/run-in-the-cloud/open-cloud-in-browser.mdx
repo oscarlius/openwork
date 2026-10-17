@@ -1,0 +1,43 @@
+---
+title: "在浏览器中打开 OpenWork Web"
+description: "在浏览器里打开一个完整的 OpenWork 实例，无需安装任何东西"
+---
+
+<Warning>
+**托管访问。** 只有当 OpenWork 托管的部署明确启用时，OpenWork Web 才对所有组织可用。在部署级可用性处于关闭状态时，Den `/admin` 里的平台管理员也可以为某一个特定组织授予免费访问。必须先配置好 Web 计费，所有者或管理员才能购买。费用为 **每位已加入的组织成员每月 $50**；待接受的邀请在被接受之前不计费。
+</Warning>
+
+打开 `/dashboard/web` 可以看到价格、计费成员数量、预计月度总额和购买入口。只有在组织的订阅确认之后，访问才会开启。
+
+## 谁能使用
+
+当托管部署提供 OpenWork Web 时，每一位已加入的成员都能看到它。由组织所有者或管理员购买订阅；订阅生效后，所有已加入的成员都会获得访问权限。
+
+自托管部署默认不显示 OpenWork Web：缺失或为 false 的 `DEN_OPENWORK_WEB_ENABLED` 值会失败关闭，除非 Den `/admin` 里的平台管理员已明确为那个组织授予免费访问。如果你用的是 OpenWork 托管的组织却在侧栏里看不到它，请发邮件到 [team@openworklabs.com](mailto:team@openworklabs.com)，以便我们检查部署配置或组织授权。
+
+## 打开 OpenWork Web
+
+1. 登录你的组织仪表盘。
+2. 在侧栏点击 `OpenWork Web`。
+3. 如果出现提示，购买 OpenWork Web 并等待订阅确认。
+4. 点击 `Open OpenWork Web`。
+
+<Frame>
+  ![组织仪表盘中的 OpenWork Web 页面，带有打开 OpenWork Web 的按钮](/images/cloud-openwork-web.png)
+</Frame>
+
+现在你看到的就是浏览器里完整的 OpenWork 界面。
+
+<Frame>
+  ![在浏览器标签页中打开的 OpenWork Web，展示完整的 OpenWork 界面](/images/openwork-web-browser-tab.png)
+</Frame>
+
+## 休眠与持久化
+
+托管实例在空闲时会休眠，在你再次打开它时唤醒。工作区里的文件在休眠前后都会保留，所以你可以关掉标签页，之后再回来而不丢工作。
+
+## 早期访问的限制
+
+在早期访问期间，实例 URL 本身就是凭据。不要分享它，不要粘贴到公开聊天里，也不要发布在任何公开的地方。
+
+如果你不小心分享了那个 URL，请向 OpenWork 管理员求助。

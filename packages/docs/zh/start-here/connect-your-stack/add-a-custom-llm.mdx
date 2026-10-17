@@ -1,0 +1,107 @@
+---
+title: "添加自定义 LLM 或 AI 网关"
+description: "在 OpenWork 中使用你自己的 API 密钥，或接入任意 OpenAI 兼容端点（OpenRouter、LiteLLM、Azure OpenAI、你自己的网关）。"
+---
+
+OpenWork 支持你能拿到的任何模型。如果提供商在 OpenWork 的目录里（OpenRouter、Mistral、Fireworks、Google、Anthropic、OpenAI 等等），把 API 密钥粘贴到 `Settings > AI Providers > Connect provider` 即可。如果不在目录里，或者你跑的是自己的网关，就把它作为自定义 OpenAI 兼容提供商添加到工作区的 `opencode.jsonc`。
+
+<Note>
+**本地提供商配置。** 自定义提供商可以完全留在你的工作区里。OpenWork 依然免费，你不需要登录 OpenWork Cloud。要给整个团队配同一个提供商、又不想手动传递密钥，见下文“与团队共享一个提供商”一节。
+</Note>
+
+## 方式一：为目录中的提供商自带 API 密钥
+
+OpenWork 列出了 OpenCode 模型目录里所有接受 API 密钥的提供商。
+
+1. 在该提供商的控制台里创建一个 API 密钥。它只会显示一次，复制好后当作密码对待。
+2. 在 OpenWork 里打开 `Settings`，选择 `AI Providers`。
+3. 点击 `Connect provider`。
+4. 在 `Search providers` 里输入提供商的名字（例如 `openrouter`、`mistral` 或 `fireworks`）并选中它。
+5. 把密钥粘贴到 `API key` 字段并保存。
+6. 在聊天的模型选择器里选中该提供商的某个模型。
+
+需要带截图的逐步示例，见[添加 Anthropic API 密钥](/zh/start-here/connect-your-stack/add-anthropic-api-key)。
+
+## 方式二：添加任意 OpenAI 兼容端点
+
+适用于 AI 网关（LiteLLM、托管路由或你自己搭的）、Azure OpenAI 或 Azure AI Foundry 部署、自托管的模型服务器，以及任何不在目录里的提供商。该端点必须实现 OpenAI Chat Completions API。
+
+因为 OpenWork 构建在 OpenCode 之上，凡是 [OpenCode 配置文件](https://opencode.ai/docs/models/)里能配的东西，在这里同样能配。请把这条设置留在工作区里，而不是放进全局的 `~/.config/opencode/opencode.json`。
+
+1. 备齐端点的 base URL（通常以 `/v1` 结尾）、它对外提供的模型 ID，以及需要时的 API 密钥。
+2. 打开你的工作区文件夹，编辑根目录下的 `opencode.jsonc`。不存在就先创建。
+3. 添加一个提供商条目：
+
+   ```jsonc
+   {
+     "provider": {
+       "my-gateway": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "My gateway",
+         "options": {
+           "baseURL": "https://gateway.example.com/v1",
+           "apiKey": "{env:MY_GATEWAY_API_KEY}"
+         },
+         "models": {
+           "model-id-from-your-gateway": {
+             "name": "Friendly model name"
+           }
+         }
+       }
+     }
+   }
+   ```
+
+4. 让 OpenWork 能读到 `MY_GATEWAY_API_KEY`：打开 `Settings > Environment`，点击 `Add variable`，保存密钥并应用这次改动。存在那里的密钥只留在本机。你也可以在启动 OpenWork 之前先在 shell 里设好这个变量。端点不需要密钥时，把 `apiKey` 整项省掉。
+5. 通过命令面板运行 `Reload OpenCode config`，或者重启 OpenWork。
+6. 在聊天的模型选择器里选中这个新模型，发一条简短的测试提示。
+
+端点每暴露一个模型 ID，就要在 `models` 下添加一个对应条目。
+
+### 示例
+
+| 端点 | `baseURL` | 模型 ID |
+| --- | --- | --- |
+| LiteLLM 代理 | 你的代理 URL，例如 `http://localhost:4000/v1` | 在 LiteLLM 里配置的模型名称 |
+| Azure OpenAI / Azure AI Foundry | `https://<resource>.openai.azure.com/openai/v1` | 你的部署名称 |
+| Ollama | `http://localhost:11434/v1` | 已拉取的模型名称，例如 `qwen3:8b` |
+| LM Studio | `http://localhost:1234/v1` | 当前已加载的模型标识 |
+
+对于 Ollama，内置的 `Settings > Ollama` 页面会替你写好这份配置。见[使用本地模型](/zh/start-here/connect-your-stack/use-local-models)。
+
+## 与团队共享一个提供商
+
+如果多个人需要同一个提供商，让 OpenWork Cloud 的管理员配置一次，而不是到处传密钥：
+
+- [托管 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)：目录里的提供商，配一把组织共用的密钥。
+- [自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)：任意 OpenAI 兼容端点，包括你自己的网关，按 base URL 加模型 ID 的形式录入。
+- [成员各自的 LLM 凭据](/cloud/share-with-your-team/per-member-llm-credentials)：一个提供商，每位成员一把独立的密钥（例如 LiteLLM 虚拟密钥）。
+- [OpenWork AI 网关](/ai-gateway/overview)：把提供商统一接到 OpenWork 上，按团队管理模型可用范围、限额和用量统计。
+
+组织级提供商会自动同步到成员的客户端。成员可以在 `Settings > AI Providers > Cloud providers` 下查看状态。管理员还可以用[桌面策略](/cloud/share-with-your-team/desktop-policies)屏蔽本地添加的提供商，让所有人都用批准的这套配置。
+
+## 常见问题
+
+<AccordionGroup>
+  <Accordion title="OpenWork 能用 OpenRouter 吗？">
+    能。OpenRouter 就在提供商目录里：打开 `Settings > AI Providers > Connect provider`，搜索 OpenRouter，粘贴你的密钥。
+  </Accordion>
+  <Accordion title="能用我们公司自己的 AI 网关吗？">
+    只要它对外提供 OpenAI 兼容端点就可以。自己用就走方式二；团队用则请管理员在 OpenWork Cloud 里一次性添加为[自定义 LLM 提供商](/cloud/share-with-your-team/custom-llm-provider)。
+  </Accordion>
+  <Accordion title="OpenWork 把我的 API 密钥存在哪里？">
+    在 `Connect provider` 里填写的密钥，由你本机的 OpenCode 本地引擎保存。在 `Settings > Environment` 里保存的值只留在本机。组织托管的密钥存放在 OpenWork Cloud，并同步到被允许使用它们的工作区。
+  </Accordion>
+  <Accordion title="模型能选到，但工具调用失败。">
+    有些模型或网关不支持工具调用。换一个明确声明支持 tool 或 function calling 的模型，并检查网关是否透传了工具定义。
+  </Accordion>
+  <Accordion title="看到 'Custom providers are disabled by your organization'。">
+    你的管理员屏蔽了本地添加的提供商。请使用组织共享给你的提供商（在 `Settings > AI Providers > Cloud providers` 查看），或者请管理员把你需要的这个加进来。
+  </Accordion>
+</AccordionGroup>
+
+## 相关文档
+
+- [使用本地模型（Ollama、LM Studio）](/zh/start-here/connect-your-stack/use-local-models)
+- [使用 Gemini 与 Google Vertex AI](/zh/start-here/connect-your-stack/use-gemini-and-vertex-ai)
+- [从 Claude Cowork 迁移](/start-here/migrate-from-claude-cowork)

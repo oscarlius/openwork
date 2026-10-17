@@ -1,0 +1,178 @@
+---
+title: "构建 MCP App"
+description: "构建一个 OpenWork 能在聊天和仪表盘里渲染的 MCP App 组件，以及 OpenWork 支持的宿主协议。"
+keywords: ["MCP Apps", "widgets", "ui://", "host protocol", "ext-apps", "dashboard", "interactive view", "MCP 应用", "组件", "宿主协议", "交互式视图", "仪表盘"]
+---
+
+[MCP Apps](https://modelcontextprotocol.io/docs/extensions/apps) 是 MCP 的一项标准扩展（`io.modelcontextprotocol/ui`）。一个应用就是一个普通的 MCP 服务器：它有一个工具指向某个 UI 资源，而该资源以 HTML 形式提供。OpenWork 会在聊天里和你的仪表盘上把它渲染成真正的、可交互的界面；你在界面里做的操作不会发给模型。OpenWork 只支持下面列出的这一部分，而不是规范里的每一项可选功能。应用必须检查宿主声明的能力。[`ext-apps` 仓库](https://github.com/modelcontextprotocol/ext-apps)提供 SDK 和示例。
+
+不想写 MCP 服务器也能做出应用，直接让智能体帮你做就行：参见[你构建的应用本身就是自己的 MCP 服务器](/cloud/run-in-the-cloud/cloud-mcp)。
+
+## OpenWork 如何在应用里运行工具
+
+连好的应用一旦打开，带注解的只读辅助工具就能自动运行。任何可能修改数据的工具，都需要先在这个应用里完成一次近期且经过校验的点击。比如点击 **Send**，就等于授权了一次工具调用，不再额外弹出 OpenWork 的审批框。用键盘原生地触发按钮同样算数；合成点击和后台写入不算。
+
+交互授权是一次性的，在获得焦点的应用里最多有效 **1,500 毫秒**。第一次工具调用就会消耗掉它，哪怕这次调用是只读的；第二次写入需要一次新的可信点击。未经批准的写入在到达提供商之前就会以 `tool_requires_approval` 失败。调用仍然要求：经过身份验证的协作者访问权、组织权限、发起它的服务器，以及一份有效的启动租约。只读预览和已归档的会话都不能调用工具，只读辅助工具也不行。
+
+## 支持的宿主协议
+
+聊天和仪表盘共用的渲染器使用稳定的 **2026-01-26** 协议，配套 `ext-apps` **1.7.5**：
+
+- 初始化之后，宿主会先发送完整的 `ui/notifications/tool-input` 参数，再发送 `ui/notifications/tool-result`。结果投递会保留 `content`、`structuredContent`、`_meta` 和可选的 `isError` 标记，显式写成 `false` 的情况同样保留。
+- 符合条件的仪表盘刷新会在同一份文档里用通知来更新：按 input/result 的顺序投递，就能更新数据而不用再初始化一次。应用的结果处理函数必须能接受后续结果，而不是把第一个结果当成唯一的那个。
+- 可写的应用会声明 `serverTools` 和 `openLinks`。工具调用在派发时仍会带上发起它的 endpoint、工作区、会话、引擎（如果提供了的话），以及那份有效的启动租约。自动执行只读辅助工具是允许的；写入则需要前面说的那次近期、一次性的可信交互，不需要额外的宿主确认。OpenWork 沙箱代理会校验这次交互，并覆写请求里的 `_meta["openwork/userInteraction"]`；应用自己填这个字段是给自己授不了权的。链接请求要求有一个可写的活动视图，使用宿主那个只允许 HTTP(S) 的打开器，并且要报告失败。
+- 只有 `inline` 这一种显示方式可用。合法的 `ui/request-display-mode` 请求返回当前的 `inline` 模式，包括请求全屏或画中画的情形；它们不会改变布局。
+- 尺寸通知在宿主上限内调整内嵌高度。卸载时仍然走现有的、有界的 `ui/resource-teardown` 握手并关闭桥接。
+- 这套渲染器不支持消息/上下文写入、由 View 提供的工具，也不支持资源代理请求。不支持的请求会得到协议错误，而不是成功的空响应。进度和取消都没有完整转发。
+
+| 宿主场景 | 工具与链接 | 归属 |
+| --- | --- | --- |
+| 活动会话，包括拆开的分栏面板 | 为持有有效租约的可写视图开放声明 | 消息列表提供它自己的客户端、工作区和会话，不是当前选中的那个根工作区。 |
+| 实时的仪表盘磁贴 | 启动仍然有效期间会开放声明 | 解析出这个磁贴的那个确切 endpoint 和工作区持有这份租约；这里没有会话。 |
+| 已归档的会话 | 既不声明也不允许 | 原会话提供只读来源。 |
+| 缓存的仪表盘预览 | 在新的启动成功之前，既不声明也不允许 | 缓存数据从不保存有效的租约；Run 会重新申请一份。 |
+| 生成的结果预览 | 既不声明也不允许 | 显式的只读来源，没有会话。 |
+
+启动租约**在创建 30 分钟后**过期；工具调用和点击都不会延长这个固定时长。这份租约和 1,500 毫秒的交互授权是两回事。关闭或替换某个视图，会让它待执行的操作失效，并释放它持有的租约。从仪表盘上移除 endpoint 时，这个 endpoint 的租约也随之作废。恢复出来的缓存视图不能复用之前那份租约，而且服务器在派发工具前会重新校验启动归属。租约过期后，请重新打开或重新启动这个应用。
+
+原地刷新要求一次合法、符合条件的只读仪表盘启动，并且服务器声明的 `app.refresh` 元数据里带有 `resourceDigest` 和 `expiresAt`。宿主提交它预期的资源摘要；服务器在派发前检查有效的租约、权限、工具和当前资源。资源一旦变化，服务器会在工具运行前就拒绝，宿主会走正常的受保护启动路径换掉旧视图，而不是把不兼容的数据投递给它。启动范围、输入或策略发生变化，同样会让这份文档的复用失效；任何一次获准的新启动都会创建一份替代文档。刷新既不会延长那份固定租约，也不会授权写入，或放松认证、审批、重试规则。这种连续性行为并不包含「启动过期后自动恢复」。
+
+聊天视图由已完成且已保留的结果挂载；仪表盘磁贴渲染成功结果或已保存的结果。所以一次进行中的启动取消之后，并没有已挂载的接收方去收 `ui/notifications/tool-cancelled`。取消别的操作，或者卸载一个已经完成的结果，都不会凭空造出一条取消通知。提前挂载、流式启动输入都尚未实现。仪表盘启动失败时，仍然沿用现有的错误或已保存结果的展示方式，不会挂载一个可操作的失败启动。
+
+## 提供商数据与网关附加内容
+
+提供商的 `structuredContent` 保持原样，字段名叫 `serverTools` 或 `schemaGuidance` 的也一样。OpenWork 网关的附加内容使用预留的 `_meta` 键：启动绑定用 `openwork/mcpApp`，网关工具名用 `openwork/serverTools`，提示性的 schema 告警用 `openwork/schemaGuidance`。应用应从 `result._meta["openwork/serverTools"]` 读取网关工具名，而不是从提供商的 `structuredContent.serverTools` 读取。
+
+schema 指引还会以一段独立的文本内容追加在 `openwork/schemaGuidance` 下，这样模型不用看到私密的结果 `_meta` 也能用上它。告警不会推翻提供商调用取得的成功，也不构成重跑一次成功调用的理由。网关自己生成的错误响应体里仍可能带 `schemaGuidance`；这些响应体不属于提供商的结构化数据。
+
+## OpenWork 会检查的要求
+
+- 工具的 `_meta.ui.resourceUri` 是一个以 `ui://` 开头的字符串。
+- 如果设置了 `_meta.ui.visibility`，它必须包含 `"app"`。
+- 对那个 URI 的 `resources/read` 只返回一条内容项，`mimeType` 为 `text/html;profile=mcp-app`，至多 768 KiB。
+- 资源上可选的 `_meta.ui.csp` 支持 `connectDomains`、`resourceDomains`、`frameDomains` 和 `baseUriDomains`：只允许 HTTPS 源，每类至多 16 个。`permissions` 和 `domain` 不支持；资源里含这两项的任意一个，OpenWork 会直接拒绝。
+- 服务器要能作为远程 Streamable HTTP MCP 服务器通过 HTTP(S) 访问。本地 stdio 服务器不能作为组织连接添加。
+- 只读工具用 `annotations: { readOnlyHint: true }` 标注，并且不要把它们标成破坏性。带这个注解、同时没有 `destructiveHint: true` 的辅助工具，可以在一个可写的活动应用里自动运行。其他辅助调用需要一次近期的、一次性的可信点击。启动时没有只读注解、或者带 `destructiveHint: true` 的工具，只在明确要求时才运行。
+- OpenWork 用工具的 `title`，或者 `annotations.title`，作为应用的名称。
+
+## 示例：一个团队预算组件
+
+安装 `@modelcontextprotocol/sdk`、`@modelcontextprotocol/ext-apps` 和 `express`，然后创建下面这两个文件。
+
+<Steps>
+  <Step title="创建 MCP 服务器">
+
+```ts server.ts
+import express from "express";
+import { readFile } from "node:fs/promises";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from "@modelcontextprotocol/ext-apps/server";
+
+const server = new McpServer({ name: "team-budget", version: "1.0.0" });
+const html = await readFile(new URL("./view.html", import.meta.url), "utf8");
+
+registerAppResource(
+  server,
+  "budget-view",
+  "ui://team-budget/view.html",
+  { mimeType: RESOURCE_MIME_TYPE },
+  async () => ({
+    contents: [{
+      uri: "ui://team-budget/view.html",
+      mimeType: RESOURCE_MIME_TYPE,
+      text: html,
+    }],
+  }),
+);
+
+registerAppTool(
+  server,
+  "get_budget",
+  {
+    title: "Team budget",
+    description: "Current budget allocation by team",
+    inputSchema: {},
+    annotations: { readOnlyHint: true },
+    _meta: { ui: { resourceUri: "ui://team-budget/view.html" } },
+  },
+  async () => {
+    const data = { teams: [
+      { name: "Engineering", percent: 42 },
+      { name: "Sales", percent: 33 },
+      { name: "Operations", percent: 25 },
+    ] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data) }],
+      structuredContent: data,
+    };
+  },
+);
+
+const app = express();
+app.use(express.json());
+const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+await server.connect(transport);
+app.all("/mcp", (req, res) => transport.handleRequest(req, res, req.body));
+app.listen(3000);
+```
+
+  </Step>
+  <Step title="创建视图">
+    用 Vite 打包这个文件，让它能解析包的导入；或者通过 ESM CDN 提供这个导入。
+
+```html view.html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Team budget</title>
+    <style>
+      body { font: 14px system-ui; margin: 0; padding: 16px; color: #18181b; }
+      h2 { font-size: 16px; margin: 0 0 16px; }
+      .team { display: grid; grid-template-columns: 100px 1fr 40px; gap: 8px; margin: 10px 0; }
+      .track { background: #e4e4e7; border-radius: 4px; overflow: hidden; }
+      .bar { background: #2563eb; height: 100%; }
+      .value { text-align: right; }
+    </style>
+  </head>
+  <body>
+    <h2>Team budget</h2>
+    <div id="teams">Loading…</div>
+    <script type="module">
+      import { App } from "@modelcontextprotocol/ext-apps";
+
+      const root = document.querySelector("#teams");
+      const render = (data) => {
+        root.replaceChildren(...data.teams.map(({ name, percent }) => {
+          const row = document.createElement("div");
+          row.className = "team";
+          row.innerHTML = `<span>${name}</span><span class="track"><span class="bar" style="display:block;width:${percent}%"></span></span><span class="value">${percent}%</span>`;
+          return row;
+        }));
+      };
+
+      const app = new App({ name: "Team budget", version: "1.0.0" });
+      app.addEventListener("toolresult", (params) => render(params.structuredContent));
+      await app.connect();
+    </script>
+  </body>
+</html>
+```
+
+  </Step>
+  <Step title="添加到 OpenWork">
+    把服务器跑在一个公网 HTTPS URL 上，测试时也可以用隧道。想自己试用，就[把它添加为工作区 MCP](/start-here/connect-your-stack/add-an-mcp-server)。要共享给组织，请到 OpenWork Cloud 的 **Manage › Connectors** 里添加（[共享 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)）。然后让智能体调用 `get_budget`，这个应用就会在聊天里内嵌渲染出来。
+  </Step>
+</Steps>
+
+## 小贴士
+
+- 资源要自包含。它如果要加载远程素材，就在 `_meta.ui.csp` 里声明这些素材的来源。
+- 共享的结果数据放在 `structuredContent` 里返回，可读的兜底文本放在 `content` 里。两者都要当成模型可见的内容来对待；只给视图用的数据放在结果的 `_meta` 里。
+- 一个工具可以驱动一个视图。要做几个组件，就随包带上几个工具。

@@ -340,6 +340,22 @@
         "language": "zh-Hans",
         "tabs": [
           {
+            "tab": "从这里开始",
+            "pages": [
+              "zh/start-here/get-started",
+              "zh/start-here/downloads",
+              "zh/start-here/use-openwork-from-an-ai-agent",
+              "zh/start-here/migrate-from-claude-cowork",
+              {
+                "group": "帮忙改进 OpenWork",
+                "pages": [
+                  "zh/start-here/missing-docs",
+                  "zh/start-here/missing-languages"
+                ]
+              }
+            ]
+          },
+          {
             "tab": "桌面应用",
             "pages": [
               {
@@ -347,6 +363,48 @@
                 "pages": [
                   "zh/desktop-app/first-task",
                   "zh/desktop-app/why-sign-in"
+                ]
+              },
+              {
+                "group": "连接服务",
+                "pages": [
+                  "zh/start-here/connect-your-stack/connect-services",
+                  "zh/start-here/connect-your-stack/add-an-mcp-server",
+                  "zh/start-here/connect-your-stack/enable-exa-search"
+                ]
+              },
+              {
+                "group": "技能",
+                "pages": [
+                  "zh/start-here/do-work-with-it/create-a-skill-from-chat"
+                ]
+              },
+              {
+                "group": "模型与模型提供商",
+                "pages": [
+                  "zh/start-here/connect-your-stack/sign-in-with-chatgpt",
+                  "zh/start-here/connect-your-stack/openwork-vs-opencode-models",
+                  "zh/start-here/connect-your-stack/using-opencode-zen-go-models",
+                  "zh/start-here/connect-your-stack/add-anthropic-api-key",
+                  "zh/start-here/connect-your-stack/add-a-custom-llm",
+                  "zh/start-here/connect-your-stack/use-local-models",
+                  "zh/start-here/connect-your-stack/use-gemini-and-vertex-ai"
+                ]
+              },
+              {
+                "group": "用它干活",
+                "pages": [
+                  "zh/start-here/do-work-with-it/control-the-browser",
+                  "zh/start-here/do-work-with-it/cross-chat-memory",
+                  "zh/start-here/do-work-with-it/work-with-excel-workbooks",
+                  "zh/start-here/do-work-with-it/workflows"
+                ]
+              },
+              {
+                "group": "在浏览器里使用",
+                "pages": [
+                  "zh/cloud/run-in-the-cloud/open-cloud-in-browser",
+                  "zh/cloud/run-in-the-cloud/shared-workspace"
                 ]
               }
             ]
@@ -356,19 +414,177 @@
             "pages": [
               "zh/integrations/overview",
               "zh/integrations/mcp",
-              "zh/integrations/client-plugins"
+              "zh/integrations/client-plugins",
+              {
+                "group": "OpenCode 开箱即用",
+                "pages": [
+                  "zh/model-context-protocol/opencode-plugin"
+                ]
+              }
             ]
           },
           {
             "tab": "Slack",
             "pages": [
               {
-                "group": "OpenWork in Slack（私有 alpha）",
+                "group": "在 Slack 中使用 OpenWork（私有 alpha）",
                 "pages": [
                   "zh/slack/overview",
                   "zh/slack/set-up-the-slack-app",
                   "zh/slack/connect-your-account",
                   "zh/slack/troubleshooting"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "AI 网关",
+            "pages": [
+              {
+                "group": "概览",
+                "pages": [
+                  "zh/ai-gateway/overview"
+                ]
+              },
+              {
+                "group": "组织的模型提供商",
+                "pages": [
+                  "zh/cloud/share-with-your-team/managed-llm-provider",
+                  "zh/cloud/share-with-your-team/custom-llm-provider",
+                  "zh/cloud/share-with-your-team/per-member-llm-credentials"
+                ]
+              },
+              {
+                "group": "用量与花费",
+                "pages": [
+                  "zh/ai-gateway/counting-usage",
+                  "zh/ai-gateway/token-costs"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "MCP 网关",
+            "pages": [
+              {
+                "group": "概览",
+                "pages": [
+                  "zh/cloud/run-in-the-cloud/cloud-mcp",
+                  "zh/start-here/connect-openwork-mcp"
+                ]
+              },
+              {
+                "group": "接入客户端",
+                "pages": [
+                  "zh/model-context-protocol/opencode",
+                  "zh/model-context-protocol/claude-code",
+                  "zh/model-context-protocol/codex",
+                  "zh/model-context-protocol/claude-desktop",
+                  "zh/model-context-protocol/chatgpt",
+                  "zh/model-context-protocol/cursor",
+                  "zh/model-context-protocol/vs-code",
+                  "zh/model-context-protocol/windsurf",
+                  "zh/model-context-protocol/zed",
+                  "zh/model-context-protocol/gemini-cli",
+                  "zh/cloud/run-in-the-cloud/connect-openwork-mcp-remote-machine"
+                ]
+              },
+              {
+                "group": "连接",
+                "pages": [
+                  "zh/cloud/share-with-your-team/shared-mcp-connections",
+                  "zh/cloud/share-with-your-team/microsoft-365",
+                  "zh/cloud/share-with-your-team/google-cloud-cli",
+                  "zh/cloud/share-with-your-team/mcp-server-compatibility"
+                ]
+              },
+              {
+                "group": "共享技能与插件",
+                "pages": [
+                  "zh/model-context-protocol/agent-plugins",
+                  "zh/cloud/share-with-your-team/collections",
+                  "zh/start-here/do-work-with-it/publish-and-copy-a-skill"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "仪表盘",
+            "pages": [
+              "zh/dashboards/overview",
+              "zh/dashboards/build-an-mcp-app"
+            ]
+          },
+          {
+            "tab": "SSO",
+            "pages": [
+              {
+                "group": "配置你的组织",
+                "pages": [
+                  "zh/cloud/get-started",
+                  "zh/cloud/team-quickstart",
+                  "zh/cloud/members-and-rbac"
+                ]
+              },
+              {
+                "group": "SSO 与 SCIM",
+                "pages": [
+                  "zh/cloud/scim-google-workspace",
+                  "zh/cloud/scim-okta",
+                  "zh/cloud/scim-microsoft-entra"
+                ]
+              },
+              {
+                "group": "策略与运维",
+                "pages": [
+                  "zh/cloud/share-with-your-team/desktop-policies",
+                  "zh/cloud/share-with-your-team/agent-permissions",
+                  "zh/cloud/share-with-your-team/team-prompt-cards",
+                  "zh/cloud/security-and-operations",
+                  "zh/cloud/enterprise"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "自托管",
+            "pages": [
+              {
+                "group": "概览",
+                "pages": [
+                  "zh/self-host/evaluate-with-docker-compose"
+                ]
+              },
+              {
+                "group": "部署到你的云",
+                "pages": [
+                  "zh/self-host/deploy-to-your-cloud/overview",
+                  "zh/self-host/deploy-to-your-cloud/aws",
+                  "zh/self-host/deploy-to-your-cloud/azure",
+                  "zh/self-host/deploy-to-your-cloud/google-cloud",
+                  "zh/self-host/deploy-to-your-cloud/first-administrator"
+                ]
+              },
+              {
+                "group": "网络规划",
+                "pages": [
+                  "zh/start-here/air-gapped-deployment",
+                  "zh/start-here/certificate-trust-and-proxies"
+                ]
+              },
+              {
+                "group": "安装与运维",
+                "pages": [
+                  "zh/start-here/enterprise-desktop-deployment",
+                  "zh/self-host/gateway-upgrade",
+                  "zh/start-here/installer-delivery",
+                  "zh/start-here/github-connector-helm"
+                ]
+              },
+              {
+                "group": "故障排查",
+                "pages": [
+                  "zh/start-here/network-diagnostics"
                 ]
               }
             ]

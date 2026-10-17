@@ -1,0 +1,60 @@
+---
+title: "物理隔离部署"
+description: "规划限制或断开公网访问的 OpenWork 部署方案。"
+---
+
+“物理隔离” (Air-gapped) 在 OpenWork 的规划里有好几种不同的含义。请把下面这几个术语用准确，让网络设计、安装器分发路径和功能预期保持一致。
+
+## 部署术语
+
+| 术语 | 准确含义 |
+| --- | --- |
+| **私网 / 半隔离 (Private-network / semi-air-gapped)** | 员工桌面机既能访问公网，也能通过 VPN 或私网访问内部 Den。Den 的访问被限制在获批的网络内，但除非你的终端策略做了拦截，桌面机仍然保留普通的上网通路。 |
+| **隔离式 Den (Isolated Den)** | Den 没有不受限的公网访问。客户笔记本仍然可以有网络，用来获取安装器、模型目录、npm 包、模型提供商和链接。 |
+| **完全离线的安装器分发 (Fully air-gapped installer delivery)** | 只有安装器的文件字节是从你的内网挂载或提供的。这**并不**等于整个 OpenWork 产品做到了物理隔离，它只是去掉了安装器的 GitHub 发布资产下载路径。 |
+| **完全隔离的 OpenWork 部署 (Fully isolated OpenWork deployment)** | 已启用的 OpenWork 功能所依赖的每一项内容，都被镜像、单独开通、关闭，或替换成了内网可达的服务。这包括部署产物、桌面运行时依赖、模型与提供商目录、OAuth 和提供商端点、MCP 服务器、邮件、诊断、更新以及信任锚点。 |
+
+如果桌面机有公网访问而 Den 是私有的，请先看 [私网部署](/start-here/private-network-deployment)。需要梳理域名清单时，用 [出站网络访问](/start-here/outbound-network-access)。涉及 TLS 拦截或私有根证书时，用[证书信任与代理](/zh/start-here/certificate-trust-and-proxies)。
+
+## 完全隔离检查清单
+
+只有在目标是“完全隔离的 OpenWork 部署”时才使用这份清单，仅仅是私有 Den 或内网安装器分发都不适用。
+
+### 部署产物
+
+- 把 GHCR 上的 Helm chart 镜像到一个内部 OCI registry。
+- 把所有已启用的镜像镜像到内部 registry，包括 `openwork-den-api`、`openwork-den-web`；如果启用了 OpenWork Gateway 或保留的旧版推理组件，还包括 `openwork-inference`。Gateway 沿用这个镜像名，不要用独立的 `den-gateway` Web 代理去替换。
+- 把 Helm 的镜像仓库和 chart 安装配置指向内部 registry。只有在你不镜像 chart 和镜像文件时，才需要公网的 `ghcr.io` 路径。
+
+对于 Gateway，请镜像 capability-version-1 发布版本里配套的镜像，不要用新的 chart 值去套用旧的稳定版镜像。按 [Gateway 部署配置](/self-host/gateway) 和[安全升级流程](/self-host/gateway-upgrade) 执行，其中包括先做 schema 迁移再滚动上线运行时。Gateway 对配置了它的组织来说，管理员功能在所有组织都已 GA，不需要组织级开关或平台管理员授权。部署侧的 `GATEWAY_ENABLED` 和 `deploymentCapabilities.aiGateway` 校验仍然生效，管理员权限、凭据控件和网络要求同样如此。
+
+### 安装器产物
+
+- 把标准发布版本的安装器文件挂载进 Den，并把 `OPENWORK_INSTALLER_ARTIFACTS_DIR` 设成该挂载路径。
+- 用 `OPENWORK_INSTALLER_RELEASE_TAG` 选出期望的标准文件名。每个文件名里的版本号，就是去掉开头 `v` 之后的 tag。
+- `OPENWORK_INSTALLER_RELEASE_REPO` 只用于挂载产物缺失时的 GitHub 跳转路径；它不是内部产物 registry 的覆盖项。
+- 把同一个只读的安装器产物 PVC 挂载到每一个 Den API 副本上。Den 是流式读取挂载文件的，不会去抓取、缓存、重新封装或压缩安装器字节。
+
+确切的文件名和分发矩阵见[安装器分发](/start-here/installer-delivery)。
+
+### 桌面运行时依赖
+
+- 把 `OPENCODE_MODELS_URL` 指向模型目录的内部镜像。默认目录是 `https://models.openworklabs.com/`。
+- 打包后的桌面应用可以用 `npx -y openwork-ui-mcp` 启动用于控制界面的 MCP。在完全隔离的环境里，要提供一个内部 npm 源或 npm 镜像，让 `npx` 能取到该包。OpenWork 目前没有为这个包提供单独的配置项来覆盖 registry，请按标准 npm 配置给运行账号设置好。
+- 通过你的内部发布流程来禁用、镜像或管理桌面更新和 GitHub 发布资产。除非已经针对你实际分发的那个桌面版本验证过，不要假设存在可用的内置更新镜像设置。
+
+### 功能依赖
+
+- 可选的模型提供商、MCP 服务器、OAuth 身份提供商和邮件服务，只有在内网可达且经过批准时才可用。例如 Google Workspace、Microsoft 365、GitHub 插件导入、OpenRouter/OpenAI、Slack/Notion/Linear/Sentry/Stripe 的 MCP 预设、SMTP 以及 Resend。
+- 如果启用 GitHub 连接器，请批准确切的 GitHub API/webhook 路径，或者镜像它所需要的那套 workflow。先从 [GitHub 连接器 Helm 指南](/start-here/github-connector-helm) 开始。
+- 如果启用内网 MCP URL，请复核[私网部署](/start-here/private-network-deployment) 里的私有网络 SSRF 策略。放开私有 MCP URL 是一个信任决策，不是物理隔离的必要条件。
+
+### 安全与诊断
+
+- 为正确的信任面安装私有根证书和代理配置：桌面 Electron/Chromium、被拉起的本地运行时、Den 容器和 MySQL TLS 用的并不是同一个证书库。见[证书信任与代理](/zh/start-here/certificate-trust-and-proxies)。
+- 用[网络诊断](/start-here/network-diagnostics) 把桌面的 DNS/TLS/代理问题和 Den 的出站检查区分开。
+- Helm 对隔离的自托管安装默认已经关闭了外部密码泄露查询。只有安全团队批准了外部 Have I Been Pwned 区间 API 通路时，才把它打开。
+
+## 完全隔离不会自动覆盖的内容
+
+挂载安装器产物很有用，但它只解决了安装器分发这一件事。它不会镜像 npm、模型目录、提供商 API、GitHub 插件内容、OAuth 元数据、邮件投递、诊断、桌面更新或证书信任。请把每一个启用的功能当作一次独立的依赖评审。

@@ -1,0 +1,129 @@
+---
+title: "GitHub 连接器的 Helm 配置"
+description: "创建 GitHub App，并为 OpenWork EE Helm chart 配置仓库连接器。"
+---
+
+GitHub 连接器让自托管的 OpenWork 部署可以安装一个 GitHub App、列出该安装可读的仓库、发现插件或市场 manifest、导入指定仓库，并借助 GitHub webhook 让导入的内容与 GitHub 保持同步。
+
+这与 GitHub 社交登录是两回事。社交登录用 Better Auth，读取 `GITHUB_CLIENT_ID` 和 `GITHUB_CLIENT_SECRET`；仓库连接器用的是下面这组 `GITHUB_CONNECTOR_APP_*` 设置。
+
+## 公开 URL
+
+使用你在 Helm chart 里设置的同一组公开主机名：
+
+```yaml
+config:
+  public:
+    webOrigin: "https://openwork.example.com"
+    apiOrigin: "https://api.openwork.example.com"
+```
+
+GitHub App 需要这些 OpenWork URL：
+
+| GitHub App 字段 | 取值 |
+| --- | --- |
+| Homepage URL | `https://openwork.example.com` |
+| Setup URL | `https://openwork.example.com/dashboard/integrations/github` |
+| Webhook URL | `https://api.openwork.example.com/v1/webhooks/connectors/github` |
+
+给 Setup URL 勾选 **Redirect on update**。GitHub 会带着 `installation_id` 和 `state` 跳回 Setup URL，之后由 Den web 调用 Den API 完成安装。
+
+当前的仓库连接器流程不需要 OAuth 回调 URL。如果你之后另外启用 GitHub 用户授权，请把它当作与该连接器分开的 OAuth 配置。
+
+## 创建 GitHub App
+
+在 GitHub 里，为应当拥有这个连接器的账号新建一个 GitHub App。
+
+使用以下设置：
+
+- **Webhook**：启用。
+- **Webhook URL**：`https://api.openwork.example.com/v1/webhooks/connectors/github`。
+- **Webhook secret**：生成一个强随机密钥并保留下来给 Helm 用。
+- **Setup URL**：`https://openwork.example.com/dashboard/integrations/github`。
+- **Redirect on update**：启用。
+- **Repository permissions**：
+  - **Contents**：只读。
+  - **Metadata**：只读。GitHub 会自动授予该项。
+- **Subscribe to events**：
+  - `push`
+  - `installation`
+  - `installation_repositories`
+  - `repository`
+
+创建好应用之后，复制以下内容：
+
+- **App ID**
+- **Client ID**
+- **Client secret**（如果你生成了）
+- **Private key**（`.pem`）
+- **Webhook secret**
+
+连接器目前需要 App ID 和私钥来调用实时的 GitHub App 接口。接收 webhook 需要 webhook secret。Helm chart 之所以暴露 Client ID 和 Client secret，是因为 GitHub App 本身带有这两项，但当前的安装与仓库同步流程并不依赖它们。
+
+## 配置 Helm
+
+把 GitHub App 的值加进你的生产 values 文件：
+
+```yaml
+config:
+  githubConnector:
+    appId: "123456"
+    clientId: "Iv1.example"
+
+secret:
+  values:
+    githubConnectorAppClientSecret: "github-app-client-secret-if-used"
+    githubConnectorAppPrivateKey: |-
+      -----BEGIN PRIVATE KEY-----
+      ...
+      -----END PRIVATE KEY-----
+    githubConnectorAppWebhookSecret: "replace-with-the-github-webhook-secret"
+```
+
+你也可以粘贴带转义换行符（`\n`）的私钥。Den 在签发 GitHub App JWT 之前会先把转义的换行符规范化。
+
+如果你用已有的 Kubernetes Secret 而不写 `secret.values`，请继续把 `config.githubConnector.appId` 留在 values 里，并在那个 Secret 中放入这些由 secret 承载的键：
+
+```yaml
+secret:
+  create: false
+  existingSecret: openwork-ee-secrets
+```
+
+必需的部署值：
+
+- `GITHUB_CONNECTOR_APP_ID`
+- `GITHUB_CONNECTOR_APP_PRIVATE_KEY`
+- `GITHUB_CONNECTOR_APP_WEBHOOK_SECRET`
+
+可选的连接器键：
+
+- `GITHUB_CONNECTOR_APP_CLIENT_ID`
+- `GITHUB_CONNECTOR_APP_CLIENT_SECRET`
+
+chart 会通过共享的 ConfigMap 写入 `GITHUB_CONNECTOR_APP_ID` 和 `GITHUB_CONNECTOR_APP_CLIENT_ID`，通过共享的 Secret 写入 `GITHUB_CONNECTOR_APP_PRIVATE_KEY`、`GITHUB_CONNECTOR_APP_WEBHOOK_SECRET` 和 `GITHUB_CONNECTOR_APP_CLIENT_SECRET`。
+
+## OpenWork 拿它做什么
+
+当管理员在 OpenWork 中点击 **Connect GitHub** 时：
+
+1. Den API 调用 `/v1/connectors/github/install/start`。
+2. Den API 用 App ID 和私钥读取 GitHub App 的元数据。
+3. Den API 把管理员导向带签名 `state` 的 GitHub App 安装 URL。
+4. GitHub 跳回 `/dashboard/integrations/github?installation_id=...&state=...`。
+5. Den web 调用 `/v1/connectors/github/install/complete`。
+6. Den API 把这次 GitHub 安装作为连接器账号存下来，并列出该安装可见的仓库。
+
+当 GitHub 向 `/v1/webhooks/connectors/github` 发送 webhook 时，Den API 会先用 `GITHUB_CONNECTOR_APP_WEBHOOK_SECRET` 校验 `x-hub-signature-256` 请求头，然后才把连接器同步任务排队。
+
+## 验证配置
+
+部署好 chart 之后，登录 Den web 并打开：
+
+```text
+https://openwork.example.com/dashboard/integrations
+```
+
+选择 GitHub，在一个测试账号或组织上安装这个 GitHub App，挑一个仓库并启动发现流程。配置正常时，页面会回到 OpenWork，列出该安装可见的仓库，并允许你对选中的仓库执行发现。
+
+要验证 webhook，就向某个已连接的仓库推送一次，然后在 Den API 日志里查看该 GitHub webhook 是被接受还是被有意忽略。`/v1/webhooks/connectors/github` 返回 `503`，说明 Den API 的 Pod 里没有配置 webhook secret。

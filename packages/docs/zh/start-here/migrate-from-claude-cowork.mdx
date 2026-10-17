@@ -1,0 +1,116 @@
+---
+title: "从 Claude Cowork 迁移"
+description: "把你的文件、技能、插件、MCP 服务器和团队配置迁移到 OpenWork。"
+---
+
+{/* openworklabs.com serves this URL from ee/apps/landing/components/migration-guide-page.tsx. Keep both saying the same thing. */}
+
+从 Claude Cowork 换到 OpenWork，不需要重做一遍你的配置。先拿一件真实的任务开跑，把它需要的能力带过来，在整条链路跑通之前让 Cowork 继续可用。
+
+## 让你的智能体来搬
+
+把下面这段贴进 Claude Code，或者任何能在你电脑上执行命令的智能体：
+
+```text
+Follow https://openworklabs.com/migrate.md to move my Claude plugins and skills to OpenWork.
+```
+
+智能体会找到你添加过的插件市场和你自己写的技能，先展示哪些会被迁移，把你选中的插件导入你的 OpenWork 组织，再列出留给你自己处理的部分，比如连接 Gmail。你自己写的技能始终保持私有。之后再跑一次，它会补上变化，也不会重复导入。
+
+要为所有人导入插件，你需要在你所在 OpenWork 组织里有一个所有者或管理员账号。
+
+## 哪些东西能带过来
+
+| Claude Cowork 里的 | 在 OpenWork 中 | 要做的事 |
+| --- | --- | --- |
+| 本地文件和文件夹 | 工作区文件 | 把同一个文件夹或仓库作为 OpenWork 工作区打开。 |
+| 你自己写的技能 | 私有技能 | `migrate` 会先把它们作为只有你能使用的技能上传，直到你主动共享。 |
+| 来自 GitHub 市场的插件 | 组织插件 | `migrate` 导入你选中的那些；它们的技能立刻可用，建议的连接器是可选项。 |
+| MCP 服务器 | 连接器和自定义应用 | 通过 OpenWork Connect 重新连接该服务器，或把它的 URL 添加为自定义应用。 |
+| Claude 模型 | Anthropic 提供商 | 添加 Anthropic 的 API 密钥，或者由 OpenWork Cloud 集中开通 Anthropic。 |
+| 定时任务 | 定时任务 | 逐条重建排期，并核对它的工作区、权限和产出位置。 |
+
+<Note>
+  历史对话不会自动转移。重要的指令请写进工作区文件或技能，不要依赖旧的会话线程。
+</Note>
+
+## 1. 安装 OpenWork 并打开同样的工作
+
+1. [下载 OpenWork](https://openworklabs.com/download)，支持 macOS、Windows 或 Linux。
+2. 用你在 Cowork 里的那个文件夹或仓库创建工作区。
+3. 在改动任何内容之前，先让 OpenWork 总结一下这个工作区。这能确认它读到的是你预期的那些文件。
+
+你的文件留在原处。OpenWork 不要求你先上传一份副本才能开始工作。
+
+## 2. 选择你的模型
+
+OpenWork 不绑定模型。你可以继续用 Anthropic 的模型、再接一个提供商，或者让你的组织集中开通模型。
+
+- 想继续用 Claude，请按 [添加 Anthropic API 密钥](/start-here/connect-your-stack/add-anthropic-api-key)。
+- 想用 ChatGPT，请按 [用 ChatGPT 登录](/start-here/connect-your-stack/sign-in-with-chatgpt)。
+- 想用其他提供商、你自己的 API 密钥，或 OpenRouter、LiteLLM 这类 AI 网关，请按 [添加自定义 LLM 或 AI 网关](/start-here/connect-your-stack/add-a-custom-llm)。
+- 想在你自己的电脑上跑模型，请按 [使用本地模型（Ollama、LM Studio）](/start-here/connect-your-stack/use-local-models)。
+- 想用 Gemini 或 Google Vertex AI，请按 [使用 Gemini 和 Google Vertex AI](/start-here/connect-your-stack/use-gemini-and-vertex-ai)。
+- 想用团队统一管理的提供商，请按 [托管的 LLM 提供商](/cloud/share-with-your-team/managed-llm-provider)。
+
+你的 Claude 订阅和 Anthropic API 计费可能是分开的。在把 Cowork 撤出工作流之前，先确认 API 访问是可用的。
+
+## 3. 搬过来技能和插件
+
+OpenWork 使用同样的 `SKILL.md` 格式。上面那段提示会替你完成迁移；手工做则是：
+
+```bash
+openwork-bootstrap login
+openwork-bootstrap migrate plan
+openwork-bootstrap migrate apply --plugin productivity,sales
+```
+
+迁移完成后，对你依赖的每个技能：
+
+1. 打开技能，检查里面的文件路径、应用名或环境变量。
+2. 跑一个理应触发它的最小任务。
+3. 确认产出没问题，再导入下一个技能。
+
+OpenWork 如何组织这些东西，见 [连接器、技能和插件](/start-here/do-work-with-it/skills-plugins-and-mcp)。要给团队分发，见 [发布并复制技能](/start-here/do-work-with-it/publish-and-copy-a-skill)。
+
+## 4. 重新连接应用和 MCP 服务器
+
+凭证不会跨产品转移。请逐个重新连接服务，让 OpenWork 拿到属于它自己的授权。
+
+- Gmail、Calendar、Drive、Slack、Notion、Linear 等托管服务，用 [连接你的服务](/start-here/connect-your-stack/connect-services)。
+- 其他远程或本地 MCP 服务器，用 [添加自定义 MCP 服务器](/start-here/connect-your-stack/add-an-mcp-server)。
+- 整个组织统一配置，用 [共享的 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)。
+- 想在 Claude Code、Codex 或 Cursor 里使用同样的技能和连接，[一条命令添加 OpenWork MCP](/start-here/connect-openwork-mcp)。
+
+先测只读操作。再用一个可随意丢弃的例子，测试会改数据的操作，比如发消息或更新记录。
+
+## 5. 重建排期任务和浏览器任务
+
+对每一个周期性任务，记下：
+
+- 提示词；
+- 它的排期和时区；
+- 可用的工作区与文件；
+- 需要哪些已连接的应用；
+- 结果应该保存或发送到哪里。
+
+一次只重建一个排期，先手动跑通，再开启周期性执行。需要浏览器完成的工作，请按 [控制浏览器](/start-here/do-work-with-it/control-the-browser)，并在你在场的情况下核对目标站点。
+
+## 6. 迁移一个团队而不产生配置漂移
+
+不要让每位同事都手工重做一遍你的本地配置。在 OpenWork Cloud 里，把审核通过技能和连接发布一次，分配给正确的团队，再集中下发桌面策略。
+
+先看 [与团队共享技能和 MCP 服务器](/start-here/do-work-with-it/share-your-setup)，然后按 [团队快速上手](/cloud/team-quickstart) 开始，再核对 [桌面策略](/cloud/share-with-your-team/desktop-policies) 和 [成员与角色](/cloud/members-and-rbac)。
+
+## 切换前检查清单
+
+- [ ] 同一个工作区能打开，智能体能读到预期的文件。
+- [ ] 至少接通了一个模型，并且计费方式已经清楚。
+- [ ] 每个必需技能都能在一个代表性任务上被触发。
+- [ ] 每个连接器或 MCP 服务器都已完成授权并测试过。
+- [ ] 定时任务和浏览器任务都手动跑通过一次。
+- [ ] 团队能力是集中发布的，而不是一台机器一台机器地复制。
+- [ ] 重要的 Cowork 指令已经写进文件或技能。
+- [ ] 在代表性工作流于 OpenWork 中通过之前，Cowork 仍然可用。
+
+清单全部通过后，就把 OpenWork 设为该工作流的默认选择，再迁移下一个。

@@ -1,0 +1,55 @@
+---
+title: "从对话创建技能"
+description: "把一次有用的 OpenWork 对话变成可复用的技能"
+---
+
+<Note>
+**先选好技能放在哪里。** 本地工作区技能是免费的，不需要登录 OpenWork Cloud。当你已登录并请 OpenWork 创建一个“给我自己用”的技能时，它会创建一个只有你能访问的私有 Cloud 插件。之后你可以用 **Who can use it** 把它共享出去；见[发布与复制技能](/zh/start-here/do-work-with-it/publish-and-copy-a-skill)。
+</Note>
+
+先在对话里把这件事真正做完，再把它变成一份说明。
+
+## 把一次有用的对话变成个人 Cloud 技能
+
+1. 在对话里完成任务，并保留这个会话。
+2. 用平常的话说：`Turn what we just did into a reusable skill for me`。
+3. OpenWork 会把这个技能作为私有插件保存到你的 OpenWork Cloud 组织里。你自动获得访问权限；它不会被写进你的工作区，也不会共享给任何人。
+4. 如果 OpenWork 询问，就给这个技能起一个清晰的名字，然后让它确认自己保存了什么。返回的结果是一段文本，包含技能名称、描述和 Library 链接。
+5. 之后在对话里直接按名字使用它，或者描述同一类任务，让 OpenWork 在匹配上时自动触发。
+
+## 创建技能的其他入口
+
+每条路径创建出来的东西都一样：你 OpenWork Cloud 组织里某个插件下的一个技能。
+
+- **桌面端，从 Library 进入**：打开 `Settings` > `Library`，筛选 `Skills`，点击 `Add skill`。这需要你已经登录 OpenWork Cloud；技能会作为组织内的一个私有插件创建。
+
+<Frame>
+  ![Library 筛选到 Skills，并显示 Add skill 按钮](/images/library-skills-add-skill.png)
+</Frame>
+
+<Frame>
+  ![创建技能的弹窗，包含名称、描述、技能正文和可用范围](/images/library-create-skill-modal.png)
+</Frame>
+
+- **Cloud 控制台**：管理员在 **Manage › Plugins** 里创建和编辑插件下的技能；任何成员都可以从 **My Library › Add to your Library › Skill** 创建一个。
+
+<Frame>
+  ![Cloud 控制台的插件页面，列出其技能并显示 Add skill 按钮](/images/cloud-plugin-add-skill.png)
+</Frame>
+
+<Frame>
+  ![从插件的 Add skill 按钮进入的 Cloud 控制台技能编辑器](/images/cloud-skill-editor.png)
+</Frame>
+
+- **从对话创建**，即上面那条路径。
+
+## 只有你选择时才修改或共享
+
+1. 要打磨它，就在对话里提出改动，例如 `Make the skill ask before sending email`。
+2. 要共享给同事，请在 **My Library** 里打开它，选择 **Share**，然后在 **Who can use it** 下挑选人员或团队。见[发布与复制技能](/zh/start-here/do-work-with-it/publish-and-copy-a-skill)。
+
+<Note>创建技能并不等于发布。共享是你另外要主动做的一步。</Note>
+
+## 把技能只留在一个工作区里
+
+本地技能就是工作区里的一个 `SKILL.md` 文件（例如 `.opencode/skills/<name>/SKILL.md`）。如果你在对话里明确要求创建本地技能，OpenWork 只会生成那个文件，不会另外建 Cloud 副本。本地技能不需要 Cloud 账户，仍然会出现在 `Settings > Library` 里，但 OpenWork Cloud 无法为你的团队分配或更新它们。

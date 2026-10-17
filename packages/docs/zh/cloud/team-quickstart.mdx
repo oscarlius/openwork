@@ -1,0 +1,154 @@
+---
+title: "团队快速上手：从新建组织到团队技能"
+description: "创建一个 OpenWork Cloud 组织，邀请同事，通过 Collection 发布一个技能插件，并在桌面应用中用上它"
+---
+
+在 [app.openworklabs.com](https://app.openworklabs.com) 上搭好一个团队，发布你的第一个技能，并从桌面应用里触发它——大约 15 分钟。
+
+走完这个流程，你会拥有：
+
+1. 一个在 OpenWork Cloud 上创建好的组织。
+2. 几位已邀请的同事，并且已经归入团队。
+3. 一个 Collection，里面加入了带一个简单测试技能的插件。
+4. 已把该 Collection 授予相关团队。
+5. 已在 OpenWork 桌面应用登录该组织，并用一句大白话触发了这个技能。
+
+<Note>
+**席位：** 每个工作区都包含 **5 个免费席位**。Team 版支持不限席位和 SSO。想提前体验分析功能，请[联系我们](mailto:founders@openworklabs.com)。
+</Note>
+
+---
+
+## 1. 创建你的组织
+
+前往 [app.openworklabs.com](https://app.openworklabs.com)，输入工作邮箱并按 **Next**——OpenWork 会自动把你引导到对应的登录步骤。
+
+<Frame>
+  ![开始使用 OpenWork——邮箱步骤](/images/cloud-team-quickstart/01-signin-email.png)
+</Frame>
+
+全新的邮箱会看到 **Create your account.** 这一步。填写名称和密码，然后 **Sign up**。
+
+<Frame>
+  ![Create your account](/images/cloud-team-quickstart/02-create-account.png)
+</Frame>
+
+注册完成后，OpenWork 会让你 **name your team**，也就是创建你的组织——之后可以随时改名，也不需要绑卡。
+
+<Frame>
+  ![Name your team](/images/cloud-team-quickstart/03-name-your-team.png)
+</Frame>
+
+你会进入管理控制台，页面上有一份简短的设置清单。可以现在跟着做，也可以稍后再回来——这篇教程会覆盖其中的重点。
+
+<Frame>
+  ![设置清单](/images/cloud-team-quickstart/04-onboarding-checklist.png)
+</Frame>
+
+## 2. 邀请同事并创建团队
+
+在侧栏打开 **Members**，点击 **Add member**，输入同事的邮箱，选择一个角色（通常是 Member），然后点 **Send invite**。所有者可以选择更高的角色；管理员只能邀请普通成员。
+
+<Frame>
+  ![邀请同事](/images/cloud-team-quickstart/05-invite-member-form.png)
+</Frame>
+
+给其他同事重复一遍。被邀请的人在接受之前会显示为 **Pending**。在行菜单（⋯）里你可以 **Copy invite link**、**Resend invite** 或 **Cancel invite**。
+
+<Frame>
+  ![带待处理邀请的成员列表](/images/cloud-team-quickstart/06-members-pending.png)
+</Frame>
+
+你的同事打开邀请链接，设置密码，一键加入：
+
+<Frame>
+  ![加入页面——你同事看到的界面](/images/cloud-team-quickstart/07-join-org-amy.png)
+</Frame>
+
+<Frame>
+  ![加入后的欢迎页](/images/cloud-team-quickstart/08-amy-welcome.png)
+</Frame>
+
+接着把成员组织成团队。切换到 **Teams** 页签，点击 **Create Team**，起个名字（例如 `Sales`），再点选属于这个团队的成员。
+
+<Frame>
+  ![创建 Sales 团队](/images/cloud-team-quickstart/09-create-team-sales.png)
+</Frame>
+
+团队列表会直接展示各自的成员：
+
+<Frame>
+  ![团队列表](/images/cloud-team-quickstart/10-teams-list.png)
+</Frame>
+
+对于 `Sales` 这类只做资源共享的团队，请不要勾选组织 Admin 复选框。如果某个团队需要授予全组织的管理权限，必须由所有者显式批准。见[团队 Admin 权限](/cloud/members-and-rbac#team-admin-access)。
+
+## 3. 创建一个带测试技能的插件
+
+技能是一份分步说明，任务匹配时智能体会加载它——可以理解为整个团队能共用的操作手册。技能存放在**插件**里，而 **Collection** 会把一个或多个插件归拢起来以便授予。
+
+先进入 **Settings › Advanced › Collections**，点击 **New collection**，为你的团队建一个，例如 `Sales Enablement`。
+
+新建的 Collection 会打开。在它的 **Plugins** 页签上点击 **Add a plugin**，填写 **Plugin name** 和 **Description**，然后在 **What's inside** 下点击 **Skill**。
+
+把技能当作一份优秀的手册来写：
+
+- **Name** —— 例如 `Prep a sales call`
+- **Description** —— 智能体应该在什么时候用它？例如 *“有人请求为销售拜访或客户会议做准备时使用。”*
+- **Instructions** —— 用普通 markdown 写下你希望智能体遵循的步骤。
+
+在 **Share** 区块里，确认 **Collection** 显示的是 **Sales Enablement**。如果只想授予选定的团队，就不要开启 **Share with everyone in the organization**。然后点击 **Create plugin**。创建者会自动保留访问权限。
+
+## 4. 把 Collection 的访问权限给团队
+
+打开 **Settings › Advanced › Collections › Sales Enablement**，选择 **Members** 页签。在 **Who can access this** 下点击 **Add team**，选择 `Sales`。你也可以改为让组织内所有人都有访问权限，或点击 **Add people**。
+
+整套管理流程就是这么长：**技能放进插件 → Collection → 团队或成员**。之后被加入该团队的人会自动继承这个 Collection 的访问权限。
+
+## 5. 从桌面应用触发这个技能
+
+现在切换到 [OpenWork 桌面应用](https://openworklabs.com)。在欢迎页点击 **Joining a team? Sign in**，用同一个账户登录。
+
+<Frame>
+  ![桌面应用欢迎页](/images/cloud-team-quickstart/18-desktop-welcome.png)
+</Frame>
+
+选择你的组织：
+
+<Frame>
+  ![选择你的组织](/images/cloud-team-quickstart/19-desktop-choose-org.png)
+</Frame>
+
+随时可以在 **Settings › Account** 确认连接状态：
+
+<Frame>
+  ![已登录 Acme Labs](/images/cloud-team-quickstart/21-desktop-account-connected.png)
+</Frame>
+
+打开 **Settings › Library** 并筛选到 **Skills**。通过 `Sales Enablement` 授予的技能会自动出现在这里；如果管理员刚刚改过访问权限，点击刷新按钮（提示文字 **Refresh**）。
+
+接下来只需要提出这个技能会做的那件事。输入一段与技能描述匹配的任务并按 **Run task**：
+
+> *帮我准备明天和 Northwind Traders 的销售拜访：和他们的运营负责人聊 30 分钟，目标是达成一个付费试点。*
+
+<Frame>
+  ![触发该技能的提问](/images/cloud-team-quickstart/23-desktop-prompt.png)
+</Frame>
+
+智能体会接过这个技能并按你的手册执行——调研、带时间分配的议程、探询问题、异议应对，以及一个明确的下一步，最后把结果作为文档保存在你的工作区里：
+
+<Frame>
+  ![技能实际运行的效果](/images/cloud-team-quickstart/24-desktop-skill-result.png)
+</Frame>
+
+## 接下来
+
+- 随着团队手册增多，继续往插件里加技能——所有人会自动拿到更新。
+- 从 GitHub 导入已有的插件（打开一个 Collection，点击 **Add a plugin**，再选择 **Import from GitHub**），包括兼容 Anthropic 的插件仓库。
+- 配置 **Sources**，让 Collection 与某个仓库保持同步。
+- 想只共享单个插件而不用 Collection，请在 **Manage › Plugins** 下打开它，使用 **Who can use it**。见[发布并复制一个技能](/start-here/do-work-with-it/publish-and-copy-a-skill)。
+- 当你需要多个插件、可复用的受众或更复杂的授予关系时，阅读 [Collections](/cloud/share-with-your-team/collections)。
+
+<Note>
+**还不够用？** 前 5 个席位免费，额外席位每席位每月 10 美元。Team 版已包含 SSO。想提前使用分析功能，请[联系我们](mailto:founders@openworklabs.com)。
+</Note>

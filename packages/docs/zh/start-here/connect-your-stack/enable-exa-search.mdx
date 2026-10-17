@@ -1,0 +1,65 @@
+---
+title: "启用 Exa 搜索"
+description: "在 OpenWork 中给你的 AI 装上 Exa 网页搜索，既可以为整个组织添加连接器，也可以作为自己工作区里的 MCP 服务器。"
+"og:description": "在 OpenWork 中给你的 AI 装上 Exa 网页搜索，既可以为整个组织添加连接器，也可以作为自己工作区里的 MCP 服务器。"
+keywords: ["Exa", "web search", "search the web", "Exa API key", "Exa MCP", "connector", "internet search", "网页搜索", "联网搜索"]
+---
+
+[Exa](https://exa.ai) 是一个为 AI 打造的搜索引擎。把它加进 OpenWork 后，
+你的 AI 就能搜索网页、读取页面内容。
+
+添加 Exa 有两种方式：
+
+- **给组织添加。** 管理员在 OpenWork Cloud 里用一把 Exa API 密钥添加 Exa 连接器。
+  管理员指定的人都能使用。
+- **给自己添加。** 在你自己的工作区里把 Exa 加成一个 MCP 服务器。这条路
+  不需要 OpenWork Cloud 账户。
+
+桌面应用的 **Settings › Advanced** 里已经没有 Exa 开关了。
+
+## 给组织添加 Exa
+
+你需要是 OpenWork Cloud 的 owner 或 admin，并且要有你自己 Exa 账户的 API 密钥。
+Exa 的用量限制和计费都算在这把密钥上。
+
+1. 在 OpenWork Cloud 里打开 **Manage › Connectors**。
+2. 点击 **Add connector**，然后选择 **Exa**。
+3. 当 OpenWork 索要密钥时，粘贴你的 Exa API 密钥并点击 **Save key**。
+4. 等待各项检查完成。
+5. 在 **Who can use it** 下打开 **Everyone in the organization**，
+   或者点击 **Add person**、**Add team**。
+6. 点击 **Add Exa**。
+
+大家用的都是你添加的这把密钥，所以其他人不需要再登录。被你授权的人
+在桌面应用的 **Settings › Library** 里就能找到 Exa。
+
+以后要换密钥，请在 **Manage › Connectors** 里打开 Exa，进入
+**Settings**，填入 **New API key**。
+
+关于连接器的更多内容，见[与团队共享 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)。
+
+## 给自己添加 Exa
+
+1. 在桌面应用里打开 **Settings › Library**。
+2. 展开 **Advanced settings**，点击 **Add workspace MCP**。
+3. 填入 **App name**，例如 `exa`。
+4. 类型保持 **Remote server (URL)**，并填入这个 **Server URL**：
+
+   ```text
+   https://mcp.exa.ai/mcp
+   ```
+
+5. 点击 **Add App**。
+
+Exa 只被添加到当前工作区。**Add workspace MCP** 弹窗里没有 API 密钥输入框。
+Exa 允许在不带密钥的情况下使用这个地址，按免费的速率限制来。细节见
+[Exa MCP](https://docs.exa.ai/reference/exa-mcp)。
+
+关于工作区 MCP 服务器的更多内容，见
+[添加自定义 MCP 服务器](/zh/start-here/connect-your-stack/add-an-mcp-server)。
+
+## 试一下
+
+让你的 AI 去做一件需要最新信息的事：
+
+> 搜索一下本周关于电动卡车的新闻，把最核心的三条总结一下。

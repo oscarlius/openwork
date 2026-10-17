@@ -1,0 +1,27 @@
+---
+title: "企业版"
+description: "在你自己的基础设施上部署 OpenWork"
+---
+
+想在你自己的基础设施上运行 OpenWork？我们会帮你把它落地。
+
+OpenWork 可以部署在你的 VPC 或本地机房里，带上 SSO、审计日志，以及对你团队能使用哪些模型和工具的控制。如果你正在评估自托管或私有云部署，来找我们聊聊。
+
+<Card title="与我们的团队约一次通话" icon="calendar" href="https://calendar.app.google/86QpCENvhfEzDFLu5">
+  在 [calendar.app.google/86QpCENvhfEzDFLu5](https://calendar.app.google/86QpCENvhfEzDFLu5) 预约 30 分钟的初次沟通，一起界定你的部署范围。
+</Card>
+
+## 我们会聊什么
+
+- 你的目标环境（云提供商、VPC、本地机房）
+- 身份、访问与审计要求
+- 模型与工具的允许清单
+- 部署计划与支持模式
+
+更想用邮件？写信到 [team@openworklabs.com](mailto:team@openworklabs.com?subject=Enterprise%20deployment)。
+
+## 桌面应用是怎么部署的
+
+把 OpenWork 铺到一批设备上并不需要构建定制的安装程序。你部署的是标准的 **OpenWork Enterprise 二进制包** —— 一个专用分发版本，要求登录并由管理员激活，走自己的更新通道 —— 然后可选地通过 MDM 下发一个 `desktop-bootstrap.json` 文件，让每台设备首次启动就指向你的 Den 服务器。证书来自你已经在管理的系统信任库，桌面策略在登录后由服务器下发，所以除了那一个文件之外不需要额外的 MDM 脚本。
+
+完整参考见[企业桌面部署](/start-here/enterprise-desktop-deployment)。

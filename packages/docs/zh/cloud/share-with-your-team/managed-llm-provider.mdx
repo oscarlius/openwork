@@ -1,0 +1,67 @@
+---
+title: "添加托管 LLM 提供商"
+description: "在 OpenWork Cloud 中把一个提供商密钥共享给你的组织，它会自动同步到成员的桌面应用。"
+keywords: ["managed provider", "legacy provider", "shared API key", "org provider", "AI Providers", "Cloud providers", "sync provider", "托管提供商", "共享 API 密钥", "组织提供商", "模型提供商", "同步"]
+---
+
+组织管理员在 OpenWork Cloud 里添加一次提供商，成员就能在模型选择器里用到它的模型，而不必接触密钥。
+
+这件事有两种做法，入口都在 Cloud 控制台的 **AI Gateway › AI Providers** 下。
+
+| | **AI 网关提供商**（推荐） | **旧式提供商**（自带密钥） |
+| --- | --- | --- |
+| 密钥存放位置 | 留在服务端 | 同步到每个成员的桌面应用 |
+| 用量跟踪与费用上限 | 支持 | 不支持 |
+| 自定义 OpenAI 兼容端点（你自己的 base URL） | 不支持，只能用目录里的提供商 | 支持，见[添加自定义 LLM 提供商](/zh/cloud/share-with-your-team/custom-llm-provider) |
+| 每个成员各自的密钥 | 仅支持 Google Vertex AI 登录 | 通过 API 实现，见[按成员分配的 LLM 凭证](/zh/cloud/share-with-your-team/per-member-llm-credentials) |
+
+如果要添加 AI 网关提供商，请按 [AI 网关：开始配置](/ai-gateway/overview#set-it-up) 操作。本页其余部分介绍旧式提供商。
+
+<Frame>
+  ![OpenWork Cloud 的 AI Providers 页签，AI 网关提供商下方是 Legacy Providers 区块](/images/cloud-ai-gateway-legacy-providers.png)
+</Frame>
+
+## 添加旧式提供商
+
+1. 在 OpenWork Cloud 中打开 **AI Gateway › AI Providers**。
+2. 滚动到 **Legacy Providers**，点击 **Add legacy provider**。
+3. 停留在 **Catalog provider** 上，并在 **Provider** 里选一个。OpenWork 会自动命名，点击 **Rename** 可以改名。
+4. 把共享密钥粘贴到 **API key / credential**。
+5. 在 **Models** 下勾选要共享的模型。
+6. 在 **Who can use it** 下，保留 **Everyone in** *(你的组织名称)*，或者选择指定的 **Teams** 和 **People**。
+7. 点击 **Create Provider**。OpenWork 会先检查这些模型；如果检查失败但你仍想保存，点击 **Save anyway**。
+
+<Frame>
+  ![Add a new LLM provider 表单：Catalog provider、API key / credential 与 Models](/images/cloud-managed-llm-provider-form.png)
+</Frame>
+
+如果提供商不在目录里，切换到 **Custom provider**，见[添加自定义 LLM 提供商](/zh/cloud/share-with-your-team/custom-llm-provider)。
+
+## 成员会看到什么
+
+成员不需要导入任何东西。桌面应用会在启动时、成员登录时、打开模型选择器时以及打开提供商设置时同步组织提供商，模型随后出现在模型选择器里。
+
+要查看同步状态，成员打开 **Settings › AI Providers**，滚动到 **Cloud providers**。该提供商也会出现在 **Providers** 下，并带上你的组织名称作为徽标。点击 **Sync now** 可立即同步。
+
+<Frame>
+  ![桌面应用中的 Settings > AI Providers，Cloud providers 下已连接 Acme LLM Gateway](/images/desktop-cloud-providers.png)
+</Frame>
+
+如果某个提供商没有显示为 **Connected**，它的状态会告诉你原因：
+
+| 状态 | 处理方式 |
+| --- | --- |
+| **Needs organization credential** | 需要管理员在 OpenWork Cloud 中为该提供商添加密钥。 |
+| **Sync error** | 点击 **Retry**。如果一直失败，到 OpenWork Cloud 检查该提供商的设置。 |
+| **Unavailable on this desktop** | 你组织的模型访问设置在这台设备上屏蔽了该提供商。 |
+| **Needs OpenWork server** 或 **Imports unavailable in this workspace** | 当前工作区无法保存提供商配置，请切换到本地工作区。 |
+
+## 修改或移除
+
+从 **Legacy Providers** 中打开该提供商：
+
+- **Edit Provider** 修改模型、密钥或可用范围，成员下次应用同步时拿到变更。
+- **Delete** 移除提供商及其访问规则，成员下次同步时它就从应用里消失。
+- **Move to gateway** 把目录提供商转为 AI 网关提供商，从而获得用量跟踪和费用上限。自定义提供商和按成员分配的提供商无法迁移。
+
+如果你只在自己的电脑上需要某个提供商，桌面应用的做法见[添加自定义 LLM 提供商/模型](/start-here/connect-your-stack/add-a-custom-llm)。

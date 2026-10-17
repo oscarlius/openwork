@@ -1,0 +1,156 @@
+---
+title: "MCP 网关"
+sidebarTitle: "MCP 网关概览"
+description: "一个托管的 MCP 服务器，把你组织的技能、插件和连接带进 Claude Code、Codex、Cursor 或任何 MCP 客户端。"
+---
+
+import { OpenWorkConnectInstaller } from "/snippets/openwork-connect-installer.jsx";
+
+在你的 MCP 客户端里添加一个 URL，在浏览器里登录 OpenWork，然后选择你的组织：
+
+```text
+https://api.openworklabs.com/mcp/agent
+```
+
+<OpenWorkConnectInstaller />
+
+## 按客户端划分的指南
+
+<CardGroup cols={3}>
+  <Card title="OpenCode" href="/model-context-protocol/opencode" />
+  <Card title="Claude Code" href="/model-context-protocol/claude-code" />
+  <Card title="Codex" href="/model-context-protocol/codex" />
+  <Card title="Claude Desktop" href="/model-context-protocol/claude-desktop" />
+  <Card title="ChatGPT" href="/model-context-protocol/chatgpt" />
+  <Card title="Cursor" href="/model-context-protocol/cursor" />
+  <Card title="VS Code" href="/model-context-protocol/vs-code" />
+  <Card title="Windsurf" href="/model-context-protocol/windsurf" />
+  <Card title="Zed" href="/model-context-protocol/zed" />
+  <Card title="Gemini CLI" href="/model-context-protocol/gemini-cli" />
+</CardGroup>
+
+## 它是如何工作的
+
+网关只暴露两个工具，所以你的客户端工具列表会保持很小：
+
+- `search_capabilities` 找出分享给你的技能、插件、工作流和连接。
+- `execute_capability` 运行搜索结果里那个确切的capability名称。
+
+访问权限跟随你的组织成员身份、角色、策略和暴露允许清单。登录之后，OpenWork 桌面应用会自动连接，无需任何配置。
+
+## 参考
+
+<AccordionGroup>
+<Accordion title="客户端支持状态">
+
+| 客户端 | 状态 | 说明 |
+| --- | --- | --- |
+| OpenCode | Verified | 原生远程 MCP OAuth 通过了端到端测试。 |
+| Codex | Setup only | 原生 OAuth 尚未重新验证。 |
+| Cursor | Setup only | 桌面端回调 `cursor://anysphere.cursor-mcp/oauth/callback` 通过精确允许清单被接受，并强制使用 `PKCE S256`。Web/Agents 使用 HTTPS 回调。 |
+| ChatGPT Desktop | Setup only | 在 ChatGPT 的 `Settings > MCP servers` 里添加。 |
+| Claude Code | Setup only | 原生验证尚未完成。 |
+| Claude Desktop | Setup only | 原生验证尚未完成。 |
+| VS Code | Setup only | 原生验证尚未完成。 |
+| Windsurf | Setup only | 通过 `mcp-remote`。 |
+| Zed | Setup only | 通过 `mcp-remote`。 |
+| Gemini CLI | Setup only | 原生验证尚未完成。 |
+| Any client | Setup only | 需要支持 OAuth 的远程 Streamable HTTP MCP。 |
+
+</Accordion>
+<Accordion title="重新连接或切换组织">
+
+你在浏览器里选择的组织会被固定进 token。要使用另一个组织，请先退出登录再重新登录。
+
+OpenCode：
+
+```sh
+opencode mcp logout openwork
+opencode mcp auth openwork
+```
+
+Codex（先完成首次设置，然后再重连）：
+
+```sh
+codex mcp add openwork --url https://api.openworklabs.com/mcp/agent
+codex mcp login openwork
+```
+
+```sh
+codex mcp logout openwork
+codex mcp login openwork
+```
+
+其他客户端：移除保存的 `openwork` token，然后重新连接。远程机器的做法见[从远程机器连接 OpenWork MCP](/zh/cloud/run-in-the-cloud/connect-openwork-mcp-remote-machine)。
+
+</Accordion>
+<Accordion title="问题排查">
+
+- **401 token 缺失或无效**：重新运行客户端的 auth/login 命令，并确认 URL 是 `https://api.openworklabs.com/mcp/agent`。
+- **403 成员身份或 scope 错误**：检查你是否选对了组织，以及你在该组织里是否仍有访问权限。
+- **`invalid_grant`**：刷新授权已过期、被撤销，或在轮换重叠窗口之后被重放。请先退出登录，再重新登录。
+- **429 速率限制**：等待 `Retry-After` 指定的时间。
+- **支持请求**：附上响应头 `X-Request-Id`，以及 JSON body 中任何 MCP `referenceId` 或 OAuth `reference_id`。
+- **URL 用错了**：`app.openworklabs.com/api/den` 是 OpenWork 第一方流程使用的内部同源桌面代理。不要把它粘贴到外部 MCP 客户端里。
+
+</Accordion>
+<Accordion title="OAuth 与 token">
+
+OpenWork Connect 是一个带 OAuth 的远程 Streamable HTTP MCP 服务器。
+
+- 受保护资源严格为 `https://api.openworklabs.com/mcp/agent`，通过 RFC9728 的 protected-resource metadata 发现。
+- 授权服务器与登录来源是 `https://app.openworklabs.com/api/auth`。
+- OAuth authorize 与 token 请求必须只包含一个 `resource` 值：`https://api.openworklabs.com/mcp/agent`。
+- 客户端可以用 Client ID Metadata Document 自证身份（`client_id_metadata_document_supported: true`），其 `client_id` 等于自身的 HTTPS URL，并带上 `client_name`、`redirect_uris` 和 `token_endpoint_auth_method: "none"`。已列出的 loopback 回调地址在任意端口都被接受（RFC 8252）。其他客户端回退到动态客户端注册。
+- 公共客户端必须使用 PKCE；只支持 `S256`。
+- 回调地址必须是 HTTPS 或 HTTP loopback。私有用途的 scheme 会被拒绝，除了精确列入允许清单的原生回调（例如 Cursor Desktop 的），并且强制使用 PKCE S256。
+- 访问令牌是用 EdDSA 签名并按 EdDSA 校验的 JWT。签发者严格为 `https://app.openworklabs.com/api/auth`，受众严格为 `https://api.openworklabs.com/mcp/agent`，有效期 45 分钟。
+- 刷新令牌是不透明的轮换式授权，带有 30 天的不活跃窗口和 30 秒的轮换重叠。OpenWork 只保存 token 的哈希，所以在重叠窗口内的重放可以再签发一个后继。重叠窗口之后的重放返回 `invalid_grant` 并撤销整个 token 家族。
+- 访问会针对你的会话和成员身份重新校验，所以移除成员或撤销会话就会切断 MCP 访问。
+
+</Accordion>
+<Accordion title="Token 作用域">
+
+`mcp:read` 允许发现、连接状态探测，以及只读的原生 API 操作。**每一次外部 MCP 提供商的工具调用都需要 `mcp:write`，包括那些声明了 `readOnlyHint: true` 的工具**，因为提供商的提示不是可信的授权依据。
+
+这对通用执行、直接连接、Code Mode 和 MCP App 辅助调用都适用。桌面应用会同时请求这两个作用域。已有的只读 token 不会被升级：要让客户端能调用提供商工具，请重新授权以获得 `mcp:write`。
+
+网关从不暴露鉴权内部实现、仅管理员可用的系统路由、webhook、API 密钥管理，或任何会返回凭据的端点。
+
+</Accordion>
+<Accordion title="MCP Apps">
+
+有些结果会以 [MCP Apps](https://modelcontextprotocol.io/docs/extensions/apps) 形式返回：也就是 `ui://` 的可交互视图，例如连接登录请求或工作流结果。不支持 App 的客户端会收到可读的降级内容。
+
+OpenWork 支持[宿主协议的一个已记录子集](/dashboards/build-an-mcp-app#supported-host-protocol)。提供商的 `structuredContent` 会被保留；OpenWork 的附加内容放在带命名空间的 `_meta` 键里。要在另一个客户端里渲染第三方 App，请使用该连接自己的 URL，位置在 **Your Connections → Use in another app**（[详情](/cloud/share-with-your-team/shared-mcp-connections#use-a-connection-in-another-mcp-client)）。要构建你自己的，见[构建一个 MCP App](/dashboards/build-an-mcp-app)。
+
+</Accordion>
+<Accordion title="你构建的 App 本身就是独立的 MCP 服务器">
+
+向智能体要一个应用、仪表盘或可交互视图，它会遵循内置的 `build-an-app` 技能：先找出这个 App 需要的工具，调用 `prepare_app` 拿到一个已经接好这些工具的起始模板，然后用 `create_app` 发布这个 App，传入 React 源码、一段文本降级内容和那些工具。不需要 Workflow。
+
+`prepare_app` 会根据工具从三个起始模板中选一个：当每个工具都只读取时选 **lookup**（App 打开时加载它的数据），当某个工具会修改数据时选 **action**（每次点击调用一次，然后展示结果），当没有工具时选 **standalone**（计算器和规划器）。每个模板都会套用宿主的主题，并处理加载、空、失败、待批准和被阻止这几种状态。任何 MCP 客户端都能把它们当资源读取，地址分别是 `openwork://apps/starters/lookup.json`、`action.json` 和 `standalone.json`；技能地址是 `skill://build-an-app/SKILL.md`。
+
+每个 App 都保存在一个 Plugin 里，并在你的 OpenWork API 上以 `/mcp/agent/connections/<appId>` 作为它自己的标准 MCP 服务器对外服务。那个服务器只暴露：
+
+- `open_app`，绑定到该 App 当前不可变的 `ui://` 版本；
+- 这个 App 声明的工具；
+- 该 App 的版本资源。
+
+每个声明的工具都有一个清晰的名字，并且运行 `search_capabilities` 返回的一个确切capability。举例来说，一个订单计算器可以声明：
+
+| 工具 | 运行 | 只读 |
+| --- | --- | --- |
+| `todays_date` | 一个 `mode: "live"` 的已保存 Workflow，从 OpenWork 取得今天的日期 | 是，所以 App 可以在打开时加载它 |
+| `lookup_unit_price` | 已连接 MCP 服务器上的一个、其提供商标记为只读的工具 | 是，所以 App 可以在打开时加载它 |
+| `reserve_stock` | 已连接 MCP 服务器上的一个、未被标记为只读的工具 | 否，所以它在 App 里点击之后才运行 |
+| `price_total` | 一个带输入的已保存 Workflow | 否，所以它在 App 里点击之后才运行 |
+
+App 就用这些名字通过 `app.callServerTool` 调用它们。它们以使用这个 App 的人的身份运行，用这个人自己的访问权限和连接，所以分享一个 App 永远不会分享凭据。只读工具指的是 OpenWork 的读取类操作、只读运行的 live Workflows，以及已连接 MCP 服务器上其提供商标记为只读（`readOnlyHint: true` 且非破坏性）的工具。OpenWork 每次调用都会重新核对这个标记，且是在调用者自己的工具清单里核对；一旦提供商不再把该工具标记为只读，调用就会被阻止，此时需要编辑者更新 App 的工具。调用连接工具仍然需要 `mcp:write` 作用域。会修改数据的 OpenWork 操作不能当 App 工具；要修改内容，请绑定一个执行该修改的已保存 Workflow。在 OpenWork 应用里，只读工具会在 App 打开并出现在屏幕上时不经点击就运行，每次打开一次；而在 App 里点击一次只允许另一次工具调用，所以请给每个其他连接工具或 Workflow 运行各自配一个按钮。`create_app` 会拒绝你无法使用的capability，并且什么都不发布。
+
+分享 App 就是分享它所在的 Plugin。`create_app` 会把该 App 的工具所运行的 Workflows 加进那个 Plugin，因此它们一并被分享；你需要分别管理这些 Workflow。有访问权限的人可以在 OpenWork 应用里打开这个 App，`create_app` 或 `update_app` 之后打开的就是新版本。他们也可以把该 App 的 MCP URL 从它的 Plugin 页面复制到 Cursor、Claude 或其他 MCP 客户端里，并用 OpenWork 登录。在对话中，智能体通过执行它 `search_capabilities` 匹配到的结果来打开一个已有的 App；可选的 `body` 对象会成为这个 App 的启动输入。OpenWork 应用为每个人最多列出 100 个连接和 App；超出这个上限的 App 无法在 OpenWork 内部打开，但它的 MCP URL 在其他 MCP 客户端里仍然可用。
+
+`read_app` 会把源码返回给编辑者，`update_app` 会在同一个 MCP URL 上发布新版本，该 App 早前的对话卡片也会跟着打开；省略 `cssSource`、`description` 或 `tools` 就会保留当前的值。构建自己的 App 对每个组织都是开启的。早先用带 `save_artifact_view` 的 Workflow 做出来的 App 是只读的：它们仍能打开和刷新，但不能被创建、编辑或重新启用。来自已连接 MCP 服务器的 MCP Apps 两种情况都能用。自托管部署可以设置 `DEN_APP_MCP_SERVERS_ENABLED=false` 为所有组织关掉它。
+
+</Accordion>
+</AccordionGroup>

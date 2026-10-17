@@ -1,0 +1,67 @@
+---
+title: "语言"
+sidebarTitle: "语言"
+description: "更改 OpenWork 应用的语言，了解目前内置了哪些语言，以及参与改进译文或新增语言。"
+keywords: ["language", "languages", "translation", "translate", "i18n", "locale", "localization", "change language", "语言", "翻译", "本地化", "切换语言"]
+---
+
+OpenWork 桌面应用提供 10 种语言。你可以随时切换语言，任何人都能改进一份译文或者新增一种语言。
+
+<Frame>
+  <iframe
+    width="100%"
+    height="400"
+    src="https://www.youtube.com/embed/orGF117Snu8"
+    title="OpenWork missing languages overview"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowFullScreen
+  />
+</Frame>
+
+## 更改应用语言
+
+1. 打开 **设置 › 外观**。
+2. 在 **语言** 下选择你要用的语言。
+
+## 目前可用的语言
+
+| 语言 | 在应用中的显示 | 代码 |
+| --- | --- | --- |
+| 英语 | English | `en` |
+| 日语 | 日本語 | `ja` |
+| 简体中文 | 简体中文 | `zh` |
+| 越南语 | Tiếng Việt | `vi` |
+| 葡萄牙语（巴西） | Português (BR) | `pt-BR` |
+| 泰语 | ไทย | `th` |
+| 法语 | Français | `fr` |
+| 加泰罗尼亚语 | Català | `ca` |
+| 西班牙语 | Español | `es` |
+| 俄语 | Русский | `ru` |
+
+如果某个短语还没有译文，应用会用英文显示它。
+
+## 改进一份译文
+
+每种语言都在 [`apps/app/src/i18n/locales`](https://github.com/different-ai/openwork/tree/dev/apps/app/src/i18n/locales) 下有自己的文件，例如 `fr.ts` 或 `es.ts`。多数修正只是改一个文件里的文案。带上你的修改发起一个 pull request 即可。
+
+## 新增一种语言
+
+以下步骤适合愿意改代码的贡献者。
+
+1. 新建 `apps/app/src/i18n/locales/<code>.ts`，以 `en.ts` 为起点。
+2. 在 `apps/app/src/i18n/index.ts` 里注册这门语言：
+   - 添加 import。
+   - 把语言代码加进 `Language` 类型和 `LANGUAGES` 列表。
+   - 在 `LANGUAGE_OPTIONS` 里补一项，写上英文名和这门语言里的名称。
+   - 把译文加进 `TRANSLATIONS`。
+   - 把语言代码加进 `pluralRulesByLanguage`。
+   - 如果这门语言不在名词上标记复数（比如日语或中文），把它加进 `PLURAL_SUFFIX_EMPTY_LANGUAGES`。
+3. 在 `scripts/i18n-audit.mjs` 里把语言代码加进 `LOCALES`。如果这门语言除了 `one` 和 `other` 还需要别的复数形式，而 `PLURAL_FORMS` 还没列出它，就在那里补上。
+4. 检查缺失的文案和复数形式：
+
+```bash
+node scripts/i18n-audit.mjs --missing
+node scripts/i18n-audit.mjs --plurals
+```
+
+想跟进本地化进展或者申请新增语言，请看 [i18n 路线图](https://github.com/different-ai/openwork/issues/1385)。

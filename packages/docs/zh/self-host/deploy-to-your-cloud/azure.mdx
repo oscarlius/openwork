@@ -1,0 +1,29 @@
+---
+title: "部署到 Azure"
+description: "在 Azure Kubernetes Service 上搭配 Azure Database for MySQL 运行 OpenWork。"
+---
+
+推荐的 Azure 方案是在 Azure Kubernetes Service（AKS）上用 Helm 部署，数据库用 Azure Database for MySQL 的 Flexible Server。面向浏览器的 HTTPS 和域名路由，用 AKS 应用路由插件里那套托管 NGINX Ingress 控制器。
+
+## Azure 负责哪些部分
+
+- AKS 控制面、节点池、虚拟网络和托管身份
+- 托管 NGINX ingress 入口和公网 IP
+- Azure Database for MySQL 的 Flexible Server、加密、备份和故障切换
+- 你使用这些服务时，还包括 Azure DNS 和证书存储
+
+OpenWork chart 负责 Deployments、Services、ConfigMaps、Secret 引用、探针、Ingress 以及数据库迁移 Job。
+
+## Azure 清单
+
+1. 确认订阅已启用，并注册所需的资源提供程序。
+2. 创建 AKS 之前，先查看所在区域的 vCPU 配额和 MySQL Flexible Server 的可用性。
+3. 在允许数据库私有流量的 VNet 拓扑里创建 AKS 和 MySQL。
+4. 把 `DATABASE_URL`、`BETTER_AUTH_SECRET` 和 `DEN_DB_ENCRYPTION_KEY` 存进一个 Kubernetes Secret。
+5. 从 chart 的 `values.azure-ingress.yaml` 示例开始改。
+6. 配置 ingress 证书，安装 chart，然后校验迁移和就绪状态。
+7. 把两个域名都指向 ingress 地址，确认 HTTPS 可信。
+
+具体的 Azure CLI 命令、values、TLS 选项、迁移排障、验证和清理，请看 [Azure AKS 运维手册](https://github.com/different-ai/openwork/blob/dev/docs/azure-aks-helm.md)。
+
+下一步：[创建第一位管理员](/zh/self-host/deploy-to-your-cloud/first-administrator)。

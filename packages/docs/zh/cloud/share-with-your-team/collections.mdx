@@ -1,0 +1,93 @@
+---
+title: "Collections"
+description: "在 OpenWork Cloud 里把多个插件归给同一批受众，于是一次权限变更就覆盖整组。"
+keywords: ["collections", "collection", "group plugins", "catalog", "marketplace", "share plugins with a team", "who can access this", "advanced settings", "team access", "插件集合", "分组插件", "目录", "市场", "把插件分享给团队", "谁能访问", "高级设置", "团队访问"]
+---
+
+一个 Collection 把若干插件归在一起，让你一步就把它们给到同一批人。任何能访问该 Collection 的人，都会在桌面应用里得到其中的每一个插件。
+
+Collection 是可选的。分享一个技能或插件最简单的方式，是在它自己的页面上设置 **Who can use it**。见[发布与复制技能](/start-here/do-work-with-it/publish-and-copy-a-skill)。
+
+只有所有者和管理员能创建和管理 Collection。
+
+## 什么时候用 Collection
+
+| 适合直接分享的情况…… | 适合用 Collection 的情况…… |
+| --- | --- |
+| 你只分享一个技能或插件。 | 同一个团队需要好几个插件。 |
+| 每个插件给的是不同的人。 | 你想在一个地方统一改变整组内容的受众。 |
+| 某位成员要分享他自己做的东西。 | 你预计这组内容会陆续加入插件。 |
+
+两者可以并用。只要有任何一条路径把插件给到某人，他就拥有该插件：直接分享、某个 Collection，或组织内全员共享。
+
+## 在哪里找到 Collections
+
+在 OpenWork Cloud 仪表盘里，打开 **Settings › Advanced** 并选择 **Collections** 标签页。
+
+OpenWork 内置的 collection，以及分配给你的任何 Collection，都会在登录出现在桌面应用里。
+
+## 创建一个 Collection
+
+1. 打开 **Settings › Advanced › Collections** 并点击 **New collection**。
+2. 填写 **Name**，例如 `Sales Enablement`，并可填一段描述。
+3. 点击 **Create collection**。新的 Collection 会打开。
+
+之后要重命名或删除某个 Collection，请用它的 ⋯ 菜单并选择 **Edit** 或 **Delete**。内置的 collection 无法删除。
+
+## 添加插件
+
+1. 打开该 Collection。在 **Plugins** 标签页点击 **Add a plugin**。
+2. 填写 **Plugin name** 和 **Description**。
+3. 在 **What's inside** 下添加一个 **Skill**、**Command** 或 **Connector**。要把 GitHub 仓库里已有的插件带进来，改为点击 **Import from GitHub**。
+4. 在 **Share** 下确认 **Collection** 显示的是这个 Collection。
+5. 如果只有该 Collection 的受众应当得到这个插件，就不要开启 **Share with everyone in the organization**。
+6. 点击 **Create plugin**。
+
+插件也可以从已连接的源仓库自动进来。在你还没有任何 Collection 时，Collections 标签页会显示 **Open Sources**，方便你连接一个源。
+
+<Note>
+当你从某个 Collection 里创建插件时，仪表盘会自动把它放进该 Collection。要分享一个已经存在的插件，请改为在插件自己的页面上设置 **Who can use it**。
+</Note>
+
+如果某个插件需要连接器，**Configure** 标签页会列出每一个连接器以及它就绪与否。在完成之前，插件可能显示 **Members need sign-in** 或 **Needs connection**。连接器的设置见[共享 MCP 连接](/cloud/share-with-your-team/shared-mcp-connections)。
+
+## 选择谁能访问
+
+1. 打开该 Collection 并选择 **Members** 标签页。
+2. 在 **Who can access this** 下，从以下方式中选一种：
+   - 打开 **Everyone in** 加上你的组织名。
+   - 点击 **Add team** 并选择一个或多个团队。
+   - 点击 **Add people** 并选择具体成员。
+
+这些变更会作用于该 Collection 里的每一个插件。后来加入某团队的人会自动获得该团队的 Collections。
+
+## 查看某个团队能用些什么
+
+要检查一个团队拥有什么、以及为什么拥有：
+
+1. 打开 **Members**，选择 **Teams** 标签页，并点击该团队。
+2. 选择 **Access** 标签页，滚动到 **Plugins & connections**。
+
+每个插件都会说明该团队是通过哪条路径得到它的：
+
+- **direct team grant**：该插件是直接分享给这个团队的。点击 **Revoke** 可移除。
+- **via catalog:** 后面跟一个 Collection 名：该团队通过那个 Collection 获得它。点击 **Open catalog** 可修改该 Collection 的访问设置。
+- **org-wide**：该插件共享给了组织内的所有人。
+
+## 成员在哪里找到这些插件
+
+成员在桌面应用里打开 **Settings › Library**。来自他们 Collection 的插件和技能会出现在 **From OpenWork** 下。如果最近的某次变更还没出现，他们可以点击刷新按钮（它的工具提示写着 **Refresh**）。
+
+## 让较大的配置保持可控
+
+- 围绕一个稳定的受众或用途来组织每个 Collection，例如 `Sales Enablement` 或 `Engineering Operations`。
+- 成员变动频繁时，把 Collection 授权给团队，而不是许多个人。
+- 受众或更新节奏不同时，使用分开的 Collection。
+- 在加入会触达敏感系统的插件之前，先审阅该 Collection 的访问设置。
+- 把服务账户和凭据放进[连接器](/cloud/share-with-your-team/shared-mcp-connections)，绝不要放进技能里。
+
+## 相关
+
+- [与团队分享技能和 MCP 服务器](/start-here/do-work-with-it/share-your-setup)
+- [发布与复制技能](/start-here/do-work-with-it/publish-and-copy-a-skill)
+- [团队快速上手](/cloud/team-quickstart)
