@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getErrorMessage, getRequestError, requestJson } from "../../_lib/den-flow";
+import { DEFAULT_DEN_LOCALE, type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { mcpConnectionQueryKeys, type ExternalMcpAuthType, type ExternalMcpCredentialMode } from "./mcp-connections-data";
 
@@ -517,13 +519,13 @@ export function useDeleteMarketplace() {
   });
 }
 
-export function formatMarketplaceTimestamp(value: string | null): string {
+export function formatMarketplaceTimestamp(value: string | null, locale: DenLocale = DEFAULT_DEN_LOCALE): string {
   if (!value) return "Recently added";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Recently added";
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDenDateTime(locale, date, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }, "en-US");
 }

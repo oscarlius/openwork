@@ -8,6 +8,9 @@ import { DenButton } from "../../_components/ui/button";
 import { DenNotice } from "../../_components/ui/notice";
 import { type TabItem, UnderlineTabs } from "../../_components/ui/tabs";
 import { getMarketplaceRoute, getMembersRoute, getOrgAccessFlags, orgFeatureEnabled } from "../../_lib/den-org";
+import { useDenLocale, useDenT } from "../../../_lib/i18n/client";
+import { type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import { desktopPolicyScreenRemoved } from "../_lib/desktop-policy-screen-rollout";
 import { DesktopSuggestionsPanel } from "./desktop-suggestions-panel";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
@@ -31,14 +34,14 @@ import {
 
 export type TeamDetailTab = "role" | "overview" | "access" | "agents" | "browser" | "models" | "desktop";
 
-function formatGrantedDate(value: string): string {
+function formatGrantedDate(value: string, locale: DenLocale): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDenDateTime(locale, date, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }, "en-US");
 }
 
 function AccessViaBadge({ item }: { item: TeamPluginAccessItem }) {
@@ -71,6 +74,8 @@ function RoleBadge({ role }: { role: TeamPluginAccessItem["role"] }) {
 
 export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string; initialTab?: TeamDetailTab | null }) {
   const { orgContext, orgId, orgSlug } = useOrgDashboard();
+  const locale = useDenLocale();
+  const t = useDenT();
   const viewerAccess = orgContext
     ? getOrgAccessFlags(orgContext.currentMember.role, orgContext.currentMember.isOwner, orgContext.currentMember.permissions)
     : null;
@@ -168,16 +173,16 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
 
       <div className="mt-6">
         {activeTab === "role" && team ? (
-          <div role="tabpanel" aria-label="Role">
+          <div role="tabpanel" aria-label={t("denTeam.tabpanel.role")}>
             {sharedRoles ? <SharedTeamRolePanel team={team} /> : <TeamRolePanel team={team} />}
           </div>
         ) : null}
 
         {activeTab === "overview" ? (
-          <div role="tabpanel" aria-label="Overview">
+          <div role="tabpanel" aria-label={t("denTeam.tabpanel.overview")}>
             {teamMembers.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
-                <p className="text-[14px] font-medium text-gray-800">This team has no members yet.</p>
+                <p className="text-[14px] font-medium text-gray-800">{t("denTeam.overview.noMembers")}</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
@@ -187,7 +192,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
                     {teamRoles && orgContext ? (
                       <MemberTeamRoles member={member} teams={orgContext.teams} customTeamIds={customRoles.teamIds} customRoleNameByTeam={sharedRoles ? customRoles.nameByTeam : undefined} exceptTeamId={teamId} />
                     ) : member.adminTeams.length > 0 ? (
-                      <p className="mt-2 text-[12px] text-gray-500">Admin via {member.adminTeams.map((entry) => entry.name).join(", ")}</p>
+                      <p className="mt-2 text-[12px] text-gray-500">{t("denTeam.overview.adminVia", { teams: member.adminTeams.map((entry) => entry.name).join(", ") })}</p>
                     ) : null}
                   </div>
                 ))}
@@ -197,34 +202,34 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
         ) : null}
 
         {activeTab === "access" ? (
-          <div role="tabpanel" aria-label="Access">
+          <div role="tabpanel" aria-label={t("denTeam.tabpanel.access")}>
             {/* With the Models tab, the default model lives there instead. */}
             {defaultModelOn && viewerAccess?.canViewModelsSettings && !showModels ? (
               <TeamDefaultModelSection teamId={teamId} canManage={viewerAccess.canManageModelsSettings} />
             ) : null}
-            {sharedRoles || showDesktop ? null : <TeamPermissionsPanel teamId={teamId} heading={teamRoles ? "In the desktop app" : undefined} />}
+            {sharedRoles || showDesktop ? null : <TeamPermissionsPanel teamId={teamId} heading={teamRoles ? t("denTeam.access.desktopAppHeading") : undefined} />}
             {orgContext && orgFeatureEnabled(orgContext, "teamAccessRows") ? (
-              <TeamPluginAccessPanel teamId={teamId} teamName={team?.name ?? "This team"} orgSlug={orgSlug} canRevoke={canRevokeAccess} />
+              <TeamPluginAccessPanel teamId={teamId} teamName={team?.name ?? t("denTeam.defaultName")} orgSlug={orgSlug} canRevoke={canRevokeAccess} />
             ) : <>
-            <h2 className="mb-2 text-lg font-semibold text-gray-950">Plugins & connections</h2>
-            {sharedRoles ? null : <p className="mb-4 text-sm text-gray-500">Review what this team can use and where access comes from.</p>}
+            <h2 className="mb-2 text-lg font-semibold text-gray-950">{t("denTeam.access.heading")}</h2>
+            {sharedRoles ? null : <p className="mb-4 text-sm text-gray-500">{t("denTeam.access.description")}</p>}
             {accessQuery.isLoading ? (
               <div className="rounded-2xl border border-gray-100 bg-white px-6 py-8 text-[13px] text-gray-400">
-                Loading team access…
+                {t("denTeam.access.loading")}
               </div>
             ) : accessQuery.error ? (
               <DenNotice
                 tone="error"
-                message={accessQuery.error instanceof Error ? accessQuery.error.message : "Could not load team access."}
+                message={accessQuery.error instanceof Error ? accessQuery.error.message : t("denTeam.access.error")}
               />
             ) : accessQuery.data?.length ? (
               <div className="overflow-hidden rounded-2xl md:border md:border-gray-100 md:bg-white md:overflow-x-auto">
                 <div className="md:min-w-[760px]">
                   <div className="hidden grid-cols-[minmax(0,1fr)_210px_100px_230px_110px] border-b border-gray-100 px-6 py-3 text-[11px] uppercase tracking-[0.14em] text-gray-400 md:grid">
-                    <span>Plugin</span>
-                    <span>Access via</span>
-                    <span>Role</span>
-                    <span>Granted by</span>
+                    <span>{t("denTeam.column.plugin")}</span>
+                    <span>{t("denTeam.column.accessVia")}</span>
+                    <span>{t("denTeam.column.role")}</span>
+                    <span>{t("denTeam.column.grantedBy")}</span>
                     <span />
                   </div>
                   <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
@@ -238,7 +243,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
                           <div className="min-w-0 md:pr-4">
                             <p className="truncate text-[14px] font-semibold text-gray-900">{item.plugin.name}</p>
                             <p className="mt-0.5 text-[12px] text-gray-400">
-                              {item.plugin.componentCount} {item.plugin.componentCount === 1 ? "component" : "components"}
+                              {t("denTeam.access.componentCount", { count: item.plugin.componentCount })}
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center gap-2 md:contents">
@@ -250,7 +255,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
                             </div>
                           </div>
                           <p className="text-[13px] text-gray-500 md:pr-4">
-                            {item.grantedBy?.name ?? "—"} · {formatGrantedDate(item.grantedAt)}
+                            {item.grantedBy?.name ?? "—"} · {formatGrantedDate(item.grantedAt, locale)}
                           </p>
                           {item.edge === "direct_team" && canRevokeAccess ? (
                             <div className="flex justify-end border-t border-gray-100 pt-3 md:border-0 md:pt-0">
@@ -268,7 +273,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
                                   });
                                 }}
                               >
-                                Revoke
+                                {t("denTeam.access.revoke")}
                               </DenButton>
                             </div>
                           ) : item.edge === "via_catalog" && item.marketplace ? (
@@ -278,7 +283,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
                                 variant="secondary"
                                 size="sm"
                               >
-                                Open catalog
+                                {t("denTeam.access.openCatalog")}
                               </DenButton>
                             </div>
                           ) : null}
@@ -290,7 +295,7 @@ export function TeamDetailScreen({ teamId, initialTab = null }: { teamId: string
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
-                <p className="text-[14px] font-medium text-gray-800">This team has no plugin access yet.</p>
+                <p className="text-[14px] font-medium text-gray-800">{t("denTeam.access.noGrants")}</p>
               </div>
             )}
 

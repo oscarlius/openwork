@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 import { headers } from "next/headers";
 import { readPublicWebOrigin } from "./_lib/public-web-origin";
+import { denHtmlLang } from "./_lib/i18n/den-locale";
+import { createDenT } from "./_lib/i18n/messages";
+import { resolveDenLocale, resolveDenLocaleMismatch } from "./_lib/i18n/server";
+import { DenLocaleBootstrap, DenMessagesProvider } from "./_lib/i18n/client";
 import "./globals.css";
 
 const inter = Inter({
@@ -41,22 +45,24 @@ export async function generateMetadata(): Promise<Metadata> {
   const protocol = forwardedProtocol(requestHeaders.get("x-forwarded-proto"));
   const metadataOrigin = configuredOrigin || (host ? `${protocol}://${host}` : "http://localhost:3005");
 
+  // Server-component translation: the same tables and the same `t(key, params?)`
+  // signature client components reach through useDenT().
+  const t = createDenT(await resolveDenLocale());
+  const documentTitle = t("denRoot.document.title");
+
   return {
     metadataBase: metadataBaseFromOrigin(metadataOrigin),
-    title: "OpenWork Cloud",
-    description:
-      "Share your OpenWork setup with your team, manage billing, and use OpenWork Cloud from app.openworklabs.com.",
+    title: documentTitle,
+    description: t("denRoot.document.description"),
     openGraph: {
-      title: "OpenWork Cloud",
-      description:
-        "Share your OpenWork setup with your team and keep selected workflows available in OpenWork Cloud.",
+      title: documentTitle,
+      description: t("denRoot.socialGraph.description"),
       images: ["/opengraph-image"]
     },
     twitter: {
       card: "summary_large_image",
-      title: "OpenWork Cloud",
-      description:
-        "Share your OpenWork setup with your team and manage OpenWork Cloud from app.openworklabs.com.",
+      title: documentTitle,
+      description: t("denRoot.socialPreview.description"),
       images: ["/opengraph-image"]
     },
     icons: {
@@ -65,13 +71,24 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
+  // `en` unless the person picked Simplified Chinese and the denLocaleSelection
+  // feature is on; a cookie left behind by a reverted rollout resolves to `en`
+  // here and is cleared by DenLocaleBootstrap.
+  const locale = await resolveDenLocale();
+  const preferenceIsStale = await resolveDenLocaleMismatch();
+
   return (
-    <html lang="en" className={`${inter.variable} ${ibmPlexMono.variable}`}>
+    <html lang={denHtmlLang(locale)} className={`${inter.variable} ${ibmPlexMono.variable}`} data-den-locale={locale}>
       <head />
-      <body>{children}</body>
+      <body>
+        <DenMessagesProvider locale={locale}>
+          <DenLocaleBootstrap stale={preferenceIsStale} />
+          {children}
+        </DenMessagesProvider>
+      </body>
     </html>
   );
 }

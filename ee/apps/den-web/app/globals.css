@@ -32,6 +32,24 @@
 
 :root {
     color-scheme: light;
+
+    /*
+     * CJK tail for the font stack. Inter and IBM Plex Mono are loaded with
+     * `subsets: ["latin"]` (app/layout.tsx), so Han characters have no glyph in
+     * them and used to fall straight through to the generic `sans-serif`.
+     * These families are appended *after* the Latin ones, which means English
+     * rendering is untouched — Inter still wins every Latin character — while
+     * Simplified Chinese picks a real Han shape on Windows, macOS and Linux.
+     * Keep this list free of remote font downloads: the Den build must not gain
+     * a new network dependency just because someone reads the console in zh.
+     */
+    --den-font-cjk:
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei",
+        "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei";
+    --den-font-mono-cjk:
+        "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC",
+        "Source Han Sans SC";
+
     --dls-surface: #ffffff;
     --dls-sidebar: #f6f9fc;
     --dls-app-bg: #f6f9fc;
@@ -69,7 +87,8 @@ body {
 body {
     margin: 0;
     font-family:
-        var(--font-inter), "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        var(--font-inter), "IBM Plex Sans", "Avenir Next", "Segoe UI",
+        var(--den-font-cjk), sans-serif;
     color: var(--ow-ink);
     background: var(--ow-bg);
 }
@@ -654,7 +673,8 @@ body {
 
 .ow-mono {
     font-family:
-        var(--font-ibm-plex-mono), "JetBrains Mono", "SF Mono", monospace;
+        var(--font-ibm-plex-mono), "JetBrains Mono", "SF Mono",
+        var(--den-font-mono-cjk), monospace;
     font-size: 0.8rem;
 }
 

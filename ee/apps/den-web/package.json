@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "next start --hostname 0.0.0.0 --port 3005",
     "lint": "eslint app components --no-inline-config --max-warnings=0",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "typecheck": "tsc --noEmit --pretty false",
     "typecheck:gateway-usage-limits": "tsc --noEmit --pretty false -p tsconfig.usage-limits.json"
   },

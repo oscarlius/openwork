@@ -53,6 +53,8 @@ import {
 import { useOrgListWindow } from "../../_lib/use-org-list-window";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { buildDenFeedbackUrl } from "../../_lib/feedback";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import { OrgSelectionScreen } from "../_features/org-selection/org-selection-screen";
 import {
   buildDashboardNavSections,
@@ -68,12 +70,15 @@ import { useLibraryNeedsSignInCount } from "./library-data";
 import { useLibraryModels } from "./library-models-data";
 import { UserProfileDialog } from "./user-profile-dialog";
 import { DownloadOpenWorkButton } from "./download-openwork-button";
+import { DenLanguageSwitcher } from "./den-language-switcher";
 
 const OPENWORK_DOCS_URL = "https://openworklabs.com/docs";
 
 /** The sidebar only tells people whether they can manage the organization. */
-function sidebarRoleLabel(role: string): string {
-  return getOrgAccessFlags(role, false).isAdmin ? "Admin" : "Member";
+function sidebarRoleLabel(role: string, t: DenTranslate): string {
+  return getOrgAccessFlags(role, false).isAdmin
+    ? t("denShell.role.admin")
+    : t("denShell.role.member");
 }
 
 function OrgMark({ name }: { name: string }) {
@@ -133,6 +138,7 @@ export function SidebarBrandMark({
   metadata: string | null | undefined;
   organizationName: string;
 }) {
+  const t = useDenT();
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
@@ -140,7 +146,7 @@ export function SidebarBrandMark({
     return (
       <div
         className="h-10 w-10 rounded-xl"
-        aria-label="Loading organization icon"
+        aria-label={t("denShell.brandIcon.loadingLabel")}
         data-sidebar-brand-icon="loading"
       />
     );
@@ -162,7 +168,7 @@ export function SidebarBrandMark({
     >
       <img
         src={iconUrl}
-        alt={`${organizationName} icon`}
+        alt={t("denShell.brandIcon.imageAlt", { organizationName })}
         className={`h-full w-full object-contain transition-opacity ${loadedUrl === iconUrl ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setLoadedUrl(iconUrl)}
         onError={() => setFailedUrl(iconUrl)}
@@ -225,96 +231,102 @@ export function WorkspaceFavicon({
   return null;
 }
 
-function getDashboardPageTitle(pathname: string, orgSlug: string | null) {
+function getDashboardPageTitle(
+  pathname: string,
+  orgSlug: string | null,
+  t: DenTranslate,
+  // teamRoles: the permission pages are role pages.
+  teamRoles: boolean,
+) {
   if (!orgSlug) {
-    return "Home";
+    return t("denShell.pageTitle.home");
   }
 
   const dashboardRoot = getOrgDashboardRoute(orgSlug);
 
   if (pathname === dashboardRoot) {
-    return "Home";
+    return t("denShell.pageTitle.home");
   }
   if (pathname.startsWith(getAuditLogsRoute(orgSlug))) {
-    return "Audit logs";
+    return t("denShell.pageTitle.auditLogs");
   }
   if (pathname.startsWith(getAnalyticsRoute(orgSlug))) {
-    return "Analytics";
+    return t("denShell.pageTitle.analytics");
   }
   if (pathname.startsWith(getMembersRoute(orgSlug))) {
-    return "Members";
+    return t("denShell.pageTitle.members");
   }
   if (pathname.startsWith(getPermissionsRoute(orgSlug))) {
-    return "Permissions";
+    return t(teamRoles ? "denShell.pageTitle.roles" : "denShell.pageTitle.permissions");
   }
   if (pathname.startsWith(getApiKeysRoute(orgSlug))) {
-    return "API Keys";
+    return t("denShell.pageTitle.apiKeys");
   }
   if (pathname.startsWith(getScimRoute(orgSlug))) {
-    return "SCIM";
+    return t("denShell.pageTitle.scim");
   }
   if (pathname.startsWith(getSsoRoute(orgSlug))) {
-    return "SSO";
+    return t("denShell.pageTitle.sso");
   }
   if (pathname.startsWith(getAutomationsRoute(orgSlug))) {
-    return "My Automations";
+    return t("denShell.pageTitle.myAutomations");
   }
   if (pathname.startsWith(getCustomLlmProvidersRoute(orgSlug))) {
-    return "Bring your Own Keys";
+    return t("denShell.pageTitle.bringYourOwnKeys");
   }
   if (pathname.startsWith(getAiGatewayRoute(orgSlug))) {
-    return "AI Gateway";
+    return t("denShell.pageTitle.aiGateway");
   }
   if (pathname.startsWith(getDesktopPoliciesRoute(orgSlug))) {
-    return "Desktop policies";
+    return t("denShell.pageTitle.desktopPolicies");
   }
   if (pathname.startsWith(getWorkbotSettingsRoute(orgSlug))) {
-    return "Workbot";
+    return t("denShell.pageTitle.workbot");
   }
   if (
     pathname.startsWith(getMarketplacesRoute(orgSlug))
     || pathname.startsWith(getBrandAppearanceRoute(orgSlug))
   ) {
-    return "Advanced";
+    return t("denShell.pageTitle.advanced");
   }
   if (pathname.startsWith(getDeploymentsRoute(orgSlug))) {
-    return "Deployments";
+    return t("denShell.pageTitle.deployments");
   }
   if (pathname.startsWith(getDiagnosticsRoute(orgSlug))) {
-    return "Diagnostics";
+    return t("denShell.pageTitle.diagnostics");
   }
   if (pathname.startsWith(getWebRoute(orgSlug))) {
-    return "OpenWork Web";
+    return t("denShell.pageTitle.openworkWeb");
   }
   if (pathname.startsWith(getLibraryRoute(orgSlug))) {
-    return "My Library";
+    return t("denShell.pageTitle.myLibrary");
   }
   if (pathname.startsWith(getPluginsRoute(orgSlug))) {
-    return "Plugins";
+    return t("denShell.pageTitle.plugins");
   }
   if (pathname.startsWith(getIntegrationsRoute(orgSlug))) {
-    return "Plugins";
+    return t("denShell.pageTitle.plugins");
   }
   if (pathname.startsWith(getMcpConnectionsRoute(orgSlug))) {
-    return "Connectors";
+    return t("denShell.pageTitle.connectors");
   }
   if (pathname.startsWith(getYourConnectionsRoute(orgSlug))) {
-    return "Your Connections";
+    return t("denShell.pageTitle.yourConnections");
   }
   if (pathname.startsWith(getWorkflowRunsRoute(orgSlug))) {
-    return "Workflow Runs";
+    return t("denShell.pageTitle.workflowRuns");
   }
   if (pathname.startsWith(getToolTesterRoute(orgSlug))) {
-    return "Tool Tester";
+    return t("denShell.pageTitle.toolTester");
   }
   if (pathname.startsWith(getBillingRoute(orgSlug))) {
-    return "Billing";
+    return t("denShell.pageTitle.billing");
   }
   if (pathname.startsWith(getOrgSettingsRoute(orgSlug))) {
-    return "Org Settings";
+    return t("denShell.pageTitle.orgSettings");
   }
 
-  return "Home";
+  return t("denShell.pageTitle.home");
 }
 
 // Desktop and mobile mount their own copy of the sidebar. Keep open state in
@@ -329,6 +341,7 @@ function WorkspaceSwitcher({ children }: { children: (close: () => void) => Reac
 }
 
 export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
+  const t = useDenT();
   const pathname = usePathname();
   const onboardingRoute = getMarketplaceOnboardingRoute();
   const isOnboarding = pathname === onboardingRoute || pathname.startsWith(`${onboardingRoute}/`);
@@ -427,9 +440,14 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
     orgContext?.currentMember.permissions,
   );
 
-  const basePageTitle = getDashboardPageTitle(pathname, activeOrg?.slug ?? null);
-  // teamRoles: the permission pages are role pages.
-  const pageTitle = basePageTitle === "Permissions" && orgFeatureEnabled(orgContext, "teamRoles") ? "Roles" : basePageTitle;
+  // teamRoles: the permission pages are role pages, resolved by message key so
+  // the switch keeps working when the visible title is not English.
+  const pageTitle = getDashboardPageTitle(
+    pathname,
+    activeOrg?.slug ?? null,
+    t,
+    orgFeatureEnabled(orgContext, "teamRoles"),
+  );
   const shouldShowProfilePrompt = Boolean(
     user &&
       !profilePromptDismissed &&
@@ -470,7 +488,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
             {activeOrg?.name ?? runtimeConfig.singleOrgName}
           </p>
           <p className="truncate text-[12px] text-gray-500">
-            {activeOrg ? sidebarRoleLabel(activeOrg.role) : "Preparing workspace"}
+            {activeOrg ? sidebarRoleLabel(activeOrg.role, t) : t("denShell.workspace.preparing")}
           </p>
         </div>
       </div>
@@ -478,7 +496,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         type="button"
         onClick={() => void signOut()}
         className="shrink-0 rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-900"
-        aria-label="Sign out"
+        aria-label={t("denShell.account.signOut")}
       >
         <LogOut className="h-4 w-4" />
       </button>
@@ -493,13 +511,13 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
             className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-gray-100"
           >
             <div className="flex min-w-0 items-center gap-3">
-              <OrgMark name={activeOrg?.name ?? "OpenWork"} />
+              <OrgMark name={activeOrg?.name ?? t("denShell.workspace.defaultOrganizationName")} />
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-medium text-gray-900">
-                  {activeOrg?.name ?? "Loading..."}
+                  {activeOrg?.name ?? t("denShell.workspace.loading")}
                 </p>
                 <p className="truncate text-[12px] text-gray-500">
-                  {activeOrg ? sidebarRoleLabel(activeOrg.role) : "Preparing workspace"}
+                  {activeOrg ? sidebarRoleLabel(activeOrg.role, t) : t("denShell.workspace.preparing")}
                 </p>
               </div>
             </div>
@@ -524,12 +542,12 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
             >
               <Popover.Popup
                 data-testid="workspace-switcher-menu"
-                aria-label="Workspace switcher"
+                aria-label={t("denShell.workspace.switcherLabel")}
                 className="flex max-h-[var(--available-height)] w-[240px] max-w-[calc(100vw-1.5rem)] flex-col gap-1 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-[0_12px_24px_-12px_rgba(0,0,0,0.15)]"
               >
                 <div className="min-w-0 shrink-0 px-3 py-1.5">
                   <p className="truncate text-[13px] font-medium text-gray-900">
-                    {user?.email ?? "OpenWork user"}
+                    {user?.email ?? t("denShell.workspace.defaultUserName")}
                   </p>
                 </div>
 
@@ -537,7 +555,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
 
                 <div className="shrink-0 px-3 pb-1 pt-1">
                   <p className="text-[11px] font-medium text-gray-500">
-                    Switch workspace
+                    {t("denShell.workspace.switchAction")}
                   </p>
                 </div>
 
@@ -547,7 +565,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                       type="search"
                       value={switcherQuery}
                       onChange={(event) => setSwitcherQuery(event.target.value)}
-                      placeholder="Search workspaces"
+                      placeholder={t("denShell.workspace.searchPlaceholder")}
                       className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[12px] text-gray-900 outline-hidden transition focus:border-gray-400"
                     />
                   </div>
@@ -572,7 +590,9 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                         <div className="min-w-0">
                           <span className="block truncate text-[13px] font-medium tracking-[-0.1px]">{org.name}</span>
                           <span className="block truncate text-[12px] text-gray-500">
-                            {org.role === "owner" ? "Creator plan" : "Free plan"} • {org.memberCount} {org.memberCount === 1 ? "member" : "members"}
+                            {t(org.role === "owner" ? "denShell.workspace.planCreator" : "denShell.workspace.planFree")}
+                            {" • "}
+                            {t("denShell.memberCount", { count: org.memberCount })}
                           </span>
                         </div>
                       </div>
@@ -586,7 +606,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 {switcherFilteredCount === 0 && switcherQuery ? (
-                  <p className="shrink-0 px-3 py-1 text-[12px] text-gray-500">No organizations match your search.</p>
+                  <p className="shrink-0 px-3 py-1 text-[12px] text-gray-500">{t("denShell.workspace.noMatch")}</p>
                 ) : null}
 
                 {switcherHasMore ? (
@@ -596,7 +616,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                       onClick={showMoreOrgDirectory}
                       className="flex w-full items-center justify-center rounded-lg px-2 py-1.5 text-[12px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                     >
-                      Show more ({switcherHiddenCount})
+                      {t("denShell.workspace.showMore", { count: switcherHiddenCount })}
                     </button>
                   </div>
                 ) : null}
@@ -607,7 +627,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                     onClick={close}
                   >
-                    <span className="text-gray-400 text-[16px] leading-none">+</span> Create or join workspace
+                    <span className="text-gray-400 text-[16px] leading-none">+</span> {t("denShell.workspace.createOrJoin")}
                   </Link>
                 </div>
 
@@ -620,7 +640,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
                   >
                     <LogOut className="h-4 w-4 text-gray-400" />
-                    Sign out
+                    {t("denShell.account.signOut")}
                   </button>
                 </div>
               </Popover.Popup>
@@ -643,7 +663,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
             type="button"
             className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 md:hidden"
             onClick={() => setSidebarOpen(false)}
-            aria-label="Close menu"
+            aria-label={t("denShell.menuButton.closeLabel")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -655,7 +675,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
           {navSections.map((section) => (
             <div key={section.label} data-sidebar-section={section.label.toLowerCase()}>
               <p className="px-3 pb-2 text-[11px] font-medium text-gray-500">
-                {section.label}
+                {t(section.labelKey)}
               </p>
               <div className="space-y-1">
                 {section.items.map((item) => {
@@ -703,15 +723,21 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                       >
                         <span className="flex min-w-0 items-center gap-3">
                           <item.icon className="h-4 w-4 shrink-0" strokeWidth={1.8} />
-                          <span className="min-w-0 truncate">{item.label}</span>
+                          <span className="min-w-0 truncate">{t(item.labelKey)}</span>
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5">
-                          {item.attention ? (
-                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" role="img" aria-label={item.attention} title={item.attention} data-testid="nav-attention" />
+                          {typeof item.attentionCount === "number" ? (
+                            <span
+                              className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+                              role="img"
+                              aria-label={t("denShell.nav.attention", { count: item.attentionCount })}
+                              title={t("denShell.nav.attention", { count: item.attentionCount })}
+                              data-testid="nav-attention"
+                            />
                           ) : null}
-                          {item.badge ? (
+                          {item.badgeKey ? (
                             <span className="shrink-0 rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium leading-3 text-gray-600" data-testid="nav-badge">
-                              {item.badge}
+                              {t(item.badgeKey)}
                             </span>
                           ) : null}
                           {item.children ? (
@@ -734,10 +760,10 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                                   : "text-gray-500 hover:text-gray-700"
                               }`}
                             >
-                              <span className="min-w-0 truncate">{child.label}</span>
-                              {child.badge ? (
+                              <span className="min-w-0 truncate">{t(child.labelKey)}</span>
+                              {child.badgeKey ? (
                                 <span className="shrink-0 rounded-full border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium leading-3 text-gray-600" data-testid="nav-badge">
-                                  {child.badge}
+                                  {t(child.badgeKey)}
                                 </span>
                               ) : null}
                             </Link>
@@ -756,8 +782,10 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
       <div className="mt-auto shrink-0 p-3" data-testid="den-org-sidebar-footer">
         {orgSwitcher}
 
+        {orgFeatureEnabled(orgContext, "denLocaleSelection") ? <DenLanguageSwitcher /> : null}
+
         {orgBusy ? (
-          <p className="mt-3 px-2 text-[11px] text-gray-400">Refreshing workspace…</p>
+          <p className="mt-3 px-2 text-[11px] text-gray-400">{t("denShell.workspace.refreshing")}</p>
         ) : null}
         {orgError ? (
           <p className="mt-3 px-2 text-[11px] font-medium text-rose-600">{orgError}</p>
@@ -791,7 +819,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 md:hidden"
               onClick={() => setSidebarOpen(true)}
-              aria-label="Open menu"
+              aria-label={t("denShell.menuButton.openLabel")}
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -815,7 +843,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
                   >
                     <MessageSquare className="h-4 w-4" />
-                    <span className="hidden sm:inline">Feedback</span>
+                    <span className="hidden sm:inline">{t("denShell.header.feedback")}</span>
                   </a>
                 ) : null}
                 <a
@@ -825,7 +853,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700"
                 >
                   <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Docs</span>
+                  <span className="hidden sm:inline">{t("denShell.header.docs")}</span>
                 </a>
                 <DownloadOpenWorkButton
                   key={`${activeOrg?.id}:${pathname}`}
@@ -838,7 +866,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto bg-[#fafafa] scroll-pb-28">
           {setupPending && setupOrganizationId === activeOrg?.id ? (
             <div className="border-b border-gray-100 px-4 py-3 text-sm md:px-6">
-              <Link href={onboardingRoute} className="font-medium text-gray-900 underline underline-offset-4">Back to setup</Link>
+              <Link href={onboardingRoute} className="font-medium text-gray-900 underline underline-offset-4">{t("denShell.header.backToSetup")}</Link>
             </div>
           ) : null}
           {children}
@@ -854,7 +882,7 @@ export function OrgDashboardShell({ children }: { children: React.ReactNode }) {
         <UserProfileDialog
           key={user.id}
           user={user}
-          descriptor="Change how your name appears in the organization"
+          descriptor={t("denShell.profilePrompt.descriptor")}
           onCancel={() => setProfilePromptDismissed(true)}
           onSave={async (input) => {
             await updateUserProfile(input);

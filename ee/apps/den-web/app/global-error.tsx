@@ -5,6 +5,7 @@ import NextError from "next/error";
 import { useEffect } from "react";
 
 import { parseBrowserObservabilityEnv } from "../observability/browser-config";
+import { denHtmlLang, readRememberedDenLocale } from "./_lib/i18n/den-locale";
 
 const browserObservability = parseBrowserObservabilityEnv({
   backend: process.env.NEXT_PUBLIC_DEN_OBSERVABILITY_BACKEND,
@@ -20,7 +21,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang={denHtmlLang(readRememberedDenLocale())}>
       <body>
         <NextError statusCode={0} />
       </body>

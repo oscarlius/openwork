@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DenRequestCanceledError, DenRequestTimeoutError, getRequestError, isReauthRequiredError, requestJson } from "../../_lib/den-flow";
+import { DEFAULT_DEN_LOCALE, type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { memberApiKeyFailureMessage } from "./member-api-key";
 import {
@@ -1202,9 +1204,9 @@ export function useNativeProviderClient(providerId: string, enabled: boolean) {
   });
 }
 
-export function formatMcpConnectedTimestamp(value: string | null): string {
+export function formatMcpConnectedTimestamp(value: string | null, locale: DenLocale = DEFAULT_DEN_LOCALE): string {
   if (!value) return "Not connected";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not connected";
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+  return formatDenDateTime(locale, date, { month: "short", day: "numeric", year: "numeric" }, "en-US");
 }

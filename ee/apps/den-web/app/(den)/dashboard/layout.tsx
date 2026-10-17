@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { joinBaseUrl, readBaseUrlEnv } from "@openwork/types/url";
 
+import { createDenT } from "../../_lib/i18n/messages";
+import { resolveDenLocale } from "../../_lib/i18n/server";
 import { getManagedBrandIconUrl, parseOrgListPayload } from "../_lib/den-org";
 import { DenToastProvider } from "./_components/den-toast";
 import { OrgDashboardShell } from "./_components/org-dashboard-shell";
@@ -42,8 +44,15 @@ async function getWorkspaceFaviconUrl(): Promise<string | null> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Server-component translation. `resolveDenLocale()` answers "en" without any
+  // lookup unless the cookie asks for Simplified Chinese, and even then it falls
+  // back to "en" unless the denLocaleSelection feature is on.
+  const t = createDenT(await resolveDenLocale());
   const iconUrl = await getWorkspaceFaviconUrl();
-  return iconUrl ? { icons: { icon: iconUrl } } : {};
+  return {
+    title: t("denDashboard.document.title"),
+    ...(iconUrl ? { icons: { icon: iconUrl } } : {}),
+  };
 }
 
 export default function DashboardLayout({

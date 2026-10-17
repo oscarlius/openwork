@@ -40,22 +40,30 @@ import {
   getWebRoute,
   getWorkbotSettingsRoute,
 } from "../../_lib/den-org";
+import type { DenMessageKey } from "../../../_lib/i18n/messages";
 import type { DenOrgMode } from "../../_lib/runtime-config";
 import { canOpenAdminRoute } from "./admin-route-access";
 
 export type DashboardNavChild = {
   href: string;
   label: string;
-  badge?: string;
+  /**
+   * Message key holding the visible text. `label` stays English on purpose: it
+   * is the command-palette search keyword key and the `data-*` identity, so a
+   * translated `label` would break search. Screens render `t(labelKey)`.
+   */
+  labelKey: DenMessageKey;
+  badgeKey?: DenMessageKey;
 };
 
 export type DashboardNavItem = {
   href: string;
   label: string;
+  labelKey: DenMessageKey;
   icon: LucideIcon;
-  badge?: string;
+  badgeKey?: DenMessageKey;
   /** Quiet dot beside the label when something here is waiting on the viewer. */
-  attention?: string;
+  attentionCount?: number;
   testId?: string;
   /** Extra pathname prefixes that select this entry. */
   matchHrefs?: string[];
@@ -65,6 +73,7 @@ export type DashboardNavItem = {
 
 export type DashboardNavSection = {
   label: string;
+  labelKey: DenMessageKey;
   items: DashboardNavItem[];
 };
 
@@ -96,6 +105,9 @@ export type BuildDashboardNavSectionsInput = {
   desktopPolicyScreenRemoved?: boolean;
 };
 
+/** An href the viewer is allowed to open, per their permission flags. */
+type NavFilter = (href: string) => boolean;
+
 export function buildDashboardNavSections({
   orgSlug,
   access,
@@ -110,90 +122,171 @@ export function buildDashboardNavSections({
 }: BuildDashboardNavSectionsInput): DashboardNavSection[] {
   const workflowsEnabled = capabilities.workflows;
   const showWeb = runtimeConfigLoaded && capabilities.openworkWeb;
-  const workItems: DashboardNavItem[] = [
-    ...(capabilities.workbot
-      ? [{ href: "/workbot", label: "Workbot", icon: MessageCircle, testId: "dashboard-nav-workbot" }]
-      : []),
-    {
-      href: orgSlug ? getLibraryRoute(orgSlug) : "#",
-      label: "My Library",
-      icon: LibraryBig,
-      ...(libraryNeedsSignIn > 0
-        ? { attention: `${libraryNeedsSignIn} ${libraryNeedsSignIn === 1 ? "needs" : "need"} your sign-in` }
-        : {}),
-    },
-    ...(workflowsEnabled && orgSlug
-      ? [{ href: getAutomationsRoute(orgSlug), label: "My Automations", icon: CalendarClock }]
-      : []),
-    ...(showWeb
-      ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OpenWork Web", icon: Globe }]
-      : []),
-  ];
 
   // Admin-area entries appear only where the member holds the page's permission.
   const canOpen = (href: string) => canOpenAdminRoute(href, access);
+
+  /*
+   * Every conditional group is its own annotated constant, and no array literal
+   * below spreads a ternary. That is deliberate: an array literal containing a
+   * spread of a conditional expression loses its contextual type, which widens
+   * every `labelKey` in it from the `DenMessageKey` union to plain `string` and
+   * stops it being assignable to `DashboardNavItem`. A `: DashboardNavItem[]`
+   * annotation on the outer variable does not restore it; `satisfies` on a
+   * branch does not either, because the sibling entries still lose the context.
+   */
+  const workbotItem: DashboardNavItem[] = capabilities.workbot
+    ? [{ href: "/workbot", label: "Workbot", labelKey: "denShell.nav.workbot", icon: MessageCircle, testId: "dashboard-nav-workbot" }]
+    : [];
+  const automationsItem: DashboardNavItem[] = workflowsEnabled && orgSlug
+    ? [{ href: getAutomationsRoute(orgSlug), label: "My Automations", labelKey: "denShell.nav.myAutomations", icon: CalendarClock }]
+    : [];
+  const webItem: DashboardNavItem[] = showWeb
+    ? [{ href: orgSlug ? getWebRoute(orgSlug) : "#", label: "OpenWork Web", labelKey: "denShell.nav.openworkWeb", icon: Globe }]
+    : [];
+  const workItems: DashboardNavItem[] = [
+    ...workbotItem,
+    {
+      href: orgSlug ? getLibraryRoute(orgSlug) : "#",
+      label: "My Library",
+      labelKey: "denShell.nav.myLibrary",
+      icon: LibraryBig,
+      ...(libraryNeedsSignIn > 0 ? { attentionCount: libraryNeedsSignIn } : {}),
+    },
+    ...automationsItem,
+    ...webItem,
+  ];
+
   const manageItems: DashboardNavItem[] = orgSlug
-    ? [
-        { href: getPluginsRoute(orgSlug), label: "Plugins", icon: Box },
-        { href: getMcpConnectionsRoute(orgSlug), label: "Connectors", icon: Plug, badge: "MCPs" },
-        { href: getAiGatewayRoute(orgSlug), label: "AI Gateway", icon: Sparkles },
-        ...(!desktopPolicyScreenRemoved ? [{ href: getDesktopPoliciesRoute(orgSlug), label: "Desktop policies", icon: Laptop }] : []),
-        ...(workbotSettings ? [{ href: getWorkbotSettingsRoute(orgSlug), label: "Workbot", icon: MessageCircle, testId: "dashboard-nav-workbot-settings" }] : []),
-        ...(managedDeployments ? [{ href: getDeploymentsRoute(orgSlug), label: "Deployments", icon: Server }] : []),
-      ].filter((item) => canOpen(item.href))
+    ? manageNavItems(orgSlug, capabilities, {
+        canOpen,
+        desktopPolicyScreenRemoved,
+        workbotSettings,
+        managedDeployments,
+      })
     : [];
   const observabilityItems: DashboardNavItem[] = orgSlug
-    ? [
-        ...(access.canViewUsageAnalytics ? [{ href: getAnalyticsRoute(orgSlug), label: "Analytics", icon: BarChart3 }] : []),
-        ...(capabilities.auditLogs
-          ? [{
-              href: getAuditLogsRoute(orgSlug),
-              label: "Audit logs",
-              icon: access.canViewAuditLogs ? ScrollText : LockKeyhole,
-              ...(access.canViewAuditLogs ? {} : { badge: "Locked" }),
-            }]
-          : []),
-      ]
+    ? observabilityNavItems(orgSlug, access, capabilities)
     : [];
   const settingsChildren: DashboardNavChild[] = orgSlug
-    ? [
-        ...[
-          { href: getOrgSettingsRoute(orgSlug), label: "General" },
-          { href: getDiagnosticsRoute(orgSlug), label: "Diagnostics" },
-          { href: getBillingRoute(orgSlug), label: "Billing" },
-          { href: getApiKeysRoute(orgSlug), label: "API Keys" },
-        ].filter((item) => canOpen(item.href)),
-        ...permissionsNavChildren(orgSlug, access, permissionsEnabled, teamRoles ? { membersOpen: canOpen(getMembersRoute(orgSlug)) } : null),
-        ...(access.canViewSso ? [{ href: getSsoRoute(orgSlug), label: "SSO" }] : []),
-        ...(access.canViewScim ? [{ href: getScimRoute(orgSlug), label: "SCIM" }] : []),
-        ...(canOpen(getMarketplacesRoute(orgSlug))
-          ? [{ href: getMarketplacesRoute(orgSlug), label: "Advanced" }]
-          : []),
-        ...(capabilities.mcpConnections && canOpen(getToolTesterRoute(orgSlug))
-          ? [{ href: getToolTesterRoute(orgSlug), label: "Tool Tester" }]
-          : []),
-      ]
+    ? settingsNavChildren(orgSlug, access, capabilities, { canOpen, permissionsEnabled, teamRoles })
     : [];
   const settingsGroup: DashboardNavItem | null = settingsChildren.length > 0
     ? {
         href: settingsChildren[0].href,
         label: "Settings",
+        labelKey: "denShell.nav.settings",
         icon: SlidersHorizontal,
         children: settingsChildren,
       }
     : null;
-  const teamItems: DashboardNavItem[] = [
-    ...(orgSlug && canOpen(getMembersRoute(orgSlug))
-      ? [{ href: getMembersRoute(orgSlug), label: "Members", icon: Users }]
-      : []),
-    ...(settingsGroup ? [settingsGroup] : []),
+  const membersItem: DashboardNavItem[] = orgSlug && canOpen(getMembersRoute(orgSlug))
+    ? [{ href: getMembersRoute(orgSlug), label: "Members", labelKey: "denShell.nav.members", icon: Users }]
+    : [];
+  const settingsItem: DashboardNavItem[] = settingsGroup ? [settingsGroup] : [];
+  const teamItems: DashboardNavItem[] = [...membersItem, ...settingsItem];
+
+  const workSection: DashboardNavSection = { label: "Work", labelKey: "denShell.nav.sectionWork", items: workItems };
+  const manageSection: DashboardNavSection[] = manageItems.length > 0
+    ? [{ label: "Manage", labelKey: "denShell.nav.sectionManage", items: manageItems }]
+    : [];
+  const observabilitySection: DashboardNavSection[] = observabilityItems.length > 0
+    ? [{ label: "Observability", labelKey: "denShell.nav.sectionObservability", items: observabilityItems }]
+    : [];
+  const teamSection: DashboardNavSection[] = teamItems.length > 0
+    ? [{ label: "Team", labelKey: "denShell.nav.sectionTeam", items: teamItems }]
+    : [];
+
+  return [workSection, ...manageSection, ...observabilitySection, ...teamSection];
+}
+
+/** Manage-area entries, kept only where the viewer can open the page. */
+function manageNavItems(
+  orgSlug: string,
+  capabilities: DenOrgCapabilities,
+  options: {
+    canOpen: NavFilter;
+    desktopPolicyScreenRemoved: boolean;
+    workbotSettings: boolean;
+    managedDeployments: boolean;
+  },
+): DashboardNavItem[] {
+  const { canOpen, desktopPolicyScreenRemoved, workbotSettings, managedDeployments } = options;
+  const desktopPoliciesItem: DashboardNavItem[] = desktopPolicyScreenRemoved
+    ? []
+    : [{ href: getDesktopPoliciesRoute(orgSlug), label: "Desktop policies", labelKey: "denShell.nav.desktopPolicies", icon: Laptop }];
+  const workbotSettingsItem: DashboardNavItem[] = workbotSettings
+    ? [{ href: getWorkbotSettingsRoute(orgSlug), label: "Workbot", labelKey: "denShell.nav.workbot", icon: MessageCircle, testId: "dashboard-nav-workbot-settings" }]
+    : [];
+  const deploymentsItem: DashboardNavItem[] = managedDeployments
+    ? [{ href: getDeploymentsRoute(orgSlug), label: "Deployments", labelKey: "denShell.nav.deployments", icon: Server }]
+    : [];
+  const items: DashboardNavItem[] = [
+    { href: getPluginsRoute(orgSlug), label: "Plugins", labelKey: "denShell.nav.plugins", icon: Box },
+    { href: getMcpConnectionsRoute(orgSlug), label: "Connectors", labelKey: "denShell.nav.connectors", icon: Plug, badgeKey: "denShell.nav.badgeMcps" },
+    { href: getAiGatewayRoute(orgSlug), label: "AI Gateway", labelKey: "denShell.nav.aiGateway", icon: Sparkles },
+    ...desktopPoliciesItem,
+    ...workbotSettingsItem,
+    ...deploymentsItem,
   ];
+  return items.filter((item) => canOpen(item.href));
+}
+
+/** Analytics and Audit logs: one appears on permission, the other on capability. */
+function observabilityNavItems(
+  orgSlug: string,
+  access: DenOrgAccessFlags,
+  capabilities: DenOrgCapabilities,
+): DashboardNavItem[] {
+  const analyticsItem: DashboardNavItem[] = access.canViewUsageAnalytics
+    ? [{ href: getAnalyticsRoute(orgSlug), label: "Analytics", labelKey: "denShell.nav.analytics", icon: BarChart3 }]
+    : [];
+  const auditLogsItem: DashboardNavItem[] = capabilities.auditLogs
+    ? [{
+        href: getAuditLogsRoute(orgSlug),
+        label: "Audit logs",
+        labelKey: "denShell.nav.auditLogs",
+        icon: access.canViewAuditLogs ? ScrollText : LockKeyhole,
+        ...(access.canViewAuditLogs ? {} : { badgeKey: "denShell.nav.badgeLocked" }),
+      }]
+    : [];
+  return [...analyticsItem, ...auditLogsItem];
+}
+
+/** The Settings group's children, in the order the sidebar shows them. */
+function settingsNavChildren(
+  orgSlug: string,
+  access: DenOrgAccessFlags,
+  capabilities: DenOrgCapabilities,
+  options: { canOpen: NavFilter; permissionsEnabled: boolean; teamRoles: boolean },
+): DashboardNavChild[] {
+  const { canOpen, permissionsEnabled, teamRoles } = options;
+  const coreChildren: DashboardNavChild[] = [
+    { href: getOrgSettingsRoute(orgSlug), label: "General", labelKey: "denShell.nav.general" },
+    { href: getDiagnosticsRoute(orgSlug), label: "Diagnostics", labelKey: "denShell.nav.diagnostics" },
+    { href: getBillingRoute(orgSlug), label: "Billing", labelKey: "denShell.nav.billing" },
+    { href: getApiKeysRoute(orgSlug), label: "API Keys", labelKey: "denShell.nav.apiKeys" },
+  ];
+  const ssoChild: DashboardNavChild[] = access.canViewSso
+    ? [{ href: getSsoRoute(orgSlug), label: "SSO", labelKey: "denShell.nav.sso" }]
+    : [];
+  const scimChild: DashboardNavChild[] = access.canViewScim
+    ? [{ href: getScimRoute(orgSlug), label: "SCIM", labelKey: "denShell.nav.scim" }]
+    : [];
+  const advancedChild: DashboardNavChild[] = canOpen(getMarketplacesRoute(orgSlug))
+    ? [{ href: getMarketplacesRoute(orgSlug), label: "Advanced", labelKey: "denShell.nav.advanced" }]
+    : [];
+  const toolTesterChild: DashboardNavChild[] = capabilities.mcpConnections && canOpen(getToolTesterRoute(orgSlug))
+    ? [{ href: getToolTesterRoute(orgSlug), label: "Tool Tester", labelKey: "denShell.nav.toolTester" }]
+    : [];
 
   return [
-    { label: "Work", items: workItems },
-    ...(manageItems.length > 0 ? [{ label: "Manage", items: manageItems }] : []),
-    ...(observabilityItems.length > 0 ? [{ label: "Observability", items: observabilityItems }] : []),
-    ...(teamItems.length > 0 ? [{ label: "Team", items: teamItems }] : []),
+    ...coreChildren.filter((item) => canOpen(item.href)),
+    ...permissionsNavChildren(orgSlug, access, permissionsEnabled, teamRoles ? { membersOpen: canOpen(getMembersRoute(orgSlug)) } : null),
+    ...ssoChild,
+    ...scimChild,
+    ...advancedChild,
+    ...toolTesterChild,
   ];
 }
 
@@ -207,9 +300,9 @@ export function buildDashboardNavSections({
  */
 function permissionsNavChildren(orgSlug: string, access: DenOrgAccessFlags, enabled: boolean, teamRoles: { membersOpen: boolean } | null): DashboardNavChild[] {
   const href = getPermissionsRoute(orgSlug);
-  if (enabled && teamRoles) return access.canViewPermissions && !teamRoles.membersOpen ? [{ href, label: "Roles" }] : [];
-  if (enabled) return access.canViewPermissions ? [{ href, label: "Permissions" }] : [];
-  return access.canManagePermissions ? [{ href, label: "Permissions", badge: "Enterprise" }] : [];
+  if (enabled && teamRoles) return access.canViewPermissions && !teamRoles.membersOpen ? [{ href, label: "Roles", labelKey: "denShell.nav.roles" }] : [];
+  if (enabled) return access.canViewPermissions ? [{ href, label: "Permissions", labelKey: "denShell.nav.permissions" }] : [];
+  return access.canManagePermissions ? [{ href, label: "Permissions", labelKey: "denShell.nav.permissions", badgeKey: "denShell.nav.badgeEnterprise" }] : [];
 }
 
 // Alias order is ranking priority in the command palette.

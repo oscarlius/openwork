@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getErrorMessage, requestJson } from "../../_lib/den-flow";
+import { DEFAULT_DEN_LOCALE, type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 
 export type DenLlmProviderSource = "models_dev" | "custom" | "openwork";
 
@@ -338,7 +340,7 @@ export function getProviderApiBase(config: Record<string, unknown>): string | nu
   return asString(config.api);
 }
 
-export function formatProviderTimestamp(value: string | null) {
+export function formatProviderTimestamp(value: string | null, locale: DenLocale = DEFAULT_DEN_LOCALE) {
   if (!value) {
     return "Recently updated";
   }
@@ -348,11 +350,11 @@ export function formatProviderTimestamp(value: string | null) {
     return "Recently updated";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDenDateTime(locale, date, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }, "en-US");
 }
 
 export function buildCustomProviderTemplate() {

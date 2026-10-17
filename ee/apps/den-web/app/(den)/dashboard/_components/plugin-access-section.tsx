@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, Globe, Plus, Users } from "lucide-react";
 
 import { getOrgAccessFlags, permissionLockReason } from "../../_lib/den-org";
+import { useDenLocale, useDenT } from "../../../_lib/i18n/client";
+import { type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import { DenButton } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
 import { DenNotice } from "../../_components/ui/notice";
@@ -32,14 +35,14 @@ type AccessCandidate = {
   content: ReactNode;
 };
 
-function formatAccessDate(value: string) {
+function formatAccessDate(value: string, locale: DenLocale) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "recently";
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDenDateTime(locale, date, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }, "en-US");
 }
 
 function roleLabel(role: PluginAccessRole) {
@@ -89,6 +92,7 @@ function AccessAddPicker({
   disabled: boolean;
   onGrant: (id: string, role: "viewer" | "editor") => Promise<void>;
 }) {
+  const t = useDenT();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -207,8 +211,8 @@ function AccessAddPicker({
                   className="min-w-0 flex-1"
                   disabled={submitting}
                 >
-                  <option value="viewer">Can view (use in chat)</option>
-                  <option value="editor">Can edit</option>
+                  <option value="viewer">{t("denPluginAccess.role.viewer")}</option>
+                  <option value="editor">{t("denPluginAccess.role.editor")}</option>
                 </DenSelect>
                 <DenButton
                   size="sm"
@@ -240,6 +244,8 @@ export function PluginAccessSection({
   error,
 }: PluginAccessSectionProps) {
   const { orgContext } = useOrgDashboard();
+  const locale = useDenLocale();
+  const t = useDenT();
   const grantMutation = useGrantPluginAccess();
   const revokeMutation = useRevokePluginAccess();
   const access = getOrgAccessFlags(
@@ -324,7 +330,7 @@ export function PluginAccessSection({
       ) : (
         <div className="rounded-2xl border border-gray-100 bg-white">
           {isLoading ? (
-            <p className="px-6 py-4 text-[13px] text-gray-400">Loading access…</p>
+            <p className="px-6 py-4 text-[13px] text-gray-400">{t("denPluginAccess.status.loading")}</p>
           ) : (
             <>
               <button
@@ -371,17 +377,17 @@ export function PluginAccessSection({
                           {member ? (
                             <OrgMemberIdentity member={member} />
                           ) : (
-                            <p className="text-[13px] font-medium text-gray-500">Removed member</p>
+                            <p className="text-[13px] font-medium text-gray-500">{t("denPluginAccess.grant.removedMember")}</p>
                           )}
                         </div>
                         <AccessRolePill role={grant.role} />
                       </div>
                       {creatorGrant ? (
-                        <span className="text-[13px] text-[var(--dls-text-secondary)]">Creator</span>
+                        <span className="text-[13px] text-[var(--dls-text-secondary)]">{t("denPluginAccess.grant.creator")}</span>
                       ) : (
                         <>
                           <p className="text-[11.5px] text-gray-400">
-                            shared by {sharedBy} · {formatAccessDate(grant.createdAt)}
+                            {t("denPluginAccess.grant.sharedBy", { by: sharedBy, date: formatAccessDate(grant.createdAt, locale) })}
                           </p>
                           <div className="flex w-full justify-end md:w-auto">
                             <DenButton
@@ -411,13 +417,13 @@ export function PluginAccessSection({
                           {team ? (
                             <TeamIdentity name={team.name} memberCount={team.memberIds.length} />
                           ) : (
-                            <p className="text-[13px] font-medium text-gray-500">Removed team</p>
+                            <p className="text-[13px] font-medium text-gray-500">{t("denPluginAccess.grant.removedTeam")}</p>
                           )}
                         </div>
                         <AccessRolePill role={grant.role} />
                       </div>
                       <p className="text-[11.5px] text-gray-400">
-                        shared by {sharedBy} · {formatAccessDate(grant.createdAt)}
+                        {t("denPluginAccess.grant.sharedBy", { by: sharedBy, date: formatAccessDate(grant.createdAt, locale) })}
                       </p>
                       <div className="flex w-full justify-end md:w-auto">
                         <DenButton
@@ -436,9 +442,9 @@ export function PluginAccessSection({
                 {!hasGrantsBeyondCreator ? (
                   <div className="px-6 py-3.5">
                     <div className="rounded-xl border border-dashed border-gray-200 px-5 py-5 text-center">
-                      <p className="text-[13px] font-medium text-gray-900">Only you can use this plugin</p>
+                      <p className="text-[13px] font-medium text-gray-900">{t("denPluginAccess.empty.onlyYou")}</p>
                       <p className="mt-1 text-[12px] text-gray-500">
-                        Share it with a person or a team to give them instant access in chat.
+                        {t("denPluginAccess.empty.description")}
                       </p>
                     </div>
                   </div>

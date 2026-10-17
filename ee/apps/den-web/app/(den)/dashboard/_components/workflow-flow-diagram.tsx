@@ -1,5 +1,10 @@
+"use client";
+
 import type { WorkflowGraph, WorkflowGraphNode } from "@openwork/types/workflows";
 import { CornerDownLeft, GitBranch, Play, Repeat, Search, Wrench } from "lucide-react";
+import { useDenLocale, useDenT } from "../../../_lib/i18n/client";
+import { type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import {
   describeCondition,
   describeLoop,
@@ -266,6 +271,7 @@ function FlowNode({
   technical: boolean;
   inputValues: Record<string, unknown> | undefined;
 }) {
+  const t = useDenT();
   const sourceNodes = new Map(graph.nodes.map((candidate) => [candidate.id, candidate]));
   const dataLabels = graph.edges.flatMap((edge) => {
     if (edge.kind !== "data" || edge.to !== node.id || !edge.label) return [];
@@ -283,13 +289,13 @@ function FlowNode({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${badge.className}`}>{badge.label}</span>
-              {runState === "ran" ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />This run: ✓ completed</span> : null}
-              {runState === "failed" ? <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">This run: ✗ stopped here</span> : null}
-              {runState === "not_reached" ? <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">This run: skipped</span> : null}
+              {runState === "ran" ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t("denWorkflow.run.completed")}</span> : null}
+              {runState === "failed" ? <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">{t("denWorkflow.run.stopped")}</span> : null}
+              {runState === "not_reached" ? <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{t("denWorkflow.run.skipped")}</span> : null}
             </div>
             <p className="mt-1.5 break-words text-[12px] font-medium text-gray-800">{nodeTitle(node, technical)}</p>
-            {node.kind === "tool" && node.assignsTo ? <p className="mt-1 text-[11px] text-gray-500">Saves the result as <strong className="font-semibold">{humanizeIdentifier(node.assignsTo).toLowerCase()}</strong></p> : null}
-            {node.kind === "input" && node.fields.length > 0 ? <div className="mt-2"><p className="mb-1 text-[10px] text-gray-400">Runs with:</p><div className="flex flex-wrap gap-1">{node.fields.map((field) => {
+            {node.kind === "tool" && node.assignsTo ? <p className="mt-1 text-[11px] text-gray-500">{t("denWorkflow.tool.savesResultAs")}<strong className="font-semibold">{humanizeIdentifier(node.assignsTo).toLowerCase()}</strong></p> : null}
+            {node.kind === "input" && node.fields.length > 0 ? <div className="mt-2"><p className="mb-1 text-[10px] text-gray-400">{t("denWorkflow.input.runsWith")}</p><div className="flex flex-wrap gap-1">{node.fields.map((field) => {
               const value = inputValue(inputValues?.[field]);
               return <span key={field} className="rounded-md bg-white px-1.5 py-0.5 text-[10px] text-gray-600">{inputFieldLabel(field)}{value ? ` · ${value}` : ""}</span>;
             })}</div></div> : null}
@@ -297,8 +303,8 @@ function FlowNode({
             {technical ? <div className="mt-2 space-y-1 break-all font-mono text-[10px] text-gray-400">
               {node.kind === "tool" ? <p>{node.scriptPath}</p> : null}
               {node.kind === "branch" ? <p>{node.label}</p> : null}
-              {node.kind === "input" && node.fields.length > 0 ? <p>Fields: {node.fields.join(", ")}</p> : null}
-              {dataLabels.map((label) => <p key={`technical:${label.raw}`}>Input: {label.raw}</p>)}
+              {node.kind === "input" && node.fields.length > 0 ? <p>{t("denWorkflow.technical.fields", { fields: node.fields.join(", ") })}</p> : null}
+              {dataLabels.map((label) => <p key={`technical:${label.raw}`}>{t("denWorkflow.technical.input", { input: label.raw })}</p>)}
             </div> : null}
           </div>
         </div>
@@ -337,8 +343,8 @@ function LaneColumn({
   </div>;
 }
 
-function runDate(value: string): string {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(value));
+function runDate(value: string, locale: DenLocale): string {
+  return formatDenDateTime(locale, new Date(value), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }, "en-US");
 }
 
 export function WorkflowFlowDiagram({
@@ -352,6 +358,8 @@ export function WorkflowFlowDiagram({
   technical?: boolean;
   inputValues?: Record<string, unknown>;
 }) {
+  const locale = useDenLocale();
+  const t = useDenT();
   const allRows = graphRows(graph);
   const states = runStates(allRows, run);
   const ordered = topologicalNodes(graph);
@@ -374,7 +382,7 @@ export function WorkflowFlowDiagram({
 
   return (
     <div className="mt-4" data-testid="den-workflow-flow-diagram">
-      {run ? <p className="mb-3 text-[11px] text-gray-500">Last run: {runDate(run.finishedAt)} · {run.status === "succeeded" ? "Succeeded" : "Failed"}</p> : null}
+      {run ? <p className="mb-3 text-[11px] text-gray-500">{t("denWorkflow.run.lastRun", { date: runDate(run.finishedAt, locale) })} · {run.status === "succeeded" ? t("denWorkflow.run.succeeded") : t("denWorkflow.run.failed")}</p> : null}
       {graph.parseError ? <div className="mb-3 rounded-xl border border-[var(--dls-border)] bg-[var(--dls-hover)] px-3 py-2 text-[12px] text-[var(--dls-text-primary)]">We couldn&apos;t map every step of this version. The code still runs; only the picture is incomplete.{technical ? <p className="mt-1 font-mono text-[10px]">{graph.parseError}</p> : null}</div> : null}
       {rows.length === 0 && !graph.parseError ? <p className="text-[12px] text-gray-400">No steps are available to show yet.</p> : null}
       <div className="flex flex-col items-center">

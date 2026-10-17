@@ -3,6 +3,8 @@
 import { queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { mcpAppProjectionSchema } from "@openwork/types/mcp-app";
 import { getErrorMessage, getRequestError, requestJson } from "../../_lib/den-flow";
+import { DEFAULT_DEN_LOCALE, type DenLocale } from "../../../_lib/i18n/den-locale";
+import { formatDenDateTime } from "../../../_lib/i18n/den-format";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import {
   type ConnectedIntegration,
@@ -171,7 +173,7 @@ export function getPluginCategoryLabel(category: PluginCategory): string {
       return "Infrastructure";
   }
 }
-export function formatPluginTimestamp(value: string | null): string {
+export function formatPluginTimestamp(value: string | null, locale: DenLocale = DEFAULT_DEN_LOCALE): string {
   if (!value) {
     return "Recently updated";
   }
@@ -181,11 +183,11 @@ export function formatPluginTimestamp(value: string | null): string {
     return "Recently updated";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDenDateTime(locale, date, {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date);
+  }, "en-US");
 }
 
 export function getPluginComponentCount(plugin: DenPlugin): number {

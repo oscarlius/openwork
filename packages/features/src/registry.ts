@@ -221,6 +221,13 @@ export const FEATURES = defineFeatures({
     deployments: everywhere,
     default: false,
   },
+  denLocaleSelection: {
+    label: "Simplified Chinese interface",
+    description: "People choose Simplified Chinese for the organization console in their account menu; the choice is remembered on this browser and everything else stays English until they pick it.",
+    since: "2026-10",
+    deployments: everywhere,
+    default: false,
+  },
   teamPageTabs: {
     label: "Team page: Browser and Models tabs",
     description: "Each team's page, and Everyone's, gets a Browser tab for the pages agents and the built-in browser can open, and a Models tab with the AI providers the team can use, its spend limits and its default model.",

@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { ArrowLeft, LockKeyhole } from "lucide-react";
+import { useDenLocale, useDenT } from "../../../_lib/i18n/client";
+import {
+  DEFAULT_DEN_LOCALE,
+  denIntlLocale,
+  type DenLocale,
+} from "../../../_lib/i18n/den-locale";
+import {
+  formatDenLocaleDate,
+  formatDenLocaleDateTime,
+} from "../../../_lib/i18n/den-format";
 import {
   PERMISSION_AREAS,
   PERMISSION_KEYS,
@@ -107,23 +117,39 @@ export function PermissionRowsSkeleton({ rows = 6, label = "Loading permissions"
   );
 }
 
-const relativeFormat = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+// One formatter per locale, built on demand. English keeps the exact tag the
+// code passed before i18n existed, so its wording cannot shift.
+const relativeFormats = new Map<DenLocale, Intl.RelativeTimeFormat>();
 
-export function relativeTimeLabel(value: string, now = Date.now()): string {
+function denRelativeFormat(locale: DenLocale): Intl.RelativeTimeFormat {
+  const cached = relativeFormats.get(locale);
+  if (cached) return cached;
+  const created = new Intl.RelativeTimeFormat(denIntlLocale(locale, "en"), { numeric: "auto" });
+  relativeFormats.set(locale, created);
+  return created;
+}
+
+export function relativeTimeLabel(
+  value: string,
+  now = Date.now(),
+  locale: DenLocale = DEFAULT_DEN_LOCALE,
+): string {
   const timestamp = new Date(value).getTime();
   if (Number.isNaN(timestamp)) return "";
+  const relativeFormat = denRelativeFormat(locale);
   const seconds = Math.round((timestamp - now) / 1000);
   const abs = Math.abs(seconds);
   if (abs < 45) return "Just now";
   if (abs < 3600) return relativeFormat.format(Math.round(seconds / 60), "minute");
   if (abs < 86_400) return relativeFormat.format(Math.round(seconds / 3600), "hour");
   if (abs < 86_400 * 30) return relativeFormat.format(Math.round(seconds / 86_400), "day");
-  return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return formatDenLocaleDate(locale, new Date(timestamp), { month: "short", day: "numeric", year: "numeric" });
 }
 
 export function RelativeTime({ value }: { value: string }) {
-  const exact = new Date(value).toLocaleString();
-  return <time dateTime={value} title={exact} className="shrink-0 text-[12px] text-gray-500">{relativeTimeLabel(value)}</time>;
+  const locale = useDenLocale();
+  const exact = formatDenLocaleDateTime(locale, new Date(value));
+  return <time dateTime={value} title={exact} className="shrink-0 text-[12px] text-gray-500">{relativeTimeLabel(value, Date.now(), locale)}</time>;
 }
 
 export type PermissionArea = { key: PermissionAreaKey; label: string; keys: PermissionKey[] };
@@ -199,6 +225,7 @@ export function PermissionEditor({ rows, onToggle, readOnlyReasonId, beforeList 
   beforeList?: ReactNode;
 }) {
   const [search, setSearch] = useState("");
+  const t = useDenT();
   const byKey = new Map(rows.map((row) => [row.key, row]));
   const visible = new Set(rows.filter((row) => permissionMatchesSearch(row.key, search)).map((row) => row.key));
   const areas = permissionAreas(visible);
@@ -236,7 +263,7 @@ export function PermissionEditor({ rows, onToggle, readOnlyReasonId, beforeList 
                   <span className="flex items-center gap-3">
                     <span>{`${allowed} of ${totalInArea.length} allowed`}</span>
                     <span className="flex items-center gap-2 text-gray-700">
-                      <span aria-hidden="true">Allow all</span>
+                      <span aria-hidden="true">{t("denPermissions.action.allowAll")}</span>
                       <DenSwitch
                         size="sm"
                         checked={allOn}
@@ -265,6 +292,7 @@ function PermissionEditorRowView({ row, onToggle, readOnlyReasonId }: {
   onToggle: (key: PermissionKey, next: PermissionStatus) => void;
   readOnlyReasonId?: string;
 }) {
+  const t = useDenT();
   const definition = getPermissionDefinition(row.key);
   const baseId = `permission-${row.key.replace(/[^a-z0-9_]/g, "-")}`;
   const reasonId = `${baseId}-reason`;
@@ -279,7 +307,7 @@ function PermissionEditorRowView({ row, onToggle, readOnlyReasonId }: {
         <p className={`text-[13px] font-medium ${disabled ? "text-gray-500" : "text-gray-900"}`}>{definition.label}</p>
         <PermissionDescription permissionKey={row.key} id={descriptionId} />
       </div>
-      {changed ? <span className="shrink-0 text-[12px] font-medium text-gray-700">Not saved</span> : null}
+      {changed ? <span className="shrink-0 text-[12px] font-medium text-gray-700">{t("denPermissions.status.notSaved")}</span> : null}
       {locked ? (
         <span id={reasonId} className="inline-flex shrink-0 items-center gap-1 text-[12px] text-gray-500">
           <LockKeyhole className="size-3.5" aria-hidden="true" strokeWidth={1.5} />
