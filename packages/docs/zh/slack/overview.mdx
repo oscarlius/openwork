@@ -1,0 +1,48 @@
+---
+title: "OpenWork in Slack"
+sidebarTitle: "概览"
+description: "在 Slack 频道中提及 @openwork，或直接给它发私信，即可使用你自己的 OpenWork 连接和权限工作。面向已批准组织的私有 alpha 阶段。"
+keywords: ["slack", "@openwork", "slack bot", "slack app", "slack assistant", "slack agent", "mention", "dm", "private alpha", "Slack 智能体", "Slack 机器人", "提及", "私信", "私有 alpha"]
+---
+
+<Note>
+**私有 alpha 阶段。**必须由平台管理员为你的组织启用 OpenWork in Slack。本指南是公开的，它不会为你开通 alpha 访问权限。如需申请访问，请联系 [OpenWork 团队](mailto:team@openworklabs.com)。你的工作区还必须可用 Slack 的智能体功能。
+</Note>
+
+在频道中提及 `@openwork`，或直接给它发私信，即可使用你自己的 OpenWork 连接和权限工作。每位成员连接的是自己的 Slack 账户。只需安装一次机器人，但并不会让所有人一起登录。
+
+## 谁负责做什么
+
+| 谁 | 做什么 | 指南 |
+| --- | --- | --- |
+| Slack 与 OpenWork 管理员 | 把 manifest 合并进已有的 Slack 应用、安装机器人、选择回复模式和频道。每个工作区一次。 | [设置 Slack 应用](/zh/slack/set-up-the-slack-app) |
+| 每位成员 | 连接一次自己的 Slack 账户，之后私信或提及 `@openwork`。 | [连接你的账户](/zh/slack/connect-your-account) |
+| 任何人 | 修复机器人消失、不响应或始终跑不完的问题。 | [问题排查](/zh/slack/troubleshooting) |
+
+## 让你的智能体帮你设置
+
+把下面这段提示交给一个具备浏览器或电脑访问权限的智能体：
+
+```text
+Set up OpenWork in Slack for my organization, using:
+https://openworklabs.com/.well-known/agent-skills/set-up-openwork-slack/SKILL.md
+
+Use our existing Slack app and Slack connector. Preserve existing user
+OAuth scopes, redirect URLs, and MCP settings. Check private-alpha access
+before making changes. Enable private replies. Ask me whether to limit
+channels or allow all channels. Handle the configuration and verification
+with my existing access, and bring me in for any required authorization.
+Keep secrets out of chat and files. Test a real bot answer and report
+what passed and anything still blocked.
+```
+
+智能体可以检查现有设置、合并 manifest、验证事件投递、配置回复和频道限制，并测试机器人。由 Slack 管理员授权安装；每位成员授权自己的账户。你智能体的工具权限依然生效。
+
+## 回复与权限如何工作
+
+- 提及或私信 `@openwork` 的人就是唯一的操作者。助手使用的是该成员自己的 Slack 和已连接服务的访问权限，不是共享账户。
+- 同一个 Slack 话题串里的两位成员会得到各自独立的 OpenWork 会话。
+- 私信和灰度期间的私密回复都会进入发起成员的私信。关闭私密回复后，频道回复对该频道所有人可见。
+- 如果助手需要权限决策，请转到 OpenWork Web 继续处理。Slack 不会替你批准。
+
+这个助手建立在 [Slack MCP 连接](/cloud/share-with-your-team/shared-mcp-connections#slack)之上。如果你的组织还没有该连接，请先完成它的设置。

@@ -1,0 +1,47 @@
+---
+title: "MCP 集成"
+description: "一个 OpenWork MCP URL，就能把组织的技能和已连接工具带入 OpenCode、Cursor、Codex、Claude Code 及其他兼容客户端。"
+---
+
+在任意 MCP 客户端中添加一个 URL，即可使用你所在组织的技能、插件、工作流和已连接的工具。
+
+```text
+https://api.openworklabs.com/mcp/agent
+```
+
+在浏览器中用你的 OpenWork 账户登录，并选择你的组织。智能体会获得分配给你的内容。
+
+## 它如何在各类客户端之间工作
+
+1. 管理员在 OpenWork 中把技能和服务器连接共享给个人或团队。
+2. 每个成员把同一个网关 URL 添加到自己常用的 MCP 客户端，然后登录。
+3. 智能体使用 `search_capabilities` 查找某项已授权的能力，并使用 `execute_capability` 执行它。它也可以用 `list_skills` 和 `get_skill` 获取技能说明。
+4. OpenWork 会把该成员的访问授权和连接工具设置应用到经由网关发出的请求。
+
+团队只需设置一次，而不必把 MCP 设置和技能复制进每个客户端。
+
+## 选择你的客户端
+
+<CardGroup cols={2}>
+  <Card title="OpenCode" icon="terminal" href="/model-context-protocol/opencode">无需插件即可连接 MCP 网关。</Card>
+  <Card title="Cursor" icon="code" href="/model-context-protocol/cursor">将 OpenWork 添加为远程 MCP 服务器。</Card>
+  <Card title="Codex" icon="terminal" href="/model-context-protocol/codex">添加网关并直接从 Codex 登录。</Card>
+  <Card title="Claude Code" icon="terminal" href="/model-context-protocol/claude-code">从 Claude Code 连接你的组织。</Card>
+  <Card title="Claude Desktop" icon="desktop" href="/model-context-protocol/claude-desktop">将 OpenWork 添加为自定义连接器。</Card>
+  <Card title="更多客户端" icon="plug" href="/start-here/connect-openwork-mcp">查找 ChatGPT、VS Code、Gemini CLI 等的设置说明。</Card>
+</CardGroup>
+
+## 模型与专用插件
+
+MCP 添加工具和技能；你的客户端保留自己的模型提供商。如果还想使用你所在组织的 AI 网关模型，请使用[客户端插件](/zh/integrations/client-plugins)。
+
+[OpenCode 插件](/model-context-protocol/opencode-plugin)已就绪。Cursor 和 Codex 插件正在开发中；这两者现在都可以通过 MCP 工作。
+
+## 为你的组织管理资源
+
+- [共享 MCP 连接并配置工具](/cloud/share-with-your-team/shared-mcp-connections)
+- [发布可复用技能](/start-here/do-work-with-it/publish-and-copy-a-skill)
+- [通过集合共享插件和技能](/cloud/share-with-your-team/collections)
+- [MCP 网关参考](/cloud/run-in-the-cloud/cloud-mcp)
+
+网关权限覆盖的是经由 OpenWork 发出的内容，不覆盖客户端中配置的其他工具或提供商。

@@ -1,0 +1,17 @@
+---
+title: "排查 OpenWork in Slack 的问题"
+sidebarTitle: "问题排查"
+description: "修复 @openwork 不出现在 Slack 自动补全中、events URL 未验证、连接链接反复出现，或机器人开始处理却迟迟不回复的问题。"
+keywords: ["slack", "@openwork", "slack bot not showing", "slack autocomplete", "slack events url", "url verification", "slack not responding", "slack troubleshooting", "机器人不显示", "自动补全", "不响应"]
+---
+
+| 症状 | 检查项 |
+| --- | --- |
+| 无法进行设置 | 私有 alpha 能力、运行时访问权限，以及 Individual accounts 模式。参见[第 1 步](/zh/slack/set-up-the-slack-app)。 |
+| 机器人不在提及自动补全中 | 机器人安装是否已完成，以及是否已用 `/invite @openwork` 把它邀请进该频道。 |
+| Slack events URL 未通过验证 | 公网 HTTPS URL、正确的连接器 ID、已保存的签名密钥，以及在 Slack 中 **Retry** 然后 **Save Changes**。 |
+| `/openwork` 返回一个连接链接 | 完成你自己的 Slack OAuth 流程；较早的连接需要再重新连接一次。参见[连接你的账户](/zh/slack/connect-your-account)。 |
+| 机器人开始处理却从不完成 | 查看失败/进行中计数和运行时可用性；不要把一条确认当作成功。 |
+| 私信可用，但频道中提及无效 | 频道允许列表、频道邀请、连接器授权，以及助手是否已启用。 |
+
+要暂停灰度，请在连接器中关闭 **Enable @openwork in Slack**。关闭新请求并不能撤回已经执行的外部动作。

@@ -1,0 +1,41 @@
+---
+title: "集成"
+description: "通过 MCP 或专用客户端插件，在你现有的 AI 客户端中使用 OpenWork Connect。"
+---
+
+OpenWork Connect 是一个 AI 网关、MCP 网关和技能网关，让组织能够在一个管理面板中集中管理模型、工具、可复用技能和访问权限。
+
+你可以从自己已在使用的 AI 客户端调用它们。OpenWork 桌面应用是可选项。
+
+## 两种连接方式
+
+<CardGroup cols={2}>
+  <Card title="MCP 集成" icon="plug" href="/zh/integrations/mcp">
+    在任意 MCP 客户端中使用技能和已连接的工具。一个 URL，一次登录。
+  </Card>
+  <Card title="专用客户端插件" icon="terminal" href="/zh/integrations/client-plugins">
+    在一个插件中同时获得模型、技能和工具。OpenCode 已就绪；Cursor 和 Codex 正在开发中。
+  </Card>
+</CardGroup>
+
+## 每个网关提供什么
+
+| 网关 | 你的组织管理的内容 | 你的客户端的使用方式 |
+| --- | --- | --- |
+| AI 网关 | 已批准的模型、提供商凭据、用量，以及支持的支出限额 | 模型请求经由 AI 网关发出 |
+| MCP 网关 | 共享的服务连接和工具访问权限 | 你的智能体发现并调用已授权的工具 |
+| 技能网关 | 分配给个人和团队的可复用技能 | 你的智能体通过 OpenWork MCP 获取它能使用的技能 |
+
+MCP 承载的是工具和技能，不是模型调用。客户端插件用一次登录把两者都接上。
+
+## 客户端可用情况
+
+| 客户端 | MCP 集成 | 专用集成 |
+| --- | --- | --- |
+| OpenCode | [可用](/model-context-protocol/opencode) | **已就绪：**[安装 `opencode-openwork`](/model-context-protocol/opencode-plugin) |
+| Cursor | [可用](/model-context-protocol/cursor) | **开发中** |
+| Codex | [可用](/model-context-protocol/codex) | **开发中** |
+| Claude Code | [可用](/model-context-protocol/claude-code) | 请使用 MCP |
+| 其他兼容客户端 | [MCP 设置指南](/start-here/connect-openwork-mcp) | 取决于客户端 |
+
+每种集成使用的都是已登录个人账户的权限。安装某项集成不会额外授予任何权限。

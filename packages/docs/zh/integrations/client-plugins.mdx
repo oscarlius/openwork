@@ -1,0 +1,31 @@
+---
+title: "专用客户端插件"
+description: "OpenCode 插件把 OpenWork AI 网关的模型和 MCP 资源带进同一个客户端。Cursor 和 Codex 集成正在开发中。"
+---
+
+[MCP 连接](/zh/integrations/mcp)为你的客户端提供技能和工具。客户端插件还会用一次登录把你所在组织的 AI 网关模型加入模型选择器。
+
+## OpenCode —— 已就绪
+
+在 OpenCode 2 中安装 [`opencode-openwork`](https://www.npmjs.com/package/opencode-openwork)。不需要桌面应用。
+
+```sh
+opencode plugin add opencode-openwork
+opencode auth login openwork
+```
+
+选择 **Browser**，登录，选择你的组织，并确认匹配的验证码。此后每次启动 OpenCode 都会加载你的模型、技能和工具。
+
+要求、检查项、自托管设置和登出方式：[OpenCode 插件指南](/model-context-protocol/opencode-plugin)。
+
+## Cursor —— 开发中
+
+支持 AI 网关模型的 Cursor 插件正在开发中。技能和工具现在就可以通过 MCP 使用：[连接 Cursor](/model-context-protocol/cursor)。
+
+## Codex —— 开发中
+
+支持 AI 网关模型的 Codex 插件正在开发中。技能和工具现在就可以通过 MCP 使用：[连接 Codex](/model-context-protocol/codex)。
+
+## 其他客户端
+
+请使用 [MCP 集成](/zh/integrations/mcp)。客户端保留自己的模型提供商。

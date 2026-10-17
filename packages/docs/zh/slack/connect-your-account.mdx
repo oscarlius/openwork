@@ -1,0 +1,29 @@
+---
+title: "把你的 Slack 账户连接到 @openwork"
+sidebarTitle: "连接你的账户"
+description: "一次性把你的 Slack 账户连接到 OpenWork，之后私信或提及 @openwork，并确认它会回应。"
+keywords: ["slack", "@openwork", "connect slack", "reconnect slack", "link slack account", "/openwork", "slack dm", "test slack bot", "连接 Slack", "重新连接", "测试机器人"]
+---
+
+<Note>
+**私有 alpha 阶段。**管理员必须先[设置 Slack 应用](/zh/slack/set-up-the-slack-app)，这套流程才能工作。
+</Note>
+
+## 只需连接一次
+
+1. 在 OpenWork 中打开 **Your Connections**，连接你自己的 Slack 账户。
+2. 如果你是在助手安装之前完成连接的，请先断开**你个人的 Slack 连接**，然后重新连接一次。这会临时中断该连接；不需要让所有人退出登录，也不需要重新安装机器人。
+3. 用你打算用来给 `@openwork` 发消息的那个 Slack 工作区和账户完成授权。
+
+这会把你的 Slack 身份与你的 OpenWork 成员身份绑定起来。在绑定之前，助手会提示你去连接。`/openwork` 会返回一个连接链接；仅打开链接并不等于完成授权。
+
+## 验证它可用
+
+1. 在 Slack 的智能体/应用下打开 `openwork`，发一条私信：“回复一句简短的问候，确认我的连接可用。”
+2. 在话题串里等待最终答复。“On it”只能确认请求已开始。
+3. 在一个被允许的测试频道里执行 `/invite @openwork`，然后用同样的测试请求提及它。确认它出现在提及自动补全中，并按所选回复模式回复。
+4. 管理员：查看连接器的 **Last 24 hours** 计数，包括已完成、进行中、需要连接和失败的请求。
+
+上述检查都通过后，试试一个任务，例如“总结这个话题串”或“起草一条回复”。已连接服务的访问权限取决于你自己的授权。如果助手需要权限决策，请转到 OpenWork Web 继续处理；Slack 不会替你批准。
+
+有哪里不对？请看[问题排查](/zh/slack/troubleshooting)。

@@ -1,0 +1,71 @@
+---
+title: "在 Slack 中设置 OpenWork"
+sidebarTitle: "设置 Slack 应用"
+description: "在 Slack 中为 @openwork 完成管理员设置：把 manifest 合并进你已有的 Slack 应用、保存签名密钥、安装机器人，并选择回复发到哪儿。"
+keywords: ["slack", "@openwork", "slack manifest", "slack app", "signing secret", "add to slack", "install slack bot", "bot scopes", "event subscriptions", "Slack manifest", "签名密钥", "安装机器人", "事件订阅"]
+---
+
+<Note>
+**私有 alpha 阶段。**平台管理员必须先为你的组织启用 **Slack Assistant**。想了解这套设置做了什么、每一步由谁完成，请看 [OpenWork in Slack](/zh/slack/overview)。
+</Note>
+
+更想交给智能体？[设置提示](/zh/slack/overview)可以让智能体用你的权限完成这些步骤。
+
+## 1. 检查 alpha 访问权限和已有的连接器
+
+在 [OpenWork Cloud](https://app.openworklabs.com) 中打开 **Connectors → Slack → OpenWork in Slack**。
+
+- 在 **Individual accounts** 模式下使用 Slack 连接器，并填入已有 Slack 应用的 client ID 和 client secret。如果你还没有连接器，请按 [Slack MCP 设置](/cloud/share-with-your-team/shared-mcp-connections#slack)操作。
+- 必须由平台管理员为你的组织启用 **Slack Assistant**。托管运行时的可用性也需要由运维人员配置。如果页面提示缺少访问权限，请在安装前先解决。
+- 让连接器的 workspace、team 和成员授权范围与你的灰度计划保持匹配。助手会遵循这些授权。
+
+## 2. 把 manifest 合并进同一个 Slack 应用
+
+在连接器中展开 **Slack app manifest**。到 [Slack API apps](https://api.slack.com/apps) 打开同一个应用，然后进入 **App Manifest**。
+
+把生成的设置合并进已有的 manifest。保留现有的用户 OAuth 权限范围、可选用户权限范围、重定向 URL 和 MCP 设置。请添加机器人相关设置，而不是替换掉用户配置。
+
+合并后的应用需要：
+
+- 机器人显示名 `openwork`。
+- 打开 **Agents → Agent experience**。
+- 打开 **App Home → Messages Tab**，并允许消息和斜杠命令。
+- 机器人权限范围：`app_mentions:read`、`chat:write`、`im:history`、`im:read`、`im:write`、`assistant:write` 和 `commands`。
+- 机器人事件：`app_mention`、`message.im`、`app_home_opened`、`app_context_changed`、`agent_session_stopped`、`agent_session_title_changed`、`app_uninstalled` 和 `tokens_revoked`。
+
+请使用为你的连接器和部署环境生成的 URL：
+
+| 设置 | 在你的公网 API URL 下的路径 |
+| --- | --- |
+| Event Subscriptions | `/v1/integrations/slack/<connectionId>/events` |
+| Interactivity | `/v1/integrations/slack/<connectionId>/interactions` |
+| `/openwork` 命令 | `/v1/integrations/slack/<connectionId>/commands` |
+| 机器人 OAuth 重定向 | `/v1/integrations/slack/oauth/callback` |
+
+events URL 必须能通过 HTTPS 从公网访问到，Slack 会用一次 challenge 来验证它。保存 manifest；如果第一次验证失败，请在保存签名密钥后重新完成 URL 验证。
+
+<Tip>
+如果 Slack 拒绝 `features.agent_view.enabled`，请改用 Slack 的 manifest 编辑器已经导出的 agent-view 写法，并确认 **Agents** 中的 **Agent experience** 已打开。不要为了让校验通过就删除 agent view 或必需的事件。
+</Tip>
+
+## 3. 保存签名密钥并安装
+
+在 Slack 中打开 **Basic Information → App Credentials → Signing Secret**。把它直接填入连接器的 **Slack app signing secret**，然后点击 **Save secret**。不要把它留在聊天、版本控制或与他人分享的截图中。
+
+点击 **Add to Slack**，为正确的工作区授权，并在十分钟内完成。如果安装没有授予全部必需的机器人权限范围，OpenWork 会拒绝该安装。安装成功后，按钮会变成 **Reinstall in Slack**。
+
+在 Slack 的 **Event Subscriptions** 中，如有需要请重试 challenge。确认显示 **Verified**，然后 **Save Changes**。
+
+## 4. 选择回复发到哪儿
+
+打开 **Enable @openwork in Slack**。灰度期间请先打开 **Send replies privately during rollout**：回复会发到发起成员的私信。
+
+在 **Rollout limits** 下，输入以逗号分隔的频道 ID 来限制可在哪些频道使用；或把 **Allowed channel IDs** 留空以允许所有频道。留空并不会自动把机器人邀请进每个频道。符合条件的成员仍可使用私信。设置每日请求上限，并在修改限额时保存。
+
+关闭灰度私密回复后，频道回复对该频道所有人可见。在向已连接服务索取个人信息之前，先确定回复模式。
+
+## 下一步
+
+安装机器人并不会绑定任何人的账户。每位成员，包括你，都要按 [连接你的账户](/zh/slack/connect-your-account)操作并发送一条测试消息。
+
+要暂停灰度，请关闭 **Enable @openwork in Slack**。关闭新请求并不能撤回已经执行的外部动作。
