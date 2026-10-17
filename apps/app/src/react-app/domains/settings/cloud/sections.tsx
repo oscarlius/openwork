@@ -198,7 +198,7 @@ interface CloudProviderListItemProps {
 function cloudProviderRowStatus(status: CloudProviderRowStatus) {
   switch (status) {
     case "connected":
-      return <ProviderStatus tone="ready">Ready to use</ProviderStatus>;
+      return <ProviderStatus tone="ready">{t("connect.group_ready")}</ProviderStatus>;
     case "error":
     case "conflict":
       return <ProviderStatus tone="error">{cloudProviderStatusLabel(status)}</ProviderStatus>;
@@ -253,7 +253,7 @@ export interface CloudProvidersSectionProps {
 
 export function CloudProvidersSection({ actionError, actionId, busy, rows, onRefresh, onRetry, onOpenDen, onOpenModelConnections, lastVerifiedAt, additionalRows, additionalCount = 0 }: CloudProvidersSectionProps) {
   const { hasActiveOrg, activeOrgName } = useCloudSession();
-  const organizationName = activeOrgName || "your organization";
+  const organizationName = activeOrgName || t("providers.your_organization");
   const verified = lastVerifiedAt ? new Date(lastVerifiedAt) : null;
   const timestamp = verified && Number.isFinite(verified.getTime()) ? formatRelativeTime(verified.getTime()) : null;
   const providerCount = rows.length + additionalCount;
@@ -263,18 +263,18 @@ export function CloudProvidersSection({ actionError, actionId, busy, rows, onRef
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           {activeOrgName ? <OrganizationMark name={activeOrgName} /> : null}
-          <h2 id="ai-providers-organization" className="min-w-0 truncate text-base font-medium text-dls-text">From {organizationName}</h2>
-          <span className="shrink-0 rounded-full bg-blue-3 px-2 py-0.5 text-xs font-medium text-blue-11">Managed in Den</span>
+          <h2 id="ai-providers-organization" className="min-w-0 truncate text-base font-medium text-dls-text">{t("den.from_organization", { organization: organizationName })}</h2>
+          <span className="shrink-0 rounded-full bg-blue-3 px-2 py-0.5 text-xs font-medium text-blue-11">{t("den.managed_in_den")}</span>
         </div>
         <div className="-mr-2 flex shrink-0 items-center gap-1">
           {onOpenModelConnections ? <Button variant="ghost" size="sm" onClick={onOpenModelConnections}>My model connections</Button> : null}
           {onOpenDen ? <Button variant="ghost" size="sm" onClick={onOpenDen}>Open in Den<ArrowUpRight className="size-3.5" aria-hidden /></Button> : null}
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">Your organization pays for and manages these. Members call them through the OpenWork Gateway; upstream credentials never reach this device.</p>
+      <p className="text-sm text-muted-foreground">{t("den.org_managed_providers_desc")}</p>
     </div>
     {actionError ? <SettingsNotice tone="error">{actionError}</SettingsNotice> : null}
-    {busy && !providerCount ? <div role="status" aria-label="Loading organization providers" className="grid gap-2">{[0, 1].map((key) => <div key={key} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div> : null}
+    {busy && !providerCount ? <div role="status" aria-label={t("den.org_providers_loading_aria")} className="grid gap-2">{[0, 1].map((key) => <div key={key} className="h-16 animate-pulse rounded-2xl bg-muted" />)}</div> : null}
     {!busy && !providerCount ? <SettingsListEmptyState>{hasActiveOrg ? t("den.no_cloud_providers") : t("den.choose_org_for_providers")}</SettingsListEmptyState> : null}
     {providerCount ? <ProviderList>
       {rows.map((row) => <CloudProviderListItem key={row.key} actionId={actionId} row={row} onRetry={onRetry} />)}

@@ -82,10 +82,10 @@ function missingCloudMcpContextMessage(input: {
   client: OpenworkServerClient | null;
   workspaceId: string | null;
 }): string {
-  if (!input.workspaceId?.trim()) return "Select a workspace before running agent access diagnostics.";
-  if (!input.client?.baseUrl.trim()) return "Connect to the workspace server before running agent access diagnostics.";
-  if (!readDenSettings().activeOrgId?.trim()) return "Select an organization before running agent access diagnostics.";
-  return "Agent access diagnostics are unavailable for the current workspace.";
+  if (!input.workspaceId?.trim()) return t("settings.cloud_mcp_need_workspace_diag");
+  if (!input.client?.baseUrl.trim()) return t("settings.cloud_mcp_need_server_diag");
+  if (!readDenSettings().activeOrgId?.trim()) return t("settings.cloud_mcp_need_org_diag");
+  return t("settings.cloud_mcp_diag_unavailable");
 }
 
 export function readyCloudMcpToolIds(health: OpenworkCloudMcpHealth | null): string[] {
@@ -115,26 +115,26 @@ export function AgentAccessCard(props: {
     ? !props.workspaceId?.trim()
       ? {
           status: "not_checked" as const,
-          statusLabel: "Not checked",
+          statusLabel: t("updates.not_checked"),
           tone: "neutral" as const,
-          stageLabel: "Select a workspace",
-          recommendedAction: "Choose the workspace agents should use.",
+          stageLabel: t("settings.cloud_mcp_stage_select_workspace"),
+          recommendedAction: t("settings.cloud_mcp_action_choose_workspace"),
         }
       : !props.client?.baseUrl.trim()
         ? {
             status: "not_checked" as const,
-            statusLabel: "Not checked",
+            statusLabel: t("updates.not_checked"),
             tone: "neutral" as const,
-            stageLabel: "Connect the workspace server",
-            recommendedAction: "Restore the workspace server connection.",
+            stageLabel: t("settings.cloud_mcp_stage_connect_server"),
+            recommendedAction: t("settings.cloud_mcp_action_restore_server"),
           }
         : !orgSelected
           ? {
               status: "degraded" as const,
-              statusLabel: "Degraded",
+              statusLabel: t("connect.agent_status_degraded"),
               tone: "error" as const,
-              stageLabel: "Select an organization",
-              recommendedAction: "Choose the organization agents should use.",
+              stageLabel: t("calendar.select_organization"),
+              recommendedAction: t("connect.agent_action_choose_org"),
             }
           : null
     : null;
@@ -175,7 +175,7 @@ export function AgentAccessCard(props: {
       });
       updateHealth(result.health);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Could not test agent access.");
+      setError(nextError instanceof Error ? nextError.message : t("settings.cloud_mcp_test_failed"));
     } finally {
       setBusy(null);
     }
@@ -198,12 +198,12 @@ export function AgentAccessCard(props: {
       if (result.status === "skipped") {
         setError(
           result.skippedReason === "unsupported"
-            ? "This OpenWork server does not support engine refresh yet. Update OpenWork, then retry."
-            : "Select a workspace before refreshing the engine connection.",
+            ? t("settings.cloud_mcp_engine_refresh_unsupported")
+            : t("settings.cloud_mcp_need_workspace_refresh"),
         );
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Could not refresh the engine connection.");
+      setError(nextError instanceof Error ? nextError.message : t("settings.cloud_mcp_engine_refresh_failed"));
     } finally {
       setBusy(null);
     }
@@ -223,9 +223,9 @@ export function AgentAccessCard(props: {
             }
           : undefined,
       }));
-      setCopyStatus("Copied sanitized diagnostic to the clipboard.");
+      setCopyStatus(t("settings.cloud_mcp_copied_clipboard"));
     } catch {
-      setCopyStatus("Could not copy the diagnostic.");
+      setCopyStatus(t("settings.cloud_mcp_copy_failed"));
     }
   };
 
@@ -251,7 +251,7 @@ export function AgentAccessCard(props: {
         setError("Could not refresh Cloud authentication. Sign in again, then retry.");
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Could not repair agent access.");
+      setError(nextError instanceof Error ? nextError.message : t("settings.cloud_mcp_repair_failed"));
     } finally {
       setBusy(null);
     }
@@ -294,7 +294,7 @@ export function AgentAccessCard(props: {
         if (!cancelled) updateHealth(result.health);
       })
       .catch((nextError) => {
-        if (!cancelled) setError(nextError instanceof Error ? nextError.message : "Could not test agent access.");
+        if (!cancelled) setError(nextError instanceof Error ? nextError.message : t("settings.cloud_mcp_test_failed"));
       })
       .finally(() => {
         if (!cancelled) setBusy(null);
@@ -323,7 +323,7 @@ export function AgentAccessCard(props: {
           if (result.health.usable) setError(null);
         })
         .catch((nextError) => {
-          if (!cancelled) setError(nextError instanceof Error ? nextError.message : "Could not restore agent access.");
+          if (!cancelled) setError(nextError instanceof Error ? nextError.message : t("settings.cloud_mcp_restore_failed"));
         });
     };
 
@@ -351,7 +351,7 @@ export function AgentAccessCard(props: {
       <SettingsInset className="flex flex-col gap-3 bg-dls-surface sm:flex-row sm:items-center sm:justify-between" data-testid="agent-access-card">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-base font-semibold text-dls-text">Agent access ready</div>
+            <div className="text-base font-semibold text-dls-text">{t("connect.agent_stage_ready")}</div>
             <SettingsStatusBadge label={summary.statusLabel} tone={summary.tone} />
           </div>
           <div className="text-sm text-dls-secondary">
@@ -362,7 +362,7 @@ export function AgentAccessCard(props: {
           </div>
         </div>
         <Button variant="outline" size="sm" disabled={!canRun || busy !== null} onClick={() => void testNow()}>
-          {busy === "test" ? "Testing…" : "Test again"}
+          {busy === "test" ? t("settings.cloud_mcp_testing") : t("settings.cloud_mcp_test_again")}
         </Button>
       </SettingsInset>
     );
@@ -372,7 +372,7 @@ export function AgentAccessCard(props: {
     <SettingsInset className="space-y-4 bg-dls-surface" data-testid="agent-access-card">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <div className="text-base font-semibold text-dls-text">Agent access to connected services</div>
+          <div className="text-base font-semibold text-dls-text">{t("settings.cloud_mcp_agent_access_title")}</div>
           <div className="max-w-[62ch] text-sm text-dls-secondary">
             Lets agents use the exact OpenWork Cloud tools for this active workspace and organization.
           </div>
@@ -382,27 +382,27 @@ export function AgentAccessCard(props: {
 
       <div className="grid gap-2 text-sm text-dls-secondary sm:grid-cols-2">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dls-secondary">First issue</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dls-secondary">{t("settings.cloud_mcp_first_issue_label")}</div>
           <div className="mt-1 text-dls-text">{summary.stageLabel}</div>
         </div>
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dls-secondary">Recommended action</div>
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-dls-secondary">{t("connect.diagnostics_action_label")}</div>
           <div className="mt-1 text-dls-text">{summary.recommendedAction}</div>
         </div>
       </div>
 
       {health?.usable && !connectStateSummary ? (
         <div className="space-y-2 rounded-xl border border-green-6/30 bg-green-2 p-3 text-sm text-green-11">
-          <div className="font-medium">Cloud tools verified for this workspace</div>
+          <div className="font-medium">{t("settings.cloud_mcp_tools_verified")}</div>
           <div className="flex flex-wrap gap-2 font-mono text-xs">
             {readyTools.map((tool) => <span key={tool} className="rounded-md bg-green-3 px-2 py-1">{tool}</span>)}
           </div>
           <div className="text-xs">
             {health.usableByCurrentModel === null
-              ? "Current model access was not checked."
+              ? t("settings.cloud_mcp_model_unchecked")
               : health.usableByCurrentModel
-                ? "Current model can use these Cloud tools."
-                : "Current model cannot use these Cloud tools."}
+                ? t("settings.cloud_mcp_model_usable")
+                : t("settings.cloud_mcp_model_unusable")}
           </div>
         </div>
       ) : null}
@@ -411,10 +411,10 @@ export function AgentAccessCard(props: {
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" disabled={!canRun || busy !== null} onClick={() => void testNow()}>
-          {busy === "test" ? "Testing…" : "Test now"}
+          {busy === "test" ? t("settings.cloud_mcp_testing") : t("settings.cloud_mcp_test_now")}
         </Button>
         <Button size="sm" disabled={!canRun || busy !== null} onClick={() => void repairAndTest()}>
-          {busy === "repair" ? "Repairing…" : "Repair and test"}
+          {busy === "repair" ? t("settings.cloud_mcp_repairing") : t("settings.cloud_mcp_repair_and_test")}
         </Button>
       </div>
 
@@ -467,7 +467,7 @@ function AgentAccessAdvanced(props: {
               disabled={!props.canRun || props.busyLabel !== null}
               onClick={props.onRefreshEngine}
             >
-              {props.busyLabel === "refresh" ? "Refreshing engine…" : "Refresh engine connection"}
+              {props.busyLabel === "refresh" ? t("settings.cloud_mcp_refreshing_engine") : t("settings.cloud_mcp_refresh_engine")}
             </Button>
             <Button variant="outline" size="sm" disabled={!props.health} onClick={props.onCopy}>
               Copy sanitized diagnostic
@@ -494,11 +494,11 @@ function AgentAccessAdvanced(props: {
               ))}
             </div>
           ) : (
-            <div className="text-xs text-dls-secondary">Run Test now to load diagnostics for this workspace.</div>
+            <div className="text-xs text-dls-secondary">{t("settings.cloud_mcp_run_test_hint")}</div>
           )}
           {traceLines.length ? (
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">Direct probe steps</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">{t("settings.cloud_mcp_probe_steps_label")}</div>
               <div className="mt-1 space-y-0.5 font-mono text-xs text-dls-text">
                 {traceLines.map((line, index) => <div key={`${index}-${line}`}>{line}</div>)}
               </div>
@@ -506,7 +506,7 @@ function AgentAccessAdvanced(props: {
           ) : null}
           {refreshLines.length ? (
             <div>
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">Last engine refresh</div>
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-dls-secondary">{t("settings.cloud_mcp_last_refresh_label")}</div>
               <div className="mt-1 space-y-0.5 font-mono text-xs text-dls-text">
                 {refreshLines.map((line, index) => <div key={`${index}-${line}`}>{line}</div>)}
               </div>

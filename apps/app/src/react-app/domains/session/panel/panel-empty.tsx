@@ -3,6 +3,7 @@ import * as React from "react";
 import { ArrowLeft, ArrowRight, FileText, Globe, Puzzle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { t } from "@/i18n";
 import { cn } from "@/lib/utils";
 
 export type PanelEmptyActions = {
@@ -33,8 +34,8 @@ export function getPanelDestinations(
   if (actions.onOpenBrowser) {
     destinations.push({
       id: "browser",
-      label: "Browser",
-      description: "Open a new page in the built-in browser.",
+      label: t("settings.browser_title"),
+      description: t("context_panel.dest_browser_desc"),
       icon: <Globe aria-hidden="true" />,
       activate: actions.onOpenBrowser,
     });
@@ -42,8 +43,8 @@ export function getPanelDestinations(
 
   destinations.push({
     id: "files",
-    label: "Files & artifacts",
-    description: "View files and artifacts created in this session.",
+    label: t("context_panel.dest_files_label"),
+    description: t("context_panel.dest_files_desc"),
     icon: <FileText aria-hidden="true" />,
     activate: onOpenFiles,
   });
@@ -51,8 +52,8 @@ export function getPanelDestinations(
   if (actions.onOpenExtensions) {
     destinations.push({
       id: "extensions",
-      label: "Library",
-      description: "Browse the skills and connections available to your agent.",
+      label: t("extensions.title"),
+      description: t("context_panel.dest_extensions_desc"),
       icon: <Puzzle aria-hidden="true" />,
       activate: actions.onOpenExtensions,
     });
@@ -74,15 +75,15 @@ export function PanelEmpty({ onOpenBrowser, onOpenExtensions }: PanelEmptyAction
           onClick={() => setDestination("chooser")}
         >
           <ArrowLeft />
-          All destinations
+          {t("context_panel.all_destinations")}
         </Button>
         <div className="m-auto max-w-sm text-center">
           <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
             <FileText aria-hidden="true" />
           </span>
-          <h2 className="text-base font-medium text-foreground">No files or artifacts yet</h2>
+          <h2 className="text-base font-medium text-foreground">{t("context_panel.empty_files_title")}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Files and artifacts created in this session will appear here automatically.
+            {t("context_panel.empty_files_desc")}
           </p>
         </div>
       </div>
@@ -97,11 +98,11 @@ export function PanelEmpty({ onOpenBrowser, onOpenExtensions }: PanelEmptyAction
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6">
       <div className="my-auto w-full max-w-xl self-center">
-        <h2 className="text-base font-medium text-foreground">Choose a destination</h2>
+        <h2 className="text-base font-medium text-foreground">{t("context_panel.choose_destination")}</h2>
         <p className="mt-1 text-sm leading-6 text-muted-foreground">
-          Open a tool or return here whenever you want to switch.
+          {t("context_panel.choose_destination_desc")}
         </p>
-        <div className="mt-5 grid gap-2" aria-label="Panel destinations">
+        <div className="mt-5 grid gap-2" aria-label={t("context_panel.destinations_label")}>
           {destinations.map((item) => (
             <button
               key={item.id}

@@ -8,6 +8,7 @@ import {
   extensionTaxonomyLabel,
   type ExtensionTaxonomy,
 } from "../domains/settings/extension-taxonomy";
+import { t } from "@/i18n";
 import { resolveExtensionIconUrl } from "./extension-icon-src";
 
 export type ExtensionCardProps = {
@@ -102,7 +103,7 @@ export function ExtensionCard(props: ExtensionCardProps) {
           <span data-library-description className="truncate text-xs text-muted-foreground">{summary || extensionTaxonomyLabel(taxonomy)}</span>
         </span>
       </button>
-      <span data-library-status className="w-14 shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">{hidden ? "Hidden" : disabledReason ? "Blocked" : props.statusChip?.label ?? (readiness === "ready" ? "Ready" : "Set up")}</span>
+      <span data-library-status className="w-14 shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">{hidden ? t("extensions.state_hidden") : disabledReason ? t("context_panel.permission_action_deny") : props.statusChip?.label ?? (readiness === "ready" ? t("extensions.detail_ready") : t("extensions.row_chip_set_up"))}</span>
       <span data-library-action className="flex min-w-[72px] shrink-0 items-center justify-end gap-1">
         {!disabledReason && !connecting && nextActionLabel ? <Button variant="outline" size="icon-sm" aria-label={nextActionLabel} onClick={() => (onNextAction ? onNextAction() : onClick?.())}><ArrowRight data-icon="inline-start" /></Button> : null}
         {props.trailing}

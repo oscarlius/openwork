@@ -119,15 +119,18 @@ export type ExtensionDetailModalProps = {
   backLabel?: string;
 };
 
-const taxonomyDesc: Record<ExtensionTaxonomy, string> = {
-  app: "Runs on this device and gives your agent tools it can use here.",
-  connection: "An account your agent can act in, once it is signed in.",
-  mcp: "Connects as a Model Context Protocol server, giving your agent access to external tools and data.",
-  skill: "A reusable workflow that your agent can execute on demand.",
-  command: "A slash command the composer can run in this workspace.",
-  agent: "A named agent the composer can run a session as.",
-  plugin: "Extends OpenWork with additional capabilities managed by your organization.",
-};
+/** Read at render time: `t()` must not be evaluated at module scope. */
+function getTaxonomyDescriptions(): Record<ExtensionTaxonomy, string> {
+  return {
+    app: t("extensions.desc_app"),
+    connection: t("extensions.desc_connection"),
+    mcp: t("extensions.desc_mcp"),
+    skill: t("extensions.desc_skill"),
+    command: t("extensions.desc_command"),
+    agent: t("extensions.desc_agent"),
+    plugin: t("extensions.desc_plugin"),
+  };
+}
 
 const uiControlClientConfig = `{
   "mcpServers": {
@@ -241,10 +244,10 @@ export function ExtensionDetailModal({
   contentPreview,
   onReveal,
   onConnect,
-  connectLabel = "Connect",
+  connectLabel = t("mcp.connect"),
   onReconnect,
-  reconnectLabel = "Reconnect",
-  connectingLabel = "Connecting...",
+  reconnectLabel = t("mcp.action_reconnect"),
+  connectingLabel = t("workspace_list.connecting"),
   onChat,
   onShare,
   onUninstall,
@@ -256,7 +259,7 @@ export function ExtensionDetailModal({
   showEnablementCard = true,
   size = "default",
   presentation = "dialog",
-  backLabel = "Library",
+  backLabel = t("extensions.title"),
 }: ExtensionDetailModalProps) {
   "use memo";
   const resolvedIconSrc = resolveExtensionIconUrl({ iconSrc, iconSlug, serviceUrl: url });
@@ -288,12 +291,12 @@ export function ExtensionDetailModal({
       ) : null}
       {preview ? (
         <span className="rounded-md bg-blue-3 px-1.5 py-0.5 text-[10px] font-medium text-blue-11">
-          Preview
+          {t("extensions.detail_preview")}
         </span>
       ) : null}
       {beta ? (
         <span className="rounded-md bg-amber-3 px-1.5 py-0.5 text-[10px] font-medium text-amber-11">
-          Beta
+          {t("common.beta")}
         </span>
       ) : null}
     </div>
@@ -318,7 +321,7 @@ export function ExtensionDetailModal({
           <>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="min-w-0 break-words text-xl font-semibold tracking-tight text-foreground">{name}</h2>
-              <span className="text-[13px] font-normal text-muted-foreground" data-library-detail-state>{connected ? savedKeyOnly ? t("extensions.detail_key_saved") : t("extensions.detail_ready") : oauth ? "Sign in" : "Set up"}</span>
+              <span className="text-[13px] font-normal text-muted-foreground" data-library-detail-state>{connected ? savedKeyOnly ? t("extensions.detail_key_saved") : t("extensions.detail_ready") : oauth ? t("extensions.row_chip_sign_in") : t("extensions.row_chip_set_up")}</span>
             </div>
           </>
         ) : (
@@ -352,11 +355,11 @@ export function ExtensionDetailModal({
   const body = (
     <div className="space-y-5 px-px">
       {presentation === "page" ? <Table><TableBody>
-        {description ? <TableRow><TableCell className="w-24 text-muted-foreground">About</TableCell><TableCell className="whitespace-normal text-[13px]">{description}</TableCell></TableRow> : null}
-        {composerCapability ? <TableRow><TableCell className="text-muted-foreground">Type</TableCell><TableCell>{extensionTaxonomyLabel(taxonomy)}</TableCell></TableRow> : null}
-        {preview || beta ? <TableRow><TableCell className="text-muted-foreground">Release</TableCell><TableCell>{[preview ? "Preview" : null, beta ? "Beta" : null].filter(Boolean).join(", ")}</TableCell></TableRow> : null}
+        {description ? <TableRow><TableCell className="w-24 text-muted-foreground">{t("extensions.detail_about")}</TableCell><TableCell className="whitespace-normal text-[13px]">{description}</TableCell></TableRow> : null}
+        {composerCapability ? <TableRow><TableCell className="text-muted-foreground">{t("mcp.server_type")}</TableCell><TableCell>{extensionTaxonomyLabel(taxonomy)}</TableCell></TableRow> : null}
+        {preview || beta ? <TableRow><TableCell className="text-muted-foreground">{t("extensions.detail_release")}</TableCell><TableCell>{[preview ? t("extensions.detail_preview") : null, beta ? t("common.beta") : null].filter(Boolean).join(", ")}</TableCell></TableRow> : null}
       </TableBody></Table> : null}
-      {presentation === "page" && sourceLabel ? <details className="text-[13px] text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-all font-mono text-xs">{sourceLabel}</p></details> : null}
+      {presentation === "page" && sourceLabel ? <details className="text-[13px] text-muted-foreground"><summary>{t("mcp.technical_details")}</summary><p className="mt-2 break-all font-mono text-xs">{sourceLabel}</p></details> : null}
       {presentation !== "page" ? (
         <div className="text-sm leading-relaxed text-card-foreground">
           {description}
@@ -375,7 +378,7 @@ export function ExtensionDetailModal({
       {setupInstructions ? (
         <Card variant="outline" size="sm">
           <CardHeader>
-            <CardTitle>Setup</CardTitle>
+            <CardTitle>{t("plugins.setup")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm leading-relaxed text-muted-foreground">
@@ -388,13 +391,13 @@ export function ExtensionDetailModal({
       {resourceLabels.length > 0 || contributionLabels.length > 0 ? (
         <Card variant="outline" size="sm">
           <CardHeader>
-            <CardTitle>Extension manifest</CardTitle>
+            <CardTitle>{t("extensions.detail_manifest")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm">
               {resourceLabels.length > 0 ? (
                 <div>
-                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Resources</div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t("extensions.detail_resources")}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {resourceLabels.map((label) => (
                       <span key={label} className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">{label}</span>
@@ -404,7 +407,7 @@ export function ExtensionDetailModal({
               ) : null}
               {contributionLabels.length > 0 ? (
                 <div>
-                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">Contributions</div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{t("extensions.detail_contributions")}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {contributionLabels.map((label) => (
                       <span key={label} className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground">{label}</span>
@@ -481,18 +484,18 @@ export function ExtensionDetailModal({
       {!composerCapability ? (
         <Card variant="outline" size="sm">
           <CardHeader>
-            <CardTitle>Details</CardTitle>
+            <CardTitle>{t("session.details")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Type</span>
+                <span className="text-muted-foreground">{t("mcp.server_type")}</span>
                 <span className="font-medium text-card-foreground">{extensionTaxonomyLabel(taxonomy)}</span>
               </div>
 
               {url ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Endpoint</span>
+                  <span className="text-muted-foreground">{t("connect.adv_endpoint")}</span>
                   <span className="flex items-center gap-1.5 truncate font-mono text-xs text-card-foreground">
                     {url.replace(/^https?:\/\//, "").slice(0, 40)}
                     <ExternalLink size={10} className="shrink-0 text-muted-foreground" />
@@ -502,20 +505,20 @@ export function ExtensionDetailModal({
 
               {uiControl ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Launch</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_launch")}</span>
                   <span className="max-w-[300px] truncate font-mono text-xs text-card-foreground">{(launchCommand ?? fallbackUiControlCommand).join(" ")}</span>
                 </div>
               ) : null}
 
               {path && onReveal ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Location</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_location")}</span>
                   <Button
                     variant="link"
                     size="xs"
                     onClick={onReveal}
                   >
-                    Reveal in Finder
+                    {t("workspace_list.reveal_finder")}
                     <ExternalLink data-icon="inline-end" />
                   </Button>
                 </div>
@@ -523,8 +526,8 @@ export function ExtensionDetailModal({
 
               {oauth ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Authentication</span>
-                  <span className="font-medium text-card-foreground">OAuth required</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_authentication")}</span>
+                  <span className="font-medium text-card-foreground">{t("extensions.detail_oauth_required")}</span>
                 </div>
               ) : null}
 
@@ -536,38 +539,38 @@ export function ExtensionDetailModal({
               ))}
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{t("extensions.detail_status")}</span>
                 <span className={cn("font-medium", connected && !savedKeyOnly ? "text-green-11" : "text-muted-foreground")}>
                   {connected
-                    ? connectedLabel ?? (taxonomy === "plugin" ? "Installed" : "Connected")
+                    ? connectedLabel ?? (taxonomy === "plugin" ? t("skills.installed_status") : t("mcp.connected"))
                     : connecting
                       ? connectingLabel
-                      : disconnectedLabel ?? (taxonomy === "plugin" ? "Not installed" : "Not connected")}
+                      : disconnectedLabel ?? (taxonomy === "plugin" ? t("extensions.detail_not_installed") : t("config.status_not_connected"))}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Visibility</span>
-                <span className="font-medium text-card-foreground">{hidden ? "Hidden" : "Shown"}</span>
+                <span className="text-muted-foreground">{t("extensions.detail_visibility")}</span>
+                <span className="font-medium text-card-foreground">{hidden ? t("extensions.state_hidden") : t("extensions.state_shown")}</span>
               </div>
 
               {preview ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Release stage</span>
-                  <span className="font-medium text-blue-11">Preview</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_release_stage")}</span>
+                  <span className="font-medium text-blue-11">{t("extensions.detail_preview")}</span>
                 </div>
               ) : null}
 
               {beta ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Release stage</span>
-                  <span className="font-medium text-amber-11">Beta</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_release_stage")}</span>
+                  <span className="font-medium text-amber-11">{t("common.beta")}</span>
                 </div>
               ) : null}
 
               {disabledReason ? (
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-muted-foreground">Availability</span>
+                  <span className="text-muted-foreground">{t("extensions.detail_availability")}</span>
                   <span className="text-right font-medium text-amber-11">{disabledReason}</span>
                 </div>
               ) : null}
@@ -616,11 +619,11 @@ export function ExtensionDetailModal({
       {showEnablementCard && !composerCapability && !uiControl ? (
         <Card variant="outline" size="sm">
           <CardHeader>
-            <CardTitle>What this enables</CardTitle>
+            <CardTitle>{t("extensions.detail_what_enables")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-sm leading-relaxed text-muted-foreground">
-              {taxonomyDesc[taxonomy]}
+              {getTaxonomyDescriptions()[taxonomy]}
             </div>
           </CardContent>
         </Card>
@@ -642,7 +645,7 @@ export function ExtensionDetailModal({
               onClose();
             }}
           >
-            Show
+            {t("common.show")}
           </Button>
         ) : !hidden && onHide ? (
           <Button
@@ -653,18 +656,18 @@ export function ExtensionDetailModal({
               onClose();
             }}
           >
-            Hide
+            {t("common.hide")}
           </Button>
         ) : null}
       </div>
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {presentation === "dialog" ? (
           <DialogClose render={<Button variant="outline" />}>
-            Close
+            {t("common.close")}
           </DialogClose>
         ) : (
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t("common.close")}
           </Button>
         )}
         {connected && onReconnect ? (
@@ -784,13 +787,13 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
     <div className="space-y-4">
       <Card variant="outline" size="sm">
         <CardHeader>
-          <CardTitle>How to connect another client</CardTitle>
+          <CardTitle>{t("mcp.ui_control_clients_title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-2 text-sm leading-relaxed text-muted-foreground">
-            <div>OpenWork desktop starts a private localhost bridge automatically.</div>
-            <div>Your MCP client starts <span className="font-mono text-card-foreground">openwork-ui-mcp</span> over stdio; the wrapper discovers the bridge and proxies UI tools to it.</div>
-            <div>Do not point clients at the random localhost bridge URL directly.</div>
+            <div>{t("mcp.ui_control_bridge_note")}</div>
+            <div>{t("mcp.ui_control_client_start_lead")} <span className="font-mono text-card-foreground">openwork-ui-mcp</span>{t("mcp.ui_control_client_start_trail")}</div>
+            <div>{t("mcp.ui_control_no_direct_url_note")}</div>
           </div>
         </CardContent>
       </Card>
@@ -819,7 +822,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
 
       <Card variant="outline" size="sm">
         <CardHeader>
-          <CardTitle>Discovery</CardTitle>
+          <CardTitle>{t("mcp.ui_control_discovery")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="relative overflow-hidden rounded-xl bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-xl)-1px)] before:border before:border-border">
@@ -827,7 +830,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
               <TableBody>
                 <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">
                   <TableCell className="bg-muted/50 w-40 py-2 text-xs font-medium">
-                    Production discovery file
+                    {t("mcp.ui_control_discovery_prod")}
                   </TableCell>
                   <TableCell className="py-2 whitespace-normal">
                     <span className="font-mono text-xs break-all">~/Library/Application Support/com.differentai.openwork/openwork-ui-control.json</span>
@@ -835,7 +838,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
                 </TableRow>
                 <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">
                   <TableCell className="bg-muted/50 py-2 text-xs font-medium">
-                    Dev discovery file
+                    {t("mcp.ui_control_discovery_dev")}
                   </TableCell>
                   <TableCell className="py-2 whitespace-normal">
                     <span className="font-mono text-xs break-all">~/Library/Application Support/com.differentai.openwork.dev/openwork-ui-control.json</span>
@@ -843,7 +846,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
                 </TableRow>
                 <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">
                   <TableCell className="bg-muted/50 py-2 text-xs font-medium">
-                    Override
+                    {t("mcp.ui_control_discovery_override")}
                   </TableCell>
                   <TableCell className="py-2 whitespace-normal">
                     <span className="font-mono text-xs break-all">OPENWORK_UI_CONTROL_DISCOVERY=/path/to/openwork-ui-control.json</span>
@@ -852,7 +855,7 @@ function UiControlConnectionDetails(props: UiControlConnectionDetailsProps) {
                 {props.environment?.OPENWORK_UI_CONTROL_DISCOVERY ? (
                   <TableRow className="*:border-border hover:bg-transparent [&>:not(:last-child)]:border-r">
                     <TableCell className="bg-muted/50 py-2 text-xs font-medium">
-                      Current override
+                      {t("mcp.ui_control_current_override")}
                     </TableCell>
                     <TableCell className="py-2 whitespace-normal">
                       <span className="font-mono text-xs break-all">{props.environment.OPENWORK_UI_CONTROL_DISCOVERY}</span>
