@@ -7,6 +7,8 @@
  * editing raw JSON stays available as the advanced escape hatch.
  */
 
+import type { DenTranslate } from "../../../_lib/i18n/messages";
+
 type JsonRecord = Record<string, unknown>;
 
 export const GUIDED_PROVIDER_NPM = "@ai-sdk/openai-compatible";
@@ -84,25 +86,28 @@ export function normalizeAzureResourceNameInput(value: string): string {
     return trimmed;
 }
 
-export function validateGuidedCustomProvider(input: {
-    providerId: string;
-    baseUrl: string;
-    modelIds: string[];
-}): string | null {
+export function validateGuidedCustomProvider(
+    input: {
+        providerId: string;
+        baseUrl: string;
+        modelIds: string[];
+    },
+    t: DenTranslate,
+): string | null {
     if (!input.providerId.trim()) {
-        return "Give this provider an ID (for example azure-foundry).";
+        return t("denModelProvider.editor.providerIdRequired");
     }
     if (!isValidGuidedProviderId(input.providerId.trim())) {
-        return "Provider IDs can only contain letters, numbers, dashes, and underscores.";
+        return t("denModelProvider.editor.providerIdInvalid");
     }
     if (!input.baseUrl.trim()) {
-        return "Add the base URL of the OpenAI-compatible endpoint.";
+        return t("denModelProvider.editor.baseUrlRequired");
     }
     if (!/^https?:\/\//i.test(input.baseUrl.trim())) {
-        return "The base URL must start with http:// or https://";
+        return t("denModelProvider.editor.baseUrlInvalid");
     }
     if (input.modelIds.length === 0) {
-        return "List at least one model ID.";
+        return t("denModelProvider.editor.modelListRequired");
     }
     return null;
 }

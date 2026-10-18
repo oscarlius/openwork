@@ -19,6 +19,7 @@ import { DenStickyActionBar } from "../../_components/ui/sticky-action-bar";
 import { UnderlineTabs } from "../../_components/ui/tabs";
 import { DenTextarea } from "../../_components/ui/textarea";
 import { getErrorMessage, getRequestError, requestJson } from "../../_lib/den-flow";
+import { useDenT } from "../../../_lib/i18n/client";
 import {
     getLlmProviderRoute,
     getLlmProvidersRoute,
@@ -62,8 +63,16 @@ import {
 } from "./llm-provider-pickers";
 
 const SOURCE_TABS = [
-    { value: "models_dev" as const, label: "Catalog provider", icon: Cpu },
-    { value: "custom" as const, label: "Custom provider", icon: CodeXml },
+    {
+        value: "models_dev" as const,
+        labelKey: "denModelProvider.editor.sourceCatalog" as const,
+        icon: Cpu,
+    },
+    {
+        value: "custom" as const,
+        labelKey: "denModelProvider.editor.sourceCustom" as const,
+        icon: CodeXml,
+    },
 ];
 
 type EditableLlmProviderSource = (typeof SOURCE_TABS)[number]["value"];
@@ -81,6 +90,7 @@ export function LlmProviderEditorScreen({
     llmProviderId?: string;
 }) {
     const router = useRouter();
+    const t = useDenT();
     const { orgId, orgSlug, orgContext, runReauthableAction } = useOrgDashboard();
     const { llmProviders, busy, error, reloadProviders } =
         useOrgLlmProviders(orgId);
@@ -163,7 +173,7 @@ export function LlmProviderEditorScreen({
                     setCatalogError(
                         loadError instanceof Error
                             ? loadError.message
-                            : "Failed to load the provider catalog.",
+                            : t("denModelProvider.editor.catalogLoadFailed"),
                     );
                 }
             })
@@ -176,7 +186,7 @@ export function LlmProviderEditorScreen({
         return () => {
             canceled = true;
         };
-    }, [orgId]);
+    }, [orgId, t]);
 
     useEffect(() => {
         if (provider) {
@@ -272,7 +282,7 @@ export function LlmProviderEditorScreen({
                     setDetailError(
                         loadError instanceof Error
                             ? loadError.message
-                            : "Failed to load provider details.",
+                            : t("denModelProvider.editor.detailLoadFailed"),
                     );
                 }
             })
@@ -285,7 +295,7 @@ export function LlmProviderEditorScreen({
         return () => {
             canceled = true;
         };
-    }, [orgId, selectedProviderId, source]);
+    }, [orgId, selectedProviderId, source, t]);
 
     const currentMemberId = orgContext?.currentMember.id ?? null;
     const lockedMemberId = getLockMemberId(provider, currentMemberId);
@@ -519,7 +529,7 @@ export function LlmProviderEditorScreen({
             providerId: resolvedCustomProviderId,
             baseUrl: customBaseUrl,
             modelIds,
-        })) {
+        }, t)) {
             setCustomConfigText(
                 JSON.stringify(
                     buildGuidedCustomProviderConfig({
@@ -542,7 +552,7 @@ export function LlmProviderEditorScreen({
         const guided = readGuidedCustomProviderFieldsFromText(customConfigText);
         if (!guided) {
             setCustomJsonHint(
-                "This config uses advanced fields the form cannot represent — keep editing it as JSON.",
+                t("denModelProvider.editor.advancedConfigHint"),
             );
             return;
         }
@@ -557,27 +567,27 @@ export function LlmProviderEditorScreen({
 
     async function saveProvider() {
         if (!orgId) {
-            setSaveError("Organization not found.");
+            setSaveError(t("denModelProvider.editor.orgNotFound"));
             return;
         }
 
         if (provider?.source === "openwork") {
-            setSaveError("OpenWork-managed providers are controlled from OpenWork Models settings.");
+            setSaveError(t("denModelProvider.editor.openworkManaged"));
             return;
         }
 
         if (!effectiveName) {
-            setSaveError("Pick a provider so the key gets a name, or rename it yourself.");
+            setSaveError(t("denModelProvider.editor.nameRequired"));
             return;
         }
 
         if (source === "models_dev") {
             if (!selectedProviderId) {
-                setSaveError("Select a provider.");
+                setSaveError(t("denModelProvider.editor.providerRequired"));
                 return;
             }
             if (!selectedModelIds.length) {
-                setSaveError("Select at least one model.");
+                setSaveError(t("denModelProvider.editor.modelsRequired"));
                 return;
             }
         }
@@ -587,7 +597,7 @@ export function LlmProviderEditorScreen({
                 providerId: resolvedCustomProviderId,
                 baseUrl: customBaseUrl,
                 modelIds: resolvedCustomModelIds,
-            });
+            }, t);
             if (validationError) {
                 setSaveError(validationError);
                 return;
@@ -595,7 +605,7 @@ export function LlmProviderEditorScreen({
         }
 
         if (source === "custom" && customMode === "json" && !customConfigText.trim()) {
-            setSaveError("Paste a custom provider config.");
+            setSaveError(t("denModelProvider.editor.configRequired"));
             return;
         }
 
@@ -636,7 +646,7 @@ export function LlmProviderEditorScreen({
                     setVerifyFailures(failures);
                     if (failures.length > 0) {
                         setSaveError(
-                            "Some models did not answer a test completion. Fix the model list, or press Save anyway to keep them.",
+                            t("denModelProvider.editor.verifyFailed"),
                         );
                         return;
                     }
@@ -708,7 +718,7 @@ export function LlmProviderEditorScreen({
             );
 
             if (!response.ok) {
-                throw getRequestError(payload, response, `Failed to save provider (${response.status}).`);
+                throw getRequestError(payload, response, t("denModelProvider.editor.saveFailedStatus", { status: response.status }));
             }
 
             const nextProvider =
@@ -726,7 +736,7 @@ export function LlmProviderEditorScreen({
                     : (provider?.id ?? null);
             if (!nextProviderId) {
                 throw new Error(
-                    "The provider was saved, but no provider id was returned.",
+                    t("denModelProvider.editor.noProviderIdReturned"),
                 );
             }
 
@@ -738,7 +748,7 @@ export function LlmProviderEditorScreen({
             setSaveError(
                 nextError instanceof Error
                     ? nextError.message
-                    : "Could not save the provider.",
+                    : t("denInference.editor.saveFailed"),
             );
         } finally {
             setSaveBusy(false);
@@ -749,7 +759,7 @@ export function LlmProviderEditorScreen({
         return (
             <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
                 <div className="rounded-[28px] border border-gray-200 bg-white px-6 py-10 text-[15px] text-gray-500">
-                    Loading provider details...
+                    {t("denModelProvider.detail.loading")}
                 </div>
             </div>
         );
@@ -759,7 +769,7 @@ export function LlmProviderEditorScreen({
         return (
             <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
                 <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-4 text-[15px] text-red-700">
-                    {error ?? "That provider could not be found."}
+                    {error ?? t("denModelProvider.detail.notFound")}
                 </div>
             </div>
         );
@@ -791,24 +801,21 @@ export function LlmProviderEditorScreen({
     const credentialFields = credentialEnvNames.length > 1 ? (
                     <div className="grid gap-6">
                         <p className="text-[14px] text-gray-500">
-                            This provider reads several environment variables.
-                            Add a value for each one — values left blank keep
-                            what is already saved.
+                            {t("denModelProvider.editor.multiEnvHint")}
                         </p>
                         {credentialEnvNames.includes("AZURE_RESOURCE_NAME") ? (
                             <div className="rounded-[22px] border border-sky-100 bg-sky-50 px-5 py-4 text-[13px] leading-6 text-sky-900">
-                                <p className="font-semibold">Azure resource name</p>
+                                <p className="font-semibold">{t("denModelProvider.editor.azureResourceName")}</p>
                                 <p className="mt-1 text-sky-800">
-                                    Azure Foundry may show a project URL such as{" "}
+                                    {t("denModelProvider.editor.azureHintLead")}{" "}
                                     <code className="rounded-sm bg-white/70 px-1.5 py-0.5 font-mono text-[12px]">
                                         https://yourFoundryResourceName.services.ai.azure.com/api/projects/your-project
                                     </code>
-                                    . Paste that full URL here and we will save just the
-                                    resource name, for example{" "}
+                                    {t("denModelProvider.editor.azureHintMiddle")}{" "}
                                     <code className="rounded-sm bg-white/70 px-1.5 py-0.5 font-mono text-[12px]">
                                         yourFoundryResourceName
                                     </code>
-                                    .
+                                    {t("denModelProvider.editor.azureHintEnd")}
                                 </p>
                             </div>
                         ) : null}
@@ -825,7 +832,7 @@ export function LlmProviderEditorScreen({
                                         </code>
                                         {configured ? (
                                             <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700">
-                                                Saved
+                                                {t("denModelProvider.editor.savedBadge")}
                                             </span>
                                         ) : null}
                                      </span>
@@ -842,10 +849,10 @@ export function LlmProviderEditorScreen({
                                         }
                                         placeholder={
                                             configured
-                                                ? "Leave blank to keep current value"
+                                                ? t("denModelProvider.editor.keepCurrentValuePlaceholder")
                                                 : isAzureResourceName
-                                                  ? "Paste the resource name or Azure Foundry project URL"
-                                                  : `Paste the ${envName} value`
+                                                  ? t("denModelProvider.editor.resourceNamePlaceholder")
+                                                  : t("denModelProvider.editor.pasteEnvValuePlaceholder", { envName })
                                         }
                                     />
                                 </label>
@@ -855,7 +862,7 @@ export function LlmProviderEditorScreen({
                 ) : (
                     <label className="grid gap-3">
                         <span className="text-[14px] font-medium text-gray-700">
-                            API key / credential
+                            {t("denModelProvider.editor.apiKeyLabel")}
                         </span>
                         <DenInput
                             type="password"
@@ -863,8 +870,8 @@ export function LlmProviderEditorScreen({
                             onChange={(event) => setApiKey(event.target.value)}
                             placeholder={
                                 provider?.hasApiKey
-                                    ? "Leave blank to keep current credential"
-                                    : "Paste the provider credential"
+                                    ? t("denModelProvider.editor.keepCurrentCredentialPlaceholder")
+                                    : t("denModelProvider.editor.pasteCredentialPlaceholder")
                             }
                         />
                     </label>
@@ -874,18 +881,17 @@ export function LlmProviderEditorScreen({
         <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
             <div className="mb-8 flex flex-col gap-3">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                    {provider ? "Edit provider" : "Add provider"}
+                    {provider ? t("denModelProvider.editor.eyebrowEdit") : t("denModelProvider.editor.eyebrowAdd")}
                 </p>
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                     <div>
                         <h1 className="text-[34px] font-semibold tracking-[-0.07em] text-gray-950">
                             {provider
                                 ? (effectiveName || provider.name)
-                                : "Add a new LLM provider"}
+                                : t("denModelProvider.editor.addTitle")}
                         </h1>
                         <p className="mt-3 max-w-[720px] text-[16px] leading-8 text-gray-500">
-                            Pick a provider, paste a credential, choose models
-                            and who can use them. We name it for you.
+                            {t("denModelProvider.editor.subtitle")}
                         </p>
                     </div>
                 </div>
@@ -901,7 +907,7 @@ export function LlmProviderEditorScreen({
                     className="inline-flex items-center gap-2 text-[15px] font-medium text-gray-500 transition hover:text-gray-900"
                 >
                     <ArrowLeft className="h-5 w-5" />
-                    Back
+                    {t("denModelProvider.editor.back")}
                 </Link>
             </div>
 
@@ -923,10 +929,14 @@ export function LlmProviderEditorScreen({
 
             <section className="mb-8 rounded-[36px] border border-gray-200 bg-white p-8 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.24)]">
                 <h2 className="mb-6 text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                    Provider
+                    {t("denModelProvider.editor.providerHeading")}
                 </h2>
                 <UnderlineTabs
-                    tabs={SOURCE_TABS}
+                    tabs={SOURCE_TABS.map((tab) => ({
+                        value: tab.value,
+                        label: t(tab.labelKey),
+                        icon: tab.icon,
+                    }))}
                     activeTab={source}
                     onChange={setSource}
                 />
@@ -935,22 +945,22 @@ export function LlmProviderEditorScreen({
                     <div className="mt-8 grid gap-6">
                         <div className="grid gap-3">
                             <span className="text-[14px] font-medium text-gray-700">
-                                Provider
+                                {t("denModelProvider.editor.providerHeading")}
                             </span>
                             <DenCombobox
                                 value={selectedProviderId}
                                 options={catalogProviderOptions}
                                 onChange={setSelectedProviderId}
-                                ariaLabel="Provider"
-                                placeholder="Select a provider..."
-                                searchPlaceholder="Search providers..."
-                                emptyLabel="No providers match"
+                                ariaLabel={t("denModelProvider.editor.providerHeading")}
+                                placeholder={t("denModelProvider.editor.selectProviderPlaceholder")}
+                                searchPlaceholder={t("denModelProvider.editor.searchProvidersPlaceholder")}
+                                emptyLabel={t("denModelProvider.editor.noProvidersMatch")}
                             />
                         </div>
 
                         {catalogBusy ? (
                             <p className="text-[14px] text-gray-500">
-                                Loading provider catalog...
+                                {t("denModelProvider.editor.loadingCatalog")}
                             </p>
                         ) : null}
                         {catalogError ? (
@@ -961,7 +971,7 @@ export function LlmProviderEditorScreen({
 
                         {detailBusy ? (
                             <p className="text-[14px] text-gray-500">
-                                Loading provider details...
+                                {t("denModelProvider.detail.loading")}
                             </p>
                         ) : null}
                         {detailError ? (
@@ -975,27 +985,27 @@ export function LlmProviderEditorScreen({
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <p className="text-[12px] font-semibold uppercase text-gray-400">
-                                            NPM package
+                                            {t("denModelProvider.detail.npmPackage")}
                                         </p>
                                         <p className="mt-2">
                                             <span className="inline-flex max-w-full rounded-md bg-white px-3 py-1.5 font-mono text-[11px] leading-5 text-gray-700 ring-1 ring-inset ring-gray-200">
-                                                {providerNpm ?? "Not set"}
+                                                {providerNpm ?? t("denModelProvider.detail.notSet")}
                                             </span>
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-[12px] font-semibold uppercase text-gray-400">
-                                            API base
+                                            {t("denModelProvider.detail.apiBase")}
                                         </p>
                                         <p className="mt-2">
                                             <span className="inline-flex max-w-full break-all rounded-md bg-white px-3 py-1.5 font-mono text-[11px] leading-5 text-gray-700 ring-1 ring-inset ring-gray-200">
-                                                {providerApiBase ?? "Not set"}
+                                                {providerApiBase ?? t("denModelProvider.detail.notSet")}
                                             </span>
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-[12px] font-semibold uppercase text-gray-400">
-                                            Env keys
+                                            {t("denModelProvider.editor.envKeysHeading")}
                                         </p>
                                         {runtimeEnvKeys.length > 0 ? (
                                             <>
@@ -1013,18 +1023,18 @@ export function LlmProviderEditorScreen({
                                         ) : (
                                             <p className="mt-2">
                                                 <span className="inline-flex max-w-full rounded-md bg-white px-3 py-1.5 font-mono text-[11px] leading-5 text-gray-700 ring-1 ring-inset ring-gray-200">
-                                                    None listed
+                                                    {t("denModelProvider.editor.noneListed")}
                                                 </span>
                                             </p>
                                         )}
                                     </div>
                                     <div>
                                         <p className="text-[12px] font-semibold uppercase text-gray-400">
-                                            Docs
+                                            {t("denModelProvider.detail.docs")}
                                         </p>
                                         <p className="mt-2">
                                             <span className="inline-flex max-w-full break-all rounded-md bg-white px-3 py-1.5 font-mono text-[11px] leading-5 text-gray-700 ring-1 ring-inset ring-gray-200">
-                                                {providerDoc ?? "Not set"}
+                                                {providerDoc ?? t("denModelProvider.detail.notSet")}
                                             </span>
                                         </p>
                                     </div>
@@ -1035,14 +1045,12 @@ export function LlmProviderEditorScreen({
                 ) : customMode === "form" ? (
                     <div className="mt-8 grid gap-6">
                         <p className="text-[15px] text-gray-500">
-                            Connect any OpenAI-compatible endpoint — Azure AI
-                            Foundry, LiteLLM, vLLM, or an internal gateway — by
-                            describing it below. No JSON required.
+                            {t("denModelProvider.editor.customIntro")}
                         </p>
 
                         <label className="grid gap-3">
                             <span className="text-[14px] font-medium text-gray-700">
-                                Provider ID
+                                {t("denModelProvider.editor.providerIdLabel")}
                             </span>
                             <DenInput
                                 value={resolvedCustomProviderId}
@@ -1056,19 +1064,17 @@ export function LlmProviderEditorScreen({
                             />
                         </label>
                         <p className="-mt-3 text-[13px] text-gray-500">
-                            A short identifier for this provider. Filled in from
-                            the name automatically.
+                            {t("denModelProvider.editor.providerIdHint")}
                         </p>
 
                         {credentialFields}
                         <p className="-mt-3 text-[13px] text-gray-500">
-                            Used right away to check the endpoint and list the
-                            models it serves.
+                            {t("denModelProvider.editor.credentialHint")}
                         </p>
 
                         <label className="grid gap-3">
                             <span className="text-[14px] font-medium text-gray-700">
-                                Base URL
+                                {t("denModelProvider.editor.baseUrlLabel")}
                             </span>
                             <DenInput
                                 value={customBaseUrl}
@@ -1081,33 +1087,31 @@ export function LlmProviderEditorScreen({
                             />
                         </label>
                         <p className="-mt-3 text-[13px] text-gray-500">
-                            The OpenAI-compatible endpoint of the provider
-                            (usually ends in{" "}
+                            {t("denModelProvider.editor.baseUrlHintLead")}{" "}
                             <code className="rounded-sm bg-gray-100 px-1 py-0.5">
                                 /v1
                             </code>
-                            ).
+                            {t("denModelProvider.editor.baseUrlHintEnd")}
                         </p>
 
                         {probeState === "probing" ? (
                             <p className="-mt-2 text-[13px] text-gray-500">
-                                Checking the endpoint…
+                                {t("denModelProvider.editor.checkingEndpoint")}
                             </p>
                         ) : null}
                         {probeState === "ok" && probeResult ? (
                             <p className="-mt-2 text-[13px] text-emerald-700">
-                                Endpoint reachable — {probeResult.models.length}{" "}
-                                {probeResult.models.length === 1 ? "model" : "models"} available.
+                                {t("denModelProvider.editor.endpointReachable", { count: probeResult.models.length })}
                             </p>
                         ) : null}
                         {probeState === "failed" ? (
                             <p className="-mt-2 text-[13px] text-red-600">
-                                {probeResult?.hint ?? "Could not reach the endpoint with this URL and key."}
+                                {probeResult?.hint ?? t("denModelProvider.editor.endpointUnreachable")}
                             </p>
                         ) : null}
                         {probeState === "idle" && customBaseUrl.trim() && !probeCredential ? (
                             <p className="-mt-2 text-[13px] text-gray-500">
-                                Enter the API key above to load the models this endpoint serves.
+                                {t("denModelProvider.editor.enterKeyForModels")}
                             </p>
                         ) : null}
 
@@ -1115,11 +1119,10 @@ export function LlmProviderEditorScreen({
                             <div className="grid gap-3">
                                 <div className="flex flex-wrap items-center gap-3">
                                     <span className="text-[14px] font-medium text-gray-700">
-                                        Models
+                                        {t("denInference.editor.modelsHeading")}
                                     </span>
                                     <span className="rounded-full bg-gray-200 px-3 py-1 text-[12px] font-medium text-gray-700">
-                                        {resolvedCustomModelIds.length}{" "}
-                                        {resolvedCustomModelIds.length === 1 ? "model selected" : "models selected"}
+                                        {t("denModelProvider.editor.modelsSelected", { count: resolvedCustomModelIds.length })}
                                     </span>
                                 </div>
                                 <DenInput
@@ -1127,7 +1130,7 @@ export function LlmProviderEditorScreen({
                                     icon={Search}
                                     value={customModelQuery}
                                     onChange={(event) => setCustomModelQuery(event.target.value)}
-                                    placeholder="Search models..."
+                                    placeholder={t("denModelProvider.editor.searchModelsPlaceholder")}
                                 />
                                 {filteredProbeModels.length ? (
                                     <div className="max-h-72 overflow-y-auto overflow-hidden rounded-[16px] border border-gray-200 bg-white divide-y divide-gray-200">
@@ -1140,8 +1143,8 @@ export function LlmProviderEditorScreen({
                                                     title={model.id}
                                                     description={
                                                         probeResult.vendor === "azure"
-                                                            ? "Deployment"
-                                                            : "Model"
+                                                            ? t("denModelProvider.editor.rowDeployment")
+                                                            : t("denModelProvider.editor.rowModel")
                                                     }
                                                     onClick={() =>
                                                         setSelectedCustomModelIds((current) =>
@@ -1156,7 +1159,7 @@ export function LlmProviderEditorScreen({
                                     </div>
                                 ) : (
                                     <p className="text-[13px] text-gray-500">
-                                        No models match &quot;{customModelQuery}&quot;.
+                                        {t("denModelProvider.editor.noModelsMatch", { query: customModelQuery })}
                                     </p>
                                 )}
                                 <button
@@ -1164,14 +1167,14 @@ export function LlmProviderEditorScreen({
                                     onClick={() => setCustomManualModels(true)}
                                     className="justify-self-start text-[13px] font-medium text-gray-500 underline underline-offset-2 transition hover:text-gray-900"
                                 >
-                                    My model isn&apos;t listed — enter IDs manually
+                                    {t("denModelProvider.editor.enterModelIdsManually")}
                                 </button>
                             </div>
                         ) : (
                             <>
                                 <label className="grid gap-3">
                                     <span className="text-[14px] font-medium text-gray-700">
-                                        Model IDs
+                                        {t("denModelProvider.editor.modelIdsLabel")}
                                     </span>
                                     <DenTextarea
                                         value={customModelsText}
@@ -1183,9 +1186,7 @@ export function LlmProviderEditorScreen({
                                     />
                                 </label>
                                 <p className="-mt-3 text-[13px] text-gray-500">
-                                    One per line (or comma-separated). Use the model IDs
-                                    the endpoint serves — on Azure AI Foundry these are
-                                    your deployment names.
+                                    {t("denModelProvider.editor.modelIdsHint")}
                                 </p>
                                 {probeState === "ok" && probeResult ? (
                                     <button
@@ -1193,7 +1194,7 @@ export function LlmProviderEditorScreen({
                                         onClick={() => setCustomManualModels(false)}
                                         className="-mt-2 justify-self-start text-[13px] font-medium text-gray-500 underline underline-offset-2 transition hover:text-gray-900"
                                     >
-                                        Pick from the endpoint&apos;s model list instead
+                                        {t("denModelProvider.editor.pickFromEndpointList")}
                                     </button>
                                 ) : null}
                             </>
@@ -1204,13 +1205,13 @@ export function LlmProviderEditorScreen({
                             onClick={switchCustomModeToJson}
                             className="justify-self-start text-[13px] font-medium text-gray-500 underline underline-offset-2 transition hover:text-gray-900"
                         >
-                            Advanced: edit as JSON
+                            {t("denModelProvider.editor.editAsJson")}
                         </button>
                     </div>
                 ) : (
                     <div className="mt-8 grid gap-3">
                         <span className="text-[14px] font-medium text-gray-700">
-                            Custom provider JSON / JSONC
+                            {t("denModelProvider.editor.customJsonLabel")}
                         </span>
                         <DenTextarea
                             value={customConfigText}
@@ -1220,12 +1221,11 @@ export function LlmProviderEditorScreen({
                             rows={18}
                         />
                         <p className="text-[13px] text-gray-500">
-                            Paste a models.dev provider, a single provider block,
-                            or a full{" "}
+                            {t("denModelProvider.editor.customJsonHintLead")}{" "}
                             <code className="rounded-sm bg-gray-100 px-1 py-0.5">
                                 opencode.jsonc
                             </code>
-                            . Model maps are imported automatically.
+                            {t("denModelProvider.editor.customJsonHintEnd")}
                         </p>
                         {customJsonHint ? (
                             <p className="text-[13px] text-amber-700">
@@ -1237,7 +1237,7 @@ export function LlmProviderEditorScreen({
                             onClick={switchCustomModeToForm}
                             className="justify-self-start text-[13px] font-medium text-gray-500 underline underline-offset-2 transition hover:text-gray-900"
                         >
-                            Use the guided form instead
+                            {t("denModelProvider.editor.useGuidedForm")}
                         </button>
                     </div>
                 )}
@@ -1246,7 +1246,7 @@ export function LlmProviderEditorScreen({
                     <DenAutoNameField
                         value={effectiveName}
                         auto={!nameTouched || !providerName.trim()}
-                        placeholder="Pick a provider first"
+                        placeholder={t("denCommon.autoName.pickProvider")}
                         testId="llm-provider-name"
                         onChange={(nextName) => {
                             if (nextName === null) {
@@ -1268,12 +1268,12 @@ export function LlmProviderEditorScreen({
                     <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                                Credential
+                                {t("denModelProvider.editor.credentialHeading")}
                             </h2>
                         </div>
                         {provider?.hasApiKey ? (
                             <span className="rounded-full bg-emerald-50 px-4 py-2 text-[13px] font-medium text-emerald-700">
-                                Existing credential saved
+                                {t("denModelProvider.editor.existingCredentialSaved")}
                             </span>
                         ) : null}
                     </div>
@@ -1281,7 +1281,7 @@ export function LlmProviderEditorScreen({
                     {credentialFields}
                     {runtimeEnvKeys.some((envKey) => envKey.tag !== null) ? (
                         <p className="mt-6 text-[13px] leading-6 text-gray-500">
-                            On members&apos; machines and cloud workers this provider reads{" "}
+                            {t("denModelProvider.editor.runtimeEnvLead")}{" "}
                             {runtimeEnvKeys.map((envKey, index) => (
                                 <span key={envKey.declared}>
                                     {index > 0 ? ", " : null}
@@ -1292,8 +1292,8 @@ export function LlmProviderEditorScreen({
                                 </span>
                             ))}
                             {runtimeEnvKeys.some((envKey) => envKey.pending)
-                                ? ". The 5-character tag is assigned when the provider is created and stays fixed."
-                                : ", so it never collides with a key someone set themselves or with another provider of the same kind."}
+                                ? t("denModelProvider.editor.runtimeEnvPending")
+                                : t("denModelProvider.editor.runtimeEnvStable")}
                         </p>
                     ) : null}
                 </section>
@@ -1305,45 +1305,34 @@ export function LlmProviderEditorScreen({
                         <div>
                             <div className="flex flex-wrap items-center gap-3">
                                 <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                                    Models
+                                    {t("denInference.editor.modelsHeading")}
                                 </h2>
                                 {catalogDetail ? (
                                     <span className="rounded-full bg-gray-200 px-3 py-1 text-[12px] font-medium text-gray-700">
-                                        {selectedModelIds.length}{" "}
-                                        {selectedModelIds.length === 1
-                                            ? "model selected"
-                                            : "models selected"}
+                                        {t("denModelProvider.editor.modelsSelected", { count: selectedModelIds.length })}
                                     </span>
                                 ) : null}
                             </div>
                             <p className="mt-2 text-[15px] text-gray-500">
-                                Pick the exact models this provider should
-                                allow.
+                                {t("denModelProvider.editor.modelsHint")}
                             </p>
                             {isAzureCatalog ? (
                                 azureProbeState === "ok" && azureProbeResult ? (
                                     <p className="mt-2 text-[13px] text-emerald-700">
-                                        Showing the {azureProbeResult.models.length}{" "}
-                                        {azureProbeResult.models.length === 1
-                                            ? "deployment"
-                                            : "deployments"}{" "}
-                                        available on your Azure resource.
+                                        {t("denModelProvider.editor.deploymentsAvailable", { count: azureProbeResult.models.length })}
                                     </p>
                                 ) : azureProbeState === "probing" ? (
                                     <p className="mt-2 text-[13px] text-gray-500">
-                                        Checking your Azure resource for
-                                        deployments…
+                                        {t("denModelProvider.editor.checkingAzure")}
                                     </p>
                                 ) : azureProbeState === "failed" ? (
                                     <p className="mt-2 text-[13px] text-red-600">
                                         {azureProbeResult?.hint ??
-                                            "Could not list the deployments on this resource — check the resource name and key."}
+                                            t("denModelProvider.editor.azureListFailed")}
                                     </p>
                                 ) : (
                                     <p className="mt-2 text-[13px] text-gray-500">
-                                        Enter the resource name and API key
-                                        above to list only the deployments your
-                                        resource actually serves.
+                                        {t("denModelProvider.editor.azureEnterCredentials")}
                                     </p>
                                 )
                             ) : null}
@@ -1362,10 +1351,10 @@ export function LlmProviderEditorScreen({
             <section className="rounded-[36px] border border-gray-200 bg-white p-8 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.24)]">
                 <div>
                     <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                        Who can use it
+                        {t("denInference.editor.whoCanUseIt")}
                     </h2>
                     <p className="mt-2 text-[15px] text-gray-500">
-                        Grant everyone access, or pick teams and people.
+                        {t("denModelProvider.editor.accessHint")}
                     </p>
                 </div>
 
@@ -1392,7 +1381,7 @@ export function LlmProviderEditorScreen({
                     <>
                         {autoNameProviderId ? (
                             <DenBrandMark
-                                name={effectiveName || "Provider"}
+                                name={effectiveName || t("denModelProvider.editor.providerHeading")}
                                 simpleIconSlug={getProviderIconSlug(autoNameProviderId)}
                                 serviceUrl={providerDoc}
                                 className="h-6 w-6 rounded-[8px]"
@@ -1400,17 +1389,21 @@ export function LlmProviderEditorScreen({
                             />
                         ) : null}
                         <span className="truncate font-medium text-gray-950">
-                            {effectiveName || "New provider"}
+                            {effectiveName || t("denModelProvider.editor.newProviderFallback")}
                         </span>
                         <span className="text-gray-300">·</span>
                         <span className="whitespace-nowrap">
-                            {summaryModelCount} {summaryModelCount === 1 ? "model" : "models"}
+                            {t("denModelProvider.list.modelCount", { count: summaryModelCount })}
                         </span>
                         <span className="text-gray-300">·</span>
                         <span className="truncate">
                             {allMembers
-                                ? `Everyone in ${orgContext?.organization.name ?? "the organization"}`
-                                : `${selectedTeamIds.length} ${selectedTeamIds.length === 1 ? "team" : "teams"} · ${selectedMemberIds.length} ${selectedMemberIds.length === 1 ? "person" : "people"}`}
+                                ? t("denModelProvider.editor.everyoneIn", {
+                                      organization:
+                                          orgContext?.organization.name ??
+                                          t("denModelProvider.editor.theOrganization"),
+                                  })
+                                : `${t("denModelProvider.list.teamCount", { count: selectedTeamIds.length })} · ${t("denCommon.count.people", { count: selectedMemberIds.length })}`}
                         </span>
                     </>
                 }
@@ -1423,7 +1416,7 @@ export function LlmProviderEditorScreen({
                     }
                     className="px-2 text-[13px] font-medium text-gray-500 transition hover:text-gray-900"
                 >
-                    Cancel
+                    {t("denCommon.action.cancel")}
                 </Link>
                 <DenButton
                     data-testid="llm-provider-save"
@@ -1431,12 +1424,12 @@ export function LlmProviderEditorScreen({
                     onClick={() => void saveProvider()}
                 >
                     {verifyBusy
-                        ? "Verifying models..."
+                        ? t("denModelProvider.editor.verifyingModels")
                         : saveAnywayArmed
-                          ? "Save anyway"
+                          ? t("denModelProvider.editor.saveAnyway")
                           : provider
-                            ? "Save Provider"
-                            : "Create Provider"}
+                            ? t("denModelProvider.editor.saveProvider")
+                            : t("denModelProvider.editor.createProvider")}
                 </DenButton>
             </DenStickyActionBar>
         </div>

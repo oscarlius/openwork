@@ -189,7 +189,7 @@ export function LlmProvidersScreen() {
   return (
     <DashboardPageTemplate
       icon={KeyRound}
-      title="Bring your Own Keys"
+      title={t("denModelProvider.page.title")}
       description={t("denModelProvider.page.description")}
     >
       <DenCard data-testid="models-access-card" className="mb-8 grid gap-5">

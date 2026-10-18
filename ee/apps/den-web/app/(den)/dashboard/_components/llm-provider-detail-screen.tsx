@@ -12,6 +12,8 @@ import {
     getAiGatewayProviderRoute,
     getLlmProvidersRoute,
 } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { migrateLlmProviderToGateway } from "./inference-provider-data";
 import { useGatewayDashboardAccess } from "./gateway-dashboard-capability-guard";
@@ -21,23 +23,17 @@ import {
     getProviderDocUrl,
     getProviderEnvNames,
     getProviderNpmPackage,
-    LLM_PROVIDER_DETAILS_HIDDEN_MESSAGE,
-    LLM_PROVIDER_MEMBERS_HIDDEN_MESSAGE,
     useOrgLlmProviders,
 } from "./llm-provider-data";
 import { RuntimeEnvKeyChip, resolveRuntimeEnvKeys } from "./runtime-env-key";
 
-function formatCountLabel(count: number, singular: string, plural: string) {
-    return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function getLimitLabel(config: Record<string, unknown>) {
+function getLimitLabel(t: DenTranslate, config: Record<string, unknown>) {
     const limit =
         typeof config.limit === "object" && config.limit !== null
             ? (config.limit as Record<string, unknown>)
             : null;
     const context = typeof limit?.context === "number" ? limit.context : null;
-    return context ? `${context.toLocaleString()} ctx` : null;
+    return context ? t("denModelProvider.detail.contextSize", { value: context.toLocaleString() }) : null;
 }
 
 export function LlmProviderDetailScreen({
@@ -46,6 +42,7 @@ export function LlmProviderDetailScreen({
     llmProviderId: string;
 }) {
     const router = useRouter();
+    const t = useDenT();
     const gatewayEnabled = useGatewayDashboardAccess("manage-providers") === "enabled";
     const { orgId, orgSlug, runReauthableAction } = useOrgDashboard();
     const { llmProviders, busy, error, reloadProviders } =
@@ -73,7 +70,7 @@ export function LlmProviderDetailScreen({
 
         if (
             !window.confirm(
-                `Delete ${provider.name}? This will remove its saved model list and access rules.`,
+                t("denModelProvider.detail.deleteConfirm", { name: provider.name }),
             )
         ) {
             return;
@@ -90,7 +87,11 @@ export function LlmProviderDetailScreen({
                 );
 
                 if (response.status !== 204 && !response.ok) {
-                    throw getRequestError(payload, response, `Failed to delete provider (${response.status}).`);
+                    throw getRequestError(
+                        payload,
+                        response,
+                        t("denModelProvider.detail.deleteFailedStatus", { status: response.status }),
+                    );
                 }
 
                 await reloadProviders();
@@ -101,7 +102,7 @@ export function LlmProviderDetailScreen({
             setDeleteError(
                 nextError instanceof Error
                     ? nextError.message
-                    : "Could not delete the provider.",
+                    : t("denModelProvider.detail.deleteFailed"),
             );
         } finally {
             setDeleteBusy(false);
@@ -124,7 +125,7 @@ export function LlmProviderDetailScreen({
             setMigrateError(
                 nextError instanceof Error
                     ? nextError.message
-                    : "Could not move the provider to the gateway.",
+                    : t("denModelProvider.detail.moveToGatewayFailed"),
             );
         } finally {
             setMigrateBusy(false);
@@ -135,7 +136,7 @@ export function LlmProviderDetailScreen({
         return (
             <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
                 <div className="rounded-[28px] border border-gray-200 bg-white px-6 py-10 text-[15px] text-gray-500">
-                    Loading provider details...
+                    {t("denModelProvider.detail.loading")}
                 </div>
             </div>
         );
@@ -145,7 +146,7 @@ export function LlmProviderDetailScreen({
         return (
             <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
                 <div className="rounded-[28px] border border-red-200 bg-red-50 px-6 py-4 text-[15px] text-red-700">
-                    {error ?? "That provider could not be found."}
+                    {error ?? t("denModelProvider.detail.notFound")}
                 </div>
             </div>
         );
@@ -165,7 +166,7 @@ export function LlmProviderDetailScreen({
         <div className="mx-auto max-w-[1180px] px-6 py-8 md:px-8">
             <div className="mb-8 flex flex-col gap-3">
                 <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-gray-400">
-                    LLM provider
+                    {t("denModelProvider.detail.eyebrow")}
                 </p>
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                     <div>
@@ -182,7 +183,7 @@ export function LlmProviderDetailScreen({
                     className="inline-flex items-center gap-2 text-[15px] font-medium text-gray-500 transition hover:text-gray-900"
                 >
                     <ArrowLeft className="h-5 w-5" />
-                    Back to providers
+                    {t("denModelProvider.detail.backToProviders")}
                 </Link>
 
                 <div className="flex flex-wrap gap-3">
@@ -196,7 +197,7 @@ export function LlmProviderDetailScreen({
                             }}
                         >
                             <ArrowRightLeft className="h-4 w-4" />
-                            Move to gateway
+                            {t("denModelProvider.detail.moveToGateway")}
                         </DenButton>
                     ) : null}
                     {provider.canManage && provider.source !== "openwork" ? (
@@ -208,7 +209,7 @@ export function LlmProviderDetailScreen({
                                 )}
                             >
                                 <DenButton variant="secondary">
-                                    Edit Provider
+                                    {t("denModelProvider.detail.editProvider")}
                                 </DenButton>
                             </Link>
                             <DenButton
@@ -217,7 +218,7 @@ export function LlmProviderDetailScreen({
                                 onClick={() => void deleteProvider()}
                             >
                                 <Trash2 className="h-4 w-4" />
-                                Delete
+                                {t("denModelProvider.detail.delete")}
                             </DenButton>
                         </>
                     ) : null}
@@ -225,7 +226,7 @@ export function LlmProviderDetailScreen({
             </div>
 
             {gatewayEnabled && provider.source === "models_dev" && provider.credentialMode === "per_member" ? (
-                <DenNotice className="mb-6" tone="info" message="Per-member BYOK providers cannot be moved to the gateway. Their individual credentials stay unchanged. Create a separate gateway provider instead; member sign-in is supported only for Google Vertex." />
+                <DenNotice className="mb-6" tone="info" message={t("denModelProvider.detail.moveToGatewayPerMemberNotice")} />
             ) : null}
             {deleteError ? (
                 <div className="mb-6 rounded-[28px] border border-red-200 bg-red-50 px-6 py-4 text-[14px] text-red-700">
@@ -247,14 +248,10 @@ export function LlmProviderDetailScreen({
                 >
                     <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl">
                         <h2 id="move-to-gateway-title" className="text-[18px] font-semibold text-gray-950">
-                            Move “{provider.name}” to the OpenWork gateway?
+                            {t("denModelProvider.detail.moveToGatewayConfirm", { name: provider.name })}
                         </h2>
                         <p className="mt-2 text-[13px] leading-5 text-gray-500">
-                            The saved credential moves to the OpenWork server and is no longer sent to devices.
-                            Members keep the same models and access, and call them via OpenWork Gateway with their
-                            own OpenWork key. Desktop apps re-sync automatically. This provider disappears from
-                            Bring your Own Keys.
-                            If its settings or credential cannot be converted safely, the move is refused and the original provider stays unchanged.
+                            {t("denModelProvider.detail.moveToGatewayBody")}
                         </p>
                         {migrateError ? (
                             <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">
@@ -263,14 +260,14 @@ export function LlmProviderDetailScreen({
                         ) : null}
                         <div className="mt-6 flex justify-end gap-2">
                             <DenButton variant="secondary" onClick={() => setConfirmingMigrate(false)}>
-                                Cancel
+                                {t("denCommon.action.cancel")}
                             </DenButton>
                             <DenButton
                                 data-testid="llm-provider-move-to-gateway-confirm"
                                 loading={migrateBusy}
                                 onClick={() => void moveToGateway()}
                             >
-                                Move to gateway
+                                {t("denModelProvider.detail.moveToGateway")}
                             </DenButton>
                         </div>
                     </div>
@@ -281,7 +278,7 @@ export function LlmProviderDetailScreen({
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                            Provider configuration
+                            {t("denModelProvider.detail.providerConfiguration")}
                         </h2>
                     </div>
 
@@ -291,8 +288,8 @@ export function LlmProviderDetailScreen({
                         >
                             <KeyRound className="h-4 w-4" />
                             {provider.hasApiKey
-                                ? "Credential saved"
-                                : "Credential missing"}
+                                ? t("denModelProvider.detail.credentialSaved")
+                                : t("denModelProvider.badge.credentialMissing")}
                         </div>
                     )}
                 </div>
@@ -300,7 +297,7 @@ export function LlmProviderDetailScreen({
                 <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div className="rounded-[24px] bg-gray-50 p-5">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                            Provider id
+                            {t("denModelProvider.detail.providerId")}
                         </p>
                         <p className="mt-3 text-[16px] font-medium text-gray-900">
                             {provider.providerId}
@@ -308,25 +305,25 @@ export function LlmProviderDetailScreen({
                     </div>
                     <div className="rounded-[24px] bg-gray-50 p-5">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                            NPM package
+                            {t("denModelProvider.detail.npmPackage")}
                         </p>
                         <p className="mt-3 text-[16px] font-medium text-gray-900">
-                            {npmPackage ?? "Not set"}
+                            {npmPackage ?? t("denModelProvider.detail.notSet")}
                         </p>
                     </div>
                     {provider.configRedacted ? null : (
                         <div className="rounded-[24px] bg-gray-50 p-5">
                             <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                                API base
+                                {t("denModelProvider.detail.apiBase")}
                             </p>
                             <p className="mt-3 break-all text-[16px] font-medium text-gray-900">
-                                {apiBase ?? "Not set"}
+                                {apiBase ?? t("denModelProvider.detail.notSet")}
                             </p>
                         </div>
                     )}
                     <div className="rounded-[24px] bg-gray-50 p-5">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                            Updated
+                            {t("denModelProvider.detail.updated")}
                         </p>
                         <p className="mt-3 text-[16px] font-medium text-gray-900">
                             {formatProviderTimestamp(provider.updatedAt)}
@@ -336,7 +333,7 @@ export function LlmProviderDetailScreen({
 
                 {provider.configRedacted ? (
                     <p data-testid="llm-provider-details-hidden" className="mt-6 rounded-[20px] bg-gray-50 px-5 py-4 text-[14px] text-gray-600">
-                        {LLM_PROVIDER_DETAILS_HIDDEN_MESSAGE}
+                        {t("denModelProvider.detail.detailsHidden")}
                     </p>
                 ) : (
                     <div className="mt-6 flex flex-wrap gap-2">
@@ -354,7 +351,7 @@ export function LlmProviderDetailScreen({
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-[12px] font-medium text-gray-600 transition hover:bg-gray-200"
                             >
-                                Docs
+                                {t("denModelProvider.detail.docs")}
                                 <ExternalLink className="h-3.5 w-3.5" />
                             </a>
                         ) : null}
@@ -366,21 +363,17 @@ export function LlmProviderDetailScreen({
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                            Selected models
+                            {t("denModelProvider.detail.selectedModels")}
                         </h2>
                     </div>
                     <div className="rounded-full bg-gray-100 px-4 py-2 text-[13px] font-medium text-gray-600">
-                        {formatCountLabel(
-                            provider.models.length,
-                            "model",
-                            "models",
-                        )}
+                        {t("denModelProvider.list.modelCount", { count: provider.models.length })}
                     </div>
                 </div>
 
                 <div className="mt-8 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
                     {provider.models.map((model) => {
-                        const limitLabel = getLimitLabel(model.config);
+                        const limitLabel = getLimitLabel(t, model.config);
                         return (
                             <div
                                 key={model.id}
@@ -411,36 +404,36 @@ export function LlmProviderDetailScreen({
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                            Access
+                            {t("denModelProvider.detail.access")}
                         </h2>
                     </div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2 text-[13px] font-medium text-gray-600">
                         <Users className="h-4 w-4" />
                         {provider.access.allMembers
-                            ? "Everyone"
-                            : `${provider.access.memberCount + provider.access.teams.length} grants`}
+                            ? t("denModelProvider.detail.everyone")
+                            : t("denModelProvider.detail.grantCount", { count: provider.access.memberCount + provider.access.teams.length })}
                     </div>
                 </div>
 
                 {provider.access.allMembers ? (
                     <p className="mt-6 rounded-[20px] bg-gray-50 px-5 py-4 text-[14px] text-gray-600">
-                        Everyone in the organization — including members who join later — can use this provider.
+                        {t("denModelProvider.detail.accessAllMembers")}
                     </p>
                 ) : null}
 
                 <div className="mt-8 grid gap-6 xl:grid-cols-2">
                     <div className="rounded-[24px] bg-gray-50 p-5">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                            People
+                            {t("denModelProvider.detail.people")}
                         </p>
                         <div className="mt-4 grid gap-3">
                             {provider.access.membersHidden ? (
                                 <p data-testid="llm-provider-members-hidden" className="text-[14px] text-gray-500">
-                                    {`${provider.access.memberCount} ${provider.access.memberCount === 1 ? "person" : "people"}. ${LLM_PROVIDER_MEMBERS_HIDDEN_MESSAGE}`}
+                                    {t("denModelProvider.detail.membersHidden", { count: provider.access.memberCount })}
                                 </p>
                             ) : provider.access.members.length === 0 ? (
                                 <p className="text-[14px] text-gray-500">
-                                    No direct people access yet.
+                                    {t("denModelProvider.detail.noPeopleAccess")}
                                 </p>
                             ) : (
                                 provider.access.members.map((member) => (
@@ -462,12 +455,12 @@ export function LlmProviderDetailScreen({
 
                     <div className="rounded-[24px] bg-gray-50 p-5">
                         <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-gray-400">
-                            Teams
+                            {t("denModelProvider.detail.teams")}
                         </p>
                         <div className="mt-4 grid gap-3">
                             {provider.access.teams.length === 0 ? (
                                 <p className="text-[14px] text-gray-500">
-                                    No team access yet.
+                                    {t("denModelProvider.detail.noTeamAccess")}
                                 </p>
                             ) : (
                                 provider.access.teams.map((team) => (
@@ -479,10 +472,7 @@ export function LlmProviderDetailScreen({
                                             {team.name}
                                         </p>
                                         <p className="mt-1 text-[13px] text-gray-500">
-                                            Updated{" "}
-                                            {formatProviderTimestamp(
-                                                team.updatedAt,
-                                            )}
+                                            {t("denModelProvider.list.updatedOn", { date: formatProviderTimestamp(team.updatedAt) })}
                                         </p>
                                     </div>
                                 ))
@@ -495,10 +485,10 @@ export function LlmProviderDetailScreen({
             {provider.source === "custom" && !provider.configRedacted ? (
                 <section className="rounded-[36px] border border-gray-200 bg-white p-8 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.24)]">
                     <h2 className="text-[24px] font-semibold tracking-[-0.05em] text-gray-950">
-                        Custom provider payload
+                        {t("denModelProvider.detail.customPayload")}
                     </h2>
                     <p className="mt-2 text-[15px] text-gray-500">
-                        The raw provider config saved for this custom source.
+                        {t("denModelProvider.detail.customPayloadDescription")}
                     </p>
                     <pre className="mt-6 overflow-x-auto rounded-[24px] bg-[#0f172a] p-5 text-[13px] leading-6 text-slate-100">
                         {JSON.stringify(provider.providerConfig, null, 2)}

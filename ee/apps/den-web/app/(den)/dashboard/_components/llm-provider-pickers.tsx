@@ -9,6 +9,8 @@ import { DenSelectableRow } from "../../_components/ui/selectable-row";
 import { DenToggleRow } from "../../_components/ui/toggle-row";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../../_components/ui/tooltip";
 import type { DenOrgContext } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import { getProviderIconSlug, type DenModelsDevProviderSummary } from "./llm-provider-data";
 
 /**
@@ -19,12 +21,13 @@ import { getProviderIconSlug, type DenModelsDevProviderSummary } from "./llm-pro
 export function buildCatalogProviderOptions(
     catalogProviders: DenModelsDevProviderSummary[],
     describe?: (catalogProvider: DenModelsDevProviderSummary) => string,
+    t?: DenTranslate,
 ): DenComboboxOption[] {
     return catalogProviders.map((catalogProvider) => ({
         value: catalogProvider.id,
         label: catalogProvider.name,
         description: describe ? describe(catalogProvider) : catalogProvider.id,
-        meta: `${catalogProvider.modelCount} ${catalogProvider.modelCount === 1 ? "model" : "models"}`,
+        meta: t ? t("denModelProvider.picker.modelCount", { count: catalogProvider.modelCount }) : `${catalogProvider.modelCount} ${catalogProvider.modelCount === 1 ? "model" : "models"}`,
         icon: (
             <DenBrandMark
                 name={catalogProvider.name}
@@ -44,7 +47,7 @@ export function ProviderModelPicker({
     models,
     selectedModelIds,
     onChange,
-    emptyLabel = "Select a provider to browse its models.",
+    emptyLabel,
     layout = "rows",
 }: {
     models: ProviderModelOption[] | null;
@@ -53,6 +56,7 @@ export function ProviderModelPicker({
     emptyLabel?: string;
     layout?: "rows" | "cards";
 }) {
+    const t = useDenT();
     const [query, setQuery] = useState("");
     const filtered = useMemo(() => {
         const normalized = query.trim().toLowerCase();
@@ -80,7 +84,7 @@ export function ProviderModelPicker({
                     icon={Search}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search models..."
+                    placeholder={t("denModelProvider.picker.searchModelsPlaceholder")}
                 />
             </div>
             {models ? (
@@ -135,12 +139,12 @@ export function ProviderModelPicker({
                     )
                 ) : (
                     <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                        No models match <span className="font-medium text-gray-700">&quot;{query}&quot;</span>.
+                        {t("denModelProvider.picker.noModelsMatch", { query })}
                     </div>
                 )
             ) : (
                 <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                    {emptyLabel}
+                    {emptyLabel ?? t("denModelProvider.picker.selectProviderEmpty")}
                 </div>
             )}
         </>
@@ -174,6 +178,7 @@ export function ProviderAccessPicker({
     singleAudience?: boolean;
     everyoneDescription?: string;
 }) {
+    const t = useDenT();
     const [accessTab, setAccessTab] = useState<"teams" | "people">("teams");
     const [accessQuery, setAccessQuery] = useState("");
     const { allMembers, memberIds, teamIds } = value;
@@ -217,15 +222,15 @@ export function ProviderAccessPicker({
                 <DenToggleRow
                     icon={Users}
                     testId={`${testIdPrefix}-all-members`}
-                    title={`Everyone in ${orgContext?.organization.name ?? "this organization"}`}
-                    description={everyoneDescription ?? `All ${orgContext?.members.length ?? 0} current members — and anyone who joins later — can use these models.`}
+                    title={t("denModelProvider.picker.everyoneIn", { name: orgContext?.organization.name ?? t("denModelProvider.picker.thisOrganization") })}
+                    description={everyoneDescription ?? t("denModelProvider.picker.everyoneDescription", { count: orgContext?.members.length ?? 0 })}
                     checked={allMembers}
                     onChange={(checked) => onChange({ ...value, ...(singleAudience ? { memberIds: [], teamIds: [] } : {}), allMembers: checked })}
                 />
             </div>
 
             {allMembers ? (
-                <p className="mt-3 text-[13px] text-gray-400">Turn off “Everyone” to pick specific teams and people.</p>
+                <p className="mt-3 text-[13px] text-gray-400">{t("denModelProvider.picker.turnOffEveryone")}</p>
             ) : null}
 
             <div className={allMembers ? "pointer-events-none select-none opacity-45" : undefined} aria-disabled={allMembers}>
@@ -239,7 +244,7 @@ export function ProviderAccessPicker({
                         className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition ${accessTab === "teams" ? "bg-white text-gray-900 shadow-xs" : "hover:text-gray-700"}`}
                     >
                         <Users className="h-4 w-4" />
-                        {`Teams (${teamIds.length})`}
+                        {t("denModelProvider.picker.teamsTab", { count: teamIds.length })}
                     </button>
                     <button
                         type="button"
@@ -250,7 +255,7 @@ export function ProviderAccessPicker({
                         className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 transition ${accessTab === "people" ? "bg-white text-gray-900 shadow-xs" : "hover:text-gray-700"}`}
                     >
                         <User className="h-4 w-4" />
-                        {`People (${memberIds.length})`}
+                        {t("denModelProvider.picker.peopleTab", { count: memberIds.length })}
                     </button>
                 </div>
 
@@ -260,7 +265,7 @@ export function ProviderAccessPicker({
                         icon={Search}
                         value={accessQuery}
                         onChange={(event) => setAccessQuery(event.target.value)}
-                        placeholder={accessTab === "teams" ? "Search teams..." : "Search people..."}
+                        placeholder={accessTab === "teams" ? t("denModelProvider.picker.searchTeamsPlaceholder") : t("denModelProvider.picker.searchPeoplePlaceholder")}
                     />
                 </div>
 
@@ -274,19 +279,19 @@ export function ProviderAccessPicker({
                                         selected={teamIds.includes(team.id)}
                                         leading={<Users className="h-4 w-4 text-gray-400" />}
                                         title={team.name}
-                                        description={`${team.memberIds.length} ${team.memberIds.length === 1 ? "member" : "members"}`}
+                                        description={t("denModelProvider.picker.memberCount", { count: team.memberIds.length })}
                                         onClick={() => toggleTeam(team.id)}
                                     />
                                 ))}
                             </div>
                         ) : (
                             <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                                No teams match <span className="font-medium text-gray-700">&quot;{accessQuery}&quot;</span>.
+                                {t("denModelProvider.picker.noTeamsMatch", { query: accessQuery })}
                             </div>
                         )
                     ) : (
                         <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                            Create teams from the Members page before assigning team access.
+                            {t("denModelProvider.picker.noTeamsHint")}
                         </div>
                     )
                 ) : orgContext?.members.length ? (
@@ -314,7 +319,7 @@ export function ProviderAccessPicker({
                                         aside={
                                             locked ? (
                                                 <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
-                                                    Locked
+                                                    {t("denModelProvider.picker.locked")}
                                                 </span>
                                             ) : undefined
                                         }
@@ -325,12 +330,12 @@ export function ProviderAccessPicker({
                         </div>
                     ) : (
                         <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                            No people match <span className="font-medium text-gray-700">&quot;{accessQuery}&quot;</span>.
+                            {t("denModelProvider.picker.noPeopleMatch", { query: accessQuery })}
                         </div>
                     )
                 ) : (
                     <div className="mt-4 rounded-[24px] border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-[15px] text-gray-500">
-                        No people are available to assign yet.
+                        {t("denModelProvider.picker.noPeopleAvailable")}
                     </div>
                 )}
             </div>
