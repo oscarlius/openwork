@@ -38,10 +38,10 @@ const DEN_MESSAGE_TABLES: Record<DenLocale, DenMessageTable> = {
   zh: denMessagesZh,
 };
 
+const DEN_MESSAGE_KEY_SET = new Set<string>(Object.keys(denMessagesEn));
+
 /** Every key, in declaration order. Used by `pnpm -C ee/apps/den-web i18n:check`. */
 export const DEN_MESSAGE_KEYS: DenMessageKey[] = Object.keys(denMessagesEn).filter(isDenMessageKey);
-
-const DEN_MESSAGE_KEY_SET = new Set<string>(DEN_MESSAGE_KEYS);
 
 /** Runtime check for a key that really is in the schema (`en.ts`). */
 export function isDenMessageKey(value: string): value is DenMessageKey {
