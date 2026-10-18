@@ -1,5 +1,7 @@
 // Owned here: reload vocabulary is part of the extension manifest contract.
 // types.ts re-exports it for the rest of the app.
+import { t } from "../i18n";
+
 export type ReloadReason = "plugins" | "skills" | "mcp" | "config" | "agents" | "commands";
 
 export type OpenWorkExtensionSourceFormat =
@@ -201,7 +203,7 @@ export const BUILT_IN_OPENWORK_EXTENSION_MANIFESTS: OpenWorkExtensionManifest[] 
     ],
     contributions: [
       { type: "settings-panel", ref: "openwork.ollama.settings", location: "settings-detail" },
-      { type: "test-action", ref: "openwork.ollama.listModels", label: "Check local models" },
+      { type: "test-action", ref: "openwork.ollama.listModels", get label() { return t("extensions.ollama_check_local_models"); } },
       { type: "composer-prompt", prompt: "Use the Ollama extension to ", location: "composer" },
     ],
     enablement: [

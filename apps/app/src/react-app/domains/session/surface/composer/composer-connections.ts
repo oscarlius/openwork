@@ -1,4 +1,5 @@
 import type { DenExternalMcpConnection } from "@/app/lib/den";
+import { t } from "@/i18n";
 import type { McpServerEntry, McpStatus, McpStatusMap } from "@/app/types";
 import { canMemberAuthorizeConnection, connectionNeedsReconnect } from "@/react-app/domains/connections/native-provider-connections";
 import {
@@ -16,7 +17,7 @@ export function orgMcpConnectionStatus(connection: DenExternalMcpConnection): Mc
   if (isOrgMcpConnectionReady(connection)) return { status: "connected" };
   if (connectionNeedsReconnect(connection)) return { status: "reconnect_required" };
   if (connection.credentialMode === "shared") {
-    return { status: "failed", error: "Organization setup is required." };
+    return { status: "failed", error: t("connection.org_setup_required") };
   }
   return { status: "needs_auth" };
 }

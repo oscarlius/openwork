@@ -1,12 +1,29 @@
+import { t } from "@/i18n";
+
 export type ComputerTarget = "cloud" | "desktop";
 
 export function isComputerTarget(value: string): value is ComputerTarget {
   return value === "cloud" || value === "desktop";
 }
 
+// `value` and `label` are the @mention routing tokens sent with the prompt;
+// keep them ASCII and stable. Only the description is user-facing, so it
+// resolves lazily through t() instead of at module load.
 export const COMPUTER_MENTIONS = [
-  { id: "computer:cloud", kind: "computer", value: "cloud", label: "cloud", description: "Start a task on your cloud computer" },
-  { id: "computer:desktop", kind: "computer", value: "desktop", label: "desktop", description: "Start a task on your connected desktop computer" },
+  {
+    id: "computer:cloud",
+    kind: "computer",
+    value: "cloud",
+    label: "cloud",
+    get description() { return t("composer.mention_cloud_desc"); },
+  },
+  {
+    id: "computer:desktop",
+    kind: "computer",
+    value: "desktop",
+    label: "desktop",
+    get description() { return t("composer.mention_desktop_desc"); },
+  },
 ] satisfies { id: string; kind: "computer"; value: ComputerTarget; label: string; description: string }[];
 
 /** Use the same Connect handoff as a natural-language remote-task request. */

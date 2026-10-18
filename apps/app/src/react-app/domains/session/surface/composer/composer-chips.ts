@@ -1,5 +1,6 @@
 import { getMediaBadge } from "@/components/chat/utils";
 import { formatAttachmentBytes } from "@/app/lib/v2-prompt-context";
+import { t } from "@/i18n";
 
 import { humanizeCapabilityName } from "./composer-plus-menu-model";
 import { composerConnectorLogoUrls } from "./composer-connector-logos";
@@ -110,9 +111,11 @@ export function lineCount(text: string): number {
 }
 
 export function pastedTextBadge(lines: number): ComposerBadge {
+  const text = t("composer.pasted_text");
   return {
-    kind: "pasted", label: "Pasted text", meta: `${lines} line${lines === 1 ? "" : "s"}`,
-    title: "Pasted text", tone: "gray", slot: { icon: "lines" }, disclosure: true,
+    kind: "pasted", label: text,
+    meta: lines === 1 ? t("composer.pasted_line_count_one", { count: lines }) : t("composer.pasted_line_count_other", { count: lines }),
+    title: text, tone: "gray", slot: { icon: "lines" }, disclosure: true,
   };
 }
 

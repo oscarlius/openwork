@@ -11,6 +11,7 @@ import type { OpenTarget } from "@/react-app/domains/session/artifacts/open-targ
 import { usePlatform } from "@/react-app/kernel/platform";
 import { useOpenTargets, type OpenTargetOptions } from "@/lib/target-provider";
 import { localArtifactPath, nativeFileAction } from "@/react-app/domains/session/artifacts/resolve-open-target";
+import { t } from "@/i18n";
 
 const SUPPORTED_PANEL_PREVIEWS = new Set(["markdown", "code", "sheet", "slides", "image", "pdf", "html", "text"]);
 

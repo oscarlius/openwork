@@ -6,6 +6,8 @@
 // Super key elsewhere. The key part is derived from `KeyboardEvent.code` when
 // possible because macOS Option rewrites `event.key` (Option+1 is "¡").
 
+import { t } from "@/i18n";
+
 export type ShortcutOs = "macos" | "other";
 
 export type ShortcutKeyEvent = Pick<
@@ -82,18 +84,22 @@ export function formatChord(chord: string, os: ShortcutOs): string {
 }
 
 /** Chords the app already uses. A model shortcut may not take them. */
-const BUILT_IN_CHORDS: ReadonlyArray<{ chord: string; label: string; os?: ShortcutOs }> = [
-  { chord: "Mod+Shift+F", label: "Search sessions" },
-  { chord: "Mod+Shift+T", label: "Previous tab" },
-  { chord: "Ctrl+Shift+M", label: "Next saved model", os: "macos" },
-  { chord: "Mod+Shift+M", label: "Next saved model", os: "other" },
-  { chord: "Ctrl+Shift+T", label: "Cycle reasoning backward", os: "macos" },
-  { chord: "Mod+Alt+T", label: "Cycle reasoning", os: "other" },
-  { chord: "Mod+Alt+Shift+T", label: "Cycle reasoning backward", os: "other" },
-  { chord: "Mod+Alt+/", label: "Change model" },
-  { chord: "Ctrl+Shift+F", label: "Toggle Fast", os: "macos" },
-  { chord: "Mod+Alt+F", label: "Toggle Fast", os: "other" },
-];
+// Labels are localized lazily (inside this function) so `t()` is never called
+// at module load, when the active locale has not yet been set.
+function getBuiltInChords(): ReadonlyArray<{ chord: string; label: string; os?: ShortcutOs }> {
+  return [
+    { chord: "Mod+Shift+F", label: t("session.palette_title_sessions") },
+    { chord: "Mod+Shift+T", label: t("shortcut.previous_tab") },
+    { chord: "Ctrl+Shift+M", label: t("settings.sc_chat_next_model"), os: "macos" },
+    { chord: "Mod+Shift+M", label: t("settings.sc_chat_next_model"), os: "other" },
+    { chord: "Ctrl+Shift+T", label: t("shortcut.cycle_reasoning_backward"), os: "macos" },
+    { chord: "Mod+Alt+T", label: t("settings.sc_chat_cycle_reasoning"), os: "other" },
+    { chord: "Mod+Alt+Shift+T", label: t("shortcut.cycle_reasoning_backward"), os: "other" },
+    { chord: "Mod+Alt+/", label: t("shortcut.change_model") },
+    { chord: "Ctrl+Shift+F", label: t("settings.sc_chat_toggle_fast"), os: "macos" },
+    { chord: "Mod+Alt+F", label: t("settings.sc_chat_toggle_fast"), os: "other" },
+  ];
+}
 
 export type ChordProblem =
   | { kind: "needs_modifier" }
@@ -109,7 +115,7 @@ export function chordProblem(chord: string, os: ShortcutOs): ChordProblem | null
   const primary = modifiers.has("Mod") || modifiers.has("Ctrl");
   const secondary = modifiers.has("Alt") || modifiers.has("Shift");
   if (!primary || !secondary) return { kind: "needs_modifier" };
-  const builtIn = BUILT_IN_CHORDS.find((entry) => entry.chord === chord && (!entry.os || entry.os === os));
+  const builtIn = getBuiltInChords().find((entry) => entry.chord === chord && (!entry.os || entry.os === os));
   return builtIn ? { kind: "built_in", label: builtIn.label } : null;
 }
 

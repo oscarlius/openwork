@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react";
 import { Building, Check, Cloud, Laptop, Lock } from "lucide-react";
 import type { ModelOption, ModelRef } from "@/app/types";
+import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActionContextMenu } from "@/components/ui/action-context-menu";
@@ -9,7 +10,7 @@ import { AutoPickerRecovery, useObservedAutoAccessSnapshot } from "@/react-app/d
 import { autoNotOffered, autoPickerCopy, autoQuietlyUnavailable, freeAutoSwitchedOff, type AutoPickerState } from "@/app/lib/inference-access";
 import type { MenuAction } from "@/components/ui/action-menu-model";
 import { Command, CommandCollection, CommandGroup, CommandGroupLabel, CommandHeader, CommandInput, CommandItem, CommandList, CommandPanel } from "@/components/ui/command";
-import { immutableModelPin, isAutoModel, isPinModelShortcut, markExplicitModelChoice, modelGroups, modelSource, modelSubtitle, modelTitle, orderedModelPins, retainedModelCopy, withAutoDefaultPin, MODEL_SOURCE_LABELS, type ModelGroup, type ModelPickerCatalogState, type RetainedModelSelection } from "./model-catalog";
+import { immutableModelPin, isAutoModel, isPinModelShortcut, markExplicitModelChoice, modelGroups, modelSource, modelSubtitle, modelTitle, orderedModelPins, pinnedGroupLabel, retainedModelCopy, withAutoDefaultPin, MODEL_SOURCE_LABELS, type ModelGroup, type ModelPickerCatalogState, type RetainedModelSelection } from "./model-catalog";
 import { modelRefKey, useModelCollectionsStore } from "@/react-app/domains/session/models/model-collections-store";
 import { PickerNotice } from "./picker-notice";
 import { useModelShortcutsStore } from "@/react-app/domains/shortcuts/model-shortcuts-store";
@@ -27,7 +28,7 @@ function ProviderMark({ model, description, retained = false }: { model: ModelRe
   </div>;
 }
 
-function ModelLoadingRows({ rows = 3, label = "Loading models", still = false }: { rows?: number; label?: string; still?: boolean }) {
+function ModelLoadingRows({ rows = 3, label = t("model_picker.loading_models"), still = false }: { rows?: number; label?: string; still?: boolean }) {
   // `still`: the rest of the list did not load; placeholders hold its place without suggesting it is loading.
   return <div role="status" aria-label={label} data-testid={still ? "model-catalog-unloaded" : "model-catalog-loading"} className={still ? "px-2 pb-2 [&_[data-slot=skeleton]]:animate-none [&_[data-slot=skeleton]]:bg-gray-4" : "px-2 pb-2"}>
     {Array.from({ length: rows }, (_, index) => index).map((index) => <div key={index} className="flex h-11 items-center gap-2 px-2"><Skeleton className="size-4 rounded" /><div className="flex flex-1 flex-col gap-1.5"><Skeleton className="h-2.5 w-36 rounded" /><Skeleton className="h-2.5 w-18 rounded" /></div><span className="size-4" /></div>)}
@@ -97,6 +98,9 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
   const [highlighted, setHighlighted] = useState<ModelOption | null>(null);
   const [retryBusy, setRetryBusy] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
+  const searchAllModelsLabel = t("model_picker.search_all_aria");
+  // The input is looked up by its accessible name, so both sides must read the same translated string.
+  const findSearchInput = () => root.current?.querySelector<HTMLInputElement>(`[aria-label="${searchAllModelsLabel}"]`);
   const blockedAuto = (option: ModelRef) => autoRow?.state !== undefined && autoRow.state !== "ready" && modelRefKey(option) === modelRefKey(autoRow.model);
   const canSelect = (option: ModelOption) => !option.disabled && !blockedAuto(option) && options.some((item) => modelRefKey(item) === modelRefKey(option) && !item.disabled);
   const select = (option: ModelOption) => { if (canSelect(option)) onSelect(option); };
@@ -107,14 +111,14 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
     if (!focusAlternative) return;
     const frame = requestAnimationFrame(() => {
       const row = [...(root.current?.querySelectorAll<HTMLElement>("[data-model-key]") ?? [])].find((item) => item.dataset.modelKey === alternativeKey);
-      const target = row ?? root.current?.querySelector<HTMLInputElement>('[aria-label="Search all models"]');
+      const target = row ?? findSearchInput();
       target?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
-  }, [focusAlternative, alternativeKey]);
+  }, [focusAlternative, alternativeKey, searchAllModelsLabel]);
   const clearSearch = () => {
     onQueryChange("");
-    root.current?.querySelector<HTMLInputElement>('[aria-label="Search all models"]')?.focus({ preventScroll: true });
+    findSearchInput()?.focus({ preventScroll: true });
   };
   const retry = async () => {
     if (!catalogState?.onRetry || retryBusy) return;
@@ -131,14 +135,14 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
   const retained = retainedSelection && modelRefKey(retainedSelection.model) === modelRefKey(current)
     && !options.some((option) => modelRefKey(option) === modelRefKey(current) && !option.disabled) ? retainedSelection : undefined;
   const retainedCopy = retained ? retainedModelCopy(retained.reason) : null;
-  const retainedName = retained ? (isAutoModel(retained.model) ? "Auto" : retained.title ? modelTitle({ ...retained.model, title: retained.title, description: retained.description }) : "Saved model") : "";
+  const retainedName = retained ? (isAutoModel(retained.model) ? "Auto" : retained.title ? modelTitle({ ...retained.model, title: retained.title, description: retained.description }) : t("model_picker.retained_saved_model")) : "";
   const retainedVisible = retained && (!query.trim() || `${retainedName} ${retained.description ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
   const retainedState = retained && isAutoModel(retained.model) && autoRow && autoRow.state !== "ready" ? autoPickerCopy(autoRow.state, false, undefined, autoRow.code, autoRow.resetsAt).subtitle : retainedCopy?.subtitle;
   const retainedSubtitle = [retained && !isAutoModel(retained.model) ? retained.description?.trim() : null, retainedState].filter(Boolean).join(" · ");
   // A saved model that was pinned stays where the person pinned it, at the top of Pinned.
   const retainedPinned = Boolean(retained && favorites.some((favorite) => modelRefKey(favorite) === modelRefKey(retained.model)));
-  const retainedLabel = retainedPinned ? "Pinned" : "Saved selection";
-  const mergedLabel = retainedVisible && retainedPinned && groups[0]?.value === "Pinned" ? "Pinned" : null;
+  const retainedLabel = retainedPinned ? pinnedGroupLabel() : t("model_picker.saved_selection");
+  const mergedLabel = retainedVisible && retainedPinned && groups[0]?.value === pinnedGroupLabel() ? pinnedGroupLabel() : null;
   const verifiedDate = catalogState?.lastVerifiedAt ? new Date(catalogState.lastVerifiedAt) : null;
   const verified = verifiedDate && Number.isFinite(verifiedDate.valueOf()) ? verifiedDate : null;
   return <div ref={root} className="flex min-h-0 flex-1 flex-col" onKeyDownCapture={(event) => {
@@ -150,24 +154,24 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
     event.preventDefault(); event.stopPropagation(); toggle(option);
   }}>
     <Command items={groups} filter={null} value={query} onValueChange={onQueryChange}>
-      <CommandHeader><CommandInput ref={searchInputRef} autoFocus={autoFocusSearch} aria-label="Search all models" placeholder="Search models…" className="h-8 text-base sm:text-base md:text-base lg:text-sm" /></CommandHeader>
+      <CommandHeader><CommandInput ref={searchInputRef} autoFocus={autoFocusSearch} aria-label={searchAllModelsLabel} placeholder={t("settings.search_models")} className="h-8 text-base sm:text-base md:text-base lg:text-sm" /></CommandHeader>
       {/* The list sizes to its rows so placeholders after it stay in view; this panel does the scrolling. */}
       <CommandPanel className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [&>[data-slot=scroll-area]]:h-auto">
-        {retainedVisible ? <div data-testid="retained-selected-model" aria-disabled="true" aria-label={`${retainedName}, current model, ${retainedSubtitle}`} className="px-2 pt-2">
+        {retainedVisible ? <div data-testid="retained-selected-model" aria-disabled="true" aria-label={[retainedName, t("model_picker.current_model"), retainedSubtitle].filter(Boolean).join(", ")} className="px-2 pt-2">
           <p className="flex h-7 items-center px-2 text-xs text-muted-foreground">{retainedLabel}</p>
           <div className="flex min-h-11 items-center gap-2 rounded-md px-2 py-1 text-sm opacity-55">
             <ProviderMark model={retained.model} description={retained.description} retained />
             <span className="min-w-0 flex-1 leading-[18px]"><span className="block truncate font-medium">{retainedName}</span><span className="block text-muted-foreground">{retainedSubtitle}</span></span>
-            <span className="flex size-4 shrink-0 items-center justify-center">{retained.reason === "policy" ? <Lock aria-label="Blocked" strokeWidth={1.5} className="size-4" /> : <Check aria-hidden="true" className="size-4" />}</span>
+            <span className="flex size-4 shrink-0 items-center justify-center">{retained.reason === "policy" ? <Lock aria-label={t("context_panel.permission_action_deny")} strokeWidth={1.5} className="size-4" /> : <Check aria-hidden="true" className="size-4" />}</span>
           </div>
         </div> : null}
         {loading && !hasOptions ? <ModelLoadingRows /> : null}
         {!loading && groups.length === 0 && query.trim() ? <div role="status" className="flex flex-col items-center gap-1 px-4 py-7 text-center text-sm">
-          <p>No models match “{query.trim()}”</p><p className="text-muted-foreground">Try a shorter name, or search by provider.</p>
-          <Button size="sm" variant="outline" className="mt-2" onClick={clearSearch}>Clear search</Button>
+          <p>{t("model_picker.no_models_match_query", { query: query.trim() })}</p><p className="text-muted-foreground">{t("model_picker.no_models_match_hint")}</p>
+          <Button size="sm" variant="outline" className="mt-2" onClick={clearSearch}>{t("model_picker.clear_search")}</Button>
         </div> : null}
         {empty ? <div role="status" className="flex flex-col items-center gap-1 px-4 py-7 text-center text-sm" data-testid="model-catalog-empty">
-          <p>No models yet</p><p className="text-muted-foreground">{onConnectProvider ? <>Connect a provider, or turn Auto back on in {onOpenProviderSettings ? <button type="button" className="text-foreground underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none" onClick={onOpenProviderSettings}>AI providers</button> : "AI providers"}.</> : "Your organization manages model access. Ask your workspace owner or admin."}</p>
+          <p>{t("model_picker.no_models_yet")}</p><p className="text-muted-foreground">{onConnectProvider ? <>{t("model_picker.empty_connect_lead")} {onOpenProviderSettings ? <button type="button" className="text-foreground underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none" onClick={onOpenProviderSettings}>{t("model_picker.ai_providers")}</button> : t("model_picker.ai_providers")}{t("model_picker.empty_connect_tail")}</> : t("model_picker.empty_org_managed")}</p>
         </div> : null}
         <CommandList>
           {(group: ModelGroup) => <CommandGroup key={group.value} items={group.items}>
@@ -179,18 +183,18 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
               const active = modelRefKey(current) === key;
               const autoState = autoRow && modelRefKey(autoRow.model) === key ? autoRow.state : undefined;
               const blocked = !canSelect(option);
-              const subtitle = autoState ? autoPickerCopy(autoState, false, undefined, autoRow?.code, autoRow?.resetsAt).subtitle : active && failed ? `${modelSubtitle(option)}${modelSubtitle(option) ? " · " : ""}availability not verified` : modelSubtitle(option);
-              const pinLabel = pinned.has(key) ? "Unpin" : "Pin to top";
+              const subtitle = autoState ? autoPickerCopy(autoState, false, undefined, autoRow?.code, autoRow?.resetsAt).subtitle : active && failed ? `${modelSubtitle(option)}${modelSubtitle(option) ? " · " : ""}${t("model_picker.availability_not_verified")}` : modelSubtitle(option);
+              const pinLabel = pinned.has(key) ? t("model_picker.unpin") : t("model_picker.pin_to_top");
               const actions: MenuAction[] = [
-                { type: "item", id: "pin", label: fixed ? "Pinned by your org" : pinLabel, webContent: fixed ? undefined : menuChord(pinLabel, "⇧P"), disabled: fixed || blocked, onSelect: () => toggle(option) },
-                { type: "item", id: "default", label: "Set as workspace default", disabled: !onSetWorkspaceDefault || blocked, onSelect: async () => { if (canSelect(option) && onSetWorkspaceDefault) { const saved = await onSetWorkspaceDefault(option, active ? currentBehaviorValue ?? null : null); if (saved !== false) markExplicitModelChoice(); } } },
-                { type: "item", id: "select", label: "Switch to this model", webContent: menuChord("Switch to this model", "⏎"), disabled: blocked, onSelect: () => select(option) },
-                { type: "item", id: "copy", label: "Copy model ID", onSelect: () => navigator.clipboard.writeText(`${option.providerID}/${option.modelID}`) },
+                { type: "item", id: "pin", label: fixed ? t("model_picker.pinned_by_org") : pinLabel, webContent: fixed ? undefined : menuChord(pinLabel, "⇧P"), disabled: fixed || blocked, onSelect: () => toggle(option) },
+                { type: "item", id: "default", label: t("model_picker.set_workspace_default"), disabled: !onSetWorkspaceDefault || blocked, onSelect: async () => { if (canSelect(option) && onSetWorkspaceDefault) { const saved = await onSetWorkspaceDefault(option, active ? currentBehaviorValue ?? null : null); if (saved !== false) markExplicitModelChoice(); } } },
+                { type: "item", id: "select", label: t("model_picker.switch_to_model"), webContent: menuChord(t("model_picker.switch_to_model"), "⏎"), disabled: blocked, onSelect: () => select(option) },
+                { type: "item", id: "copy", label: t("model_picker.copy_model_id"), onSelect: () => navigator.clipboard.writeText(`${option.providerID}/${option.modelID}`) },
               ];
               return <ActionContextMenu key={key} actions={actions} render={<CommandItem
                 value={`${key} ${name} ${subtitle}`} disabled={blocked}
                 data-model-key={key} data-checked={active} data-testid={`model-option-${option.providerID}-${option.modelID}`}
-                aria-label={`${name}, ${subtitle}, ${MODEL_SOURCE_LABELS[modelSource(option)]}${active ? ", current model" : ""}`}
+                aria-label={[name, subtitle, MODEL_SOURCE_LABELS[modelSource(option)], active ? t("model_picker.current_model") : null].filter(Boolean).join(", ")}
                 tabIndex={blocked ? -1 : 0} className="group/model min-h-11 gap-2 rounded-md px-2 py-1 text-sm data-disabled:opacity-55"
                 onFocus={() => setHighlighted(option)} onClick={() => select(option)}
                 onKeyDown={(event) => { if (event.key === "Enter" && event.target === event.currentTarget) { event.preventDefault(); select(option); } }}
@@ -199,7 +203,7 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
                 <span data-slot="model-label" className="min-w-0 flex-1 leading-[18px]"><span className={`block truncate${active ? " font-medium" : ""}`} title={name}>{name}</span><span className="block text-sm text-muted-foreground">{subtitle}</span></span>
                 {!fixed && !blocked ? <Button type="button" variant="ghost" size="sm" aria-label={`${pinLabel}: ${name}`} className="h-7 px-2 text-xs opacity-0 group-hover/model:opacity-100 group-focus-within/model:opacity-100 group-data-highlighted/model:opacity-100 focus:opacity-100"
                   onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }} onKeyDown={(event) => event.stopPropagation()}
-                  onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggle(option); }}>{pinned.has(key) ? "Unpin" : "Pin"}</Button> : null}
+                  onClick={(event) => { event.preventDefault(); event.stopPropagation(); toggle(option); }}>{pinned.has(key) ? t("model_picker.unpin") : t("model_picker.pin")}</Button> : null}
                 {shortcutLabels.get(key) ? <kbd data-testid="model-shortcut-key" className="shrink-0 rounded border border-border/70 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">{shortcutLabels.get(key)}</kbd> : null}
                 <span data-slot="model-source" className="flex size-4 shrink-0 items-center justify-center"><ModelSourceIcon model={option} /></span>
                 <span data-slot="model-selection" className="flex size-4 shrink-0 items-center justify-center">{active ? <Check aria-hidden="true" className="size-4 text-muted-foreground" /> : null}</span>
@@ -208,19 +212,19 @@ function ModelPickerRows({ options, current, query, onQueryChange, onSelect, foc
           </CommandGroup>}
         </CommandList>
         {loading && hasOptions ? <ModelLoadingRows /> : null}
-        {failed && !verified && hasOptions && !query.trim() ? <ModelLoadingRows rows={2} label="Other models not loaded" still /> : null}
+        {failed && !verified && hasOptions && !query.trim() ? <ModelLoadingRows rows={2} label={t("model_picker.other_models_not_loaded")} still /> : null}
       </CommandPanel>
-      {failed ? <PickerNotice tone={verified ? "neutral" : "error"} role="alert" testId="model-catalog-error" action={<Button size="sm" variant="outline" disabled={!catalogState?.onRetry || retryBusy || catalogState.refreshing} onClick={() => void retry()}>Retry</Button>}>
-        {verified ? <>Showing models from <time dateTime={verified.toISOString()}>{verified.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</time>. Couldn’t refresh just now.</> : hasOptions ? "Couldn’t load the rest of your models. Pinned models still work." : "Couldn’t load your models. Try again."}
+      {failed ? <PickerNotice tone={verified ? "neutral" : "error"} role="alert" testId="model-catalog-error" action={<Button size="sm" variant="outline" disabled={!catalogState?.onRetry || retryBusy || catalogState.refreshing} onClick={() => void retry()}>{t("common.retry")}</Button>}>
+        {verified ? <>{t("model_picker.showing_models_from")} <time dateTime={verified.toISOString()}>{verified.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</time>{t("model_picker.couldnt_refresh_suffix")}</> : hasOptions ? t("model_picker.couldnt_load_rest") : t("model_picker.couldnt_load_models")}
       </PickerNotice> : null}
       {retainedCopy && !query.trim() && !(isAutoModel(current) && autoRow && autoRow.state !== "ready") ? <PickerNotice action={<>
-        {retained?.reason === "unavailable" && catalogState?.onRetry ? <Button size="sm" variant="outline" disabled={retryBusy || catalogState.refreshing} onClick={() => void retry()}>Refresh</Button> : null}
-        {retained?.reason === "disabled" && onOpenProviderSettings ? <Button size="sm" variant="outline" onClick={onOpenProviderSettings}>AI providers</Button> : null}
+        {retained?.reason === "unavailable" && catalogState?.onRetry ? <Button size="sm" variant="outline" disabled={retryBusy || catalogState.refreshing} onClick={() => void retry()}>{t("common.refresh")}</Button> : null}
+        {retained?.reason === "disabled" && onOpenProviderSettings ? <Button size="sm" variant="outline" onClick={onOpenProviderSettings}>{t("model_picker.ai_providers")}</Button> : null}
       </>}>{retainedCopy.detail}</PickerNotice> : null}
       {autoRow && autoRow.state !== "ready" ? <AutoPickerRecovery state={autoRow.state} code={autoRow.code} resetsAt={autoRow.resetsAt} onRetry={onRetryAuto} onReload={onReloadWorkspace} hasAlternatives={Boolean(alternativeKey)} />
         : openWorkModelsSyncing ? <AutoPickerRecovery state="sync" onReload={onReloadWorkspace} /> : null}
-      {empty ? <PickerNotice action={onConnectProvider ? <Button size="sm" onClick={onConnectProvider}>Connect a provider</Button> : null}>Nothing is connected in this workspace.</PickerNotice> : null}
-      {focusAlternative && !alternativeKey && hasOptions && onConnectProvider ? <PickerNotice action={<Button size="sm" variant="outline" onClick={onConnectProvider}>Connect a provider</Button>}>Nothing else is connected in this workspace.</PickerNotice> : null}
+      {empty ? <PickerNotice action={onConnectProvider ? <Button size="sm" onClick={onConnectProvider}>{t("models.connect_provider")}</Button> : null}>{t("model_picker.nothing_connected")}</PickerNotice> : null}
+      {focusAlternative && !alternativeKey && hasOptions && onConnectProvider ? <PickerNotice action={<Button size="sm" variant="outline" onClick={onConnectProvider}>{t("models.connect_provider")}</Button>}>{t("model_picker.nothing_else_connected")}</PickerNotice> : null}
       {footer}
     </Command>
   </div>;

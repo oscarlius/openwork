@@ -593,7 +593,7 @@ export function createExtensionsStore(options: {
         ...current,
         cloudOrgMarketplaces: [],
         cloudOrgMarketplacesStatus:
-          error instanceof Error ? error.message : "Failed to load organization marketplaces.",
+          error instanceof Error ? error.message : t("extensions.failed_load_org_marketplaces"),
       }));
     } finally {
       if (refreshCloudOrgMarketplacesInFlightKey === loadKey) {
@@ -631,7 +631,7 @@ export function createExtensionsStore(options: {
       }
 
       const imported = snapshot.importedCloudPlugins[pluginId];
-      if (!imported) throw new Error("Marketplace package is not installed in this workspace.");
+      if (!imported) throw new Error(t("extensions.marketplace_not_installed"));
 
       const removedMcpNames: string[] = [];
       const fileDeletes: Array<{ path: string; recursive?: boolean }> = [];
@@ -878,9 +878,9 @@ export function createExtensionsStore(options: {
     if (scope !== "project" && !isLocalWorkspace) {
       mutateState((current) => ({
         ...current,
-        pluginStatus: "Global plugins are only available for local workers.",
+        pluginStatus: t("extensions.global_plugins_local_only"),
         pluginList: [],
-        sidebarPluginStatus: "Global plugins require a local worker.",
+        sidebarPluginStatus: t("extensions.global_plugins_require_local_worker"),
         sidebarPluginList: [],
       }));
       refreshPluginsInFlight = false;
@@ -915,8 +915,8 @@ export function createExtensionsStore(options: {
           ...current,
           pluginList: [],
           sidebarPluginList: [],
-          sidebarPluginStatus: "Failed to load plugins.",
-          pluginStatus: error instanceof Error ? error.message : "Failed to load plugins.",
+          sidebarPluginStatus: t("extensions.failed_to_load_plugins"),
+          pluginStatus: error instanceof Error ? error.message : t("extensions.failed_to_load_plugins"),
         }));
       } finally {
         refreshPluginsInFlight = false;
@@ -1054,7 +1054,7 @@ export function createExtensionsStore(options: {
     }
 
     if (snapshot.pluginScope !== "project" && !isLocalWorkspace) {
-      setStateField("pluginStatus", "Global plugins are only available for local workers.");
+      setStateField("pluginStatus", t("extensions.global_plugins_local_only"));
       return;
     }
 
@@ -1066,7 +1066,7 @@ export function createExtensionsStore(options: {
         if (isManualInput) setStateField("pluginInput", "");
         await refreshPlugins("project");
       } catch (error) {
-        setStateField("pluginStatus", error instanceof Error ? error.message : "Failed to add plugin.");
+        setStateField("pluginStatus", error instanceof Error ? error.message : t("extensions.failed_to_add_plugin"));
       }
       return;
     }
@@ -1146,7 +1146,7 @@ export function createExtensionsStore(options: {
       openworkSnapshot.openworkServerCapabilities?.plugins?.write !== false;
 
     if (snapshot.pluginScope !== "project" && !isLocalWorkspace) {
-      setStateField("pluginStatus", "Global plugins are only available for local workers.");
+      setStateField("pluginStatus", t("extensions.global_plugins_local_only"));
       return;
     }
 
@@ -1157,7 +1157,7 @@ export function createExtensionsStore(options: {
         options.markReloadRequired?.("plugins", { type: "plugin", name: triggerName, action: "removed" });
         await refreshPlugins("project");
       } catch (error) {
-        setStateField("pluginStatus", error instanceof Error ? error.message : "Failed to remove plugin.");
+        setStateField("pluginStatus", error instanceof Error ? error.message : t("extensions.failed_to_remove_plugin"));
       }
       return;
     }
@@ -1197,7 +1197,7 @@ export function createExtensionsStore(options: {
       const desired = stripPluginVersion(name).toLowerCase();
       const next = plugins.filter((entry) => stripPluginVersion(entry).toLowerCase() !== desired);
       if (next.length === plugins.length) {
-        setStateField("pluginStatus", "Plugin not found.");
+        setStateField("pluginStatus", t("extensions.plugin_not_found"));
         return;
       }
 
@@ -1434,7 +1434,7 @@ export function createExtensionsStore(options: {
       return null;
     }
     if (!isLocalWorkspace) {
-      setStateField("skillsStatus", "Local workers are required to view skills.");
+      setStateField("skillsStatus", t("skills.local_workers_required_view"));
       return null;
     }
 
@@ -1472,7 +1472,7 @@ export function createExtensionsStore(options: {
         });
         options.markReloadRequired?.("skills", { type: "skill", name: trimmed, action: "updated" });
         await refreshSkills({ force: true });
-        setStateField("skillsStatus", "Saved.");
+        setStateField("skillsStatus", t("skills.saved"));
       } catch (error) {
         const message = error instanceof Error ? error.message : t("skills.unknown_error");
         options.setError(addOpencodeCacheHint(message));
@@ -1497,7 +1497,7 @@ export function createExtensionsStore(options: {
       return;
     }
     if (!isLocalWorkspace) {
-      setStateField("skillsStatus", "Local workers are required to edit skills.");
+      setStateField("skillsStatus", t("skills.local_workers_required_edit"));
       return;
     }
 
@@ -1509,7 +1509,7 @@ export function createExtensionsStore(options: {
       if (!result.ok) {
         setStateField("skillsStatus", result.stderr || result.stdout || t("skills.unknown_error"));
       } else {
-        setStateField("skillsStatus", result.stdout || "Saved.");
+        setStateField("skillsStatus", result.stdout || t("skills.saved"));
         options.markReloadRequired?.("skills", { type: "skill", name: trimmed, action: "updated" });
       }
       await refreshSkills({ force: true });

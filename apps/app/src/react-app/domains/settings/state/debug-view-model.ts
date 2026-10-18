@@ -501,13 +501,13 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
 
   const onClearDeveloperLog = useCallback(() => {
     setDeveloperLog([]);
-    setDeveloperLogStatus("Cleared developer log.");
+    setDeveloperLogStatus(t("settings.cleared_developer_log"));
   }, []);
 
   const onCopyDeveloperLog = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(developerLog.join("\n"));
-      setDeveloperLogStatus("Copied developer log to clipboard.");
+      setDeveloperLogStatus(t("settings.copied_developer_log"));
     } catch (error) {
       setDeveloperLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
@@ -520,7 +520,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
         developerLog.join("\n"),
         "text/plain",
       );
-      setDeveloperLogStatus("Exported developer log.");
+      setDeveloperLogStatus(t("settings.exported_developer_log"));
     } catch (error) {
       setDeveloperLogStatus(error instanceof Error ? error.message : safeStringify(error));
     }
@@ -556,7 +556,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
 
   const onRevealElectronMigrationBackup = useCallback(async () => {
     if (!isElectronRuntime()) {
-      setElectronMigrationStatus("Migration backup reveal is available only in the desktop app.");
+      setElectronMigrationStatus(t("settings.migration_backup_reveal_desktop_only"));
       return;
     }
     try {
@@ -608,7 +608,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
     const bridge = window.__OPENWORK_ELECTRON__?.updater;
     if (!bridge?.setChannel) {
-      setElectronAlphaUpdaterStatus("Electron updater bridge is unavailable.");
+      setElectronAlphaUpdaterStatus(t("updates.bridge_unavailable"));
       return;
     }
     setElectronAlphaUpdaterBusy(true);
@@ -634,7 +634,7 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
     }
     const bridge = window.__OPENWORK_ELECTRON__?.updater;
     if (!bridge?.check) {
-      setElectronAlphaUpdaterStatus("Electron updater bridge is unavailable.");
+      setElectronAlphaUpdaterStatus(t("updates.bridge_unavailable"));
       return;
     }
     setElectronAlphaUpdaterBusy(true);
@@ -898,8 +898,8 @@ export function useDebugViewModel(options: UseDebugViewModelOptions) {
       if (!isDesktopRuntime()) return;
       const message =
         mode === "all"
-          ? "Reset ALL OpenWork app data? Open sessions and workspaces will be removed."
-          : "Reset onboarding state only?";
+          ? t("settings.reset_all_data_confirm")
+          : t("settings.reset_onboarding_state_confirm");
       if (typeof window !== "undefined" && !window.confirm(message)) {
         return;
       }

@@ -8,6 +8,7 @@ import { clearQueuedSendContext, getQueuedSendContext } from "./queued-send-cont
 import { composerAutoSendScopeKey } from "../surface/composer-auto-send";
 import { composerAttachmentsToWorkspaceFileParts } from "./attachment-file-part";
 import { getRejectedTurns, rejectedTurnOwnerKey, rejectedTurnOwnerSchema, saveRejectedTurn, sessionDraftScopeKey, type RejectedTurn, type RejectedTurnOwner } from "./draft-store";
+import { t } from "@/i18n";
 
 export function suspendRejectedQueueForSignIn(owner: RejectedTurnOwner) {
   const context = getQueuedSendContext(owner.sessionId);
@@ -51,7 +52,7 @@ export async function retainRejectedTurn(input: {
   });
   const saved = saveRejectedTurn(owner, turn, input.remainingQueued ? { remaining: input.remainingQueued } : undefined) === "saved";
   if (!saved) {
-    toast.error("Your unsent message could not be saved. Keep this chat open or copy it before closing.");
+    toast.error(t("session.rejected_save_failed"));
     return false;
   }
   if (input.queuedItemId) useComposerStateStore.getState().removeQueuedDraft(owner.sessionId, input.queuedItemId);
@@ -64,7 +65,7 @@ export async function retainRejectedTurn(input: {
         if (saveRejectedTurn(owner, { ...turn, attachments }) !== "saved") throw new Error("Attachment references could not be saved");
       }
     } catch {
-      toast.error("Your unsent message is saved, but its files could not be kept. Reattach them before sending again.");
+      toast.error(t("session.rejected_files_lost"));
     }
   }
   return true;
@@ -83,7 +84,7 @@ export function mergeRejectedTurns(messages: readonly UIMessage[], turns: readon
     const parts: UIMessage["parts"] = [{ type: "text", text: turn.text }];
     for (const file of turn.attachments) {
       if (file.url) parts.push({ type: "file", url: file.url, filename: file.name, mediaType: file.mime });
-      else parts.push({ type: "text", text: `\nAttachment: ${file.name} — reattach before sending again.` });
+      else parts.push({ type: "text", text: `\n${t("session.rejected_attachment", { name: file.name })}` });
     }
     const anchor = turn.afterMessageId ? result.findIndex((message) => message.id === turn.afterMessageId) : -1;
     let insertion = anchor === -1 ? result.length : anchor + 1;

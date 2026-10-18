@@ -1,5 +1,6 @@
 import type { ModelOption, ModelRef } from "@/app/types";
 import type { CloudImportedProvider } from "@/app/cloud/import-state";
+import { t } from "@/i18n";
 import { modelRefKey, nextFavoriteModel } from "../session/models/model-collections-store";
 
 export type ModelPickerCatalogState = {
@@ -16,10 +17,10 @@ export type RetainedModelSelection = {
 };
 export function retainedModelCopy(reason: RetainedModelSelection["reason"]) {
   switch (reason) {
-    case "policy": return { subtitle: "blocked by your organization", detail: "Your organization decides which providers are allowed here." };
-    case "disabled": return { subtitle: "disabled in AI providers", detail: "Turn this provider back on in AI providers, or choose another model." };
-    case "signed-out": return { subtitle: "sign in to verify access", detail: "Sign in to verify access to your saved model, or choose a connected provider." };
-    case "unavailable": return { subtitle: "no longer available here", detail: "Your saved model isn’t available here anymore." };
+    case "policy": return { subtitle: t("model_picker.retained_policy_subtitle"), detail: t("model_picker.retained_policy_detail") };
+    case "disabled": return { subtitle: t("model_picker.retained_disabled_subtitle"), detail: t("model_picker.retained_disabled_detail") };
+    case "signed-out": return { subtitle: t("model_picker.retained_signed_out_subtitle"), detail: t("model_picker.retained_signed_out_detail") };
+    case "unavailable": return { subtitle: t("model_picker.retained_unavailable_subtitle"), detail: t("model_picker.retained_unavailable_detail") };
   }
 }
 export function nonDefaultModelSummary(model: ModelRef, value: string | null, label: string) {
@@ -37,9 +38,17 @@ export function markExplicitModelChoice() {
   try { window.localStorage.setItem(EXPLICIT_MODEL_CHOICE_KEY, "1"); } catch {}
 }
 export type ModelSource = "gateway" | "local" | "organization";
+/** Read at access time so the labels follow the active locale (never at module import). */
 export const MODEL_SOURCE_LABELS: Record<ModelSource, string> = {
-  gateway: "OpenWork Gateway", local: "Local", organization: "Organization",
+  gateway: "OpenWork Gateway",
+  get local() { return t("composer.source_local"); },
+  get organization() { return t("settings.provider_source_organization"); },
 };
+
+/** The "Pinned" group label; also the comparison key the picker uses to merge the retained row into it. */
+export function pinnedGroupLabel() {
+  return t("session_management.pinned");
+}
 
 /** Free Auto, as opposed to the same model served by an organization's OpenWork Models. */
 export function isFreeAutoModel(model: ModelRef | null | undefined) {
@@ -87,7 +96,7 @@ export function modelTitle(model: ModelRef & { title?: string; description?: str
   const name = model.title?.trim() || model.modelID;
   if (!isOpaqueModelId(name)) return name;
   const provider = model.description?.trim();
-  return provider ? `${provider} model` : "Model";
+  return provider ? t("model_picker.provider_model", { provider }) : t("session.model");
 }
 
 /** A name safe to show as a value: the public title, never an opaque provider/model id. */
@@ -104,10 +113,10 @@ export function autoProviderSubtitle() {
 }
 
 export function modelSubtitle(model: ModelOption, exhausted = false) {
-  if (isAutoModel(model)) return exhausted ? "Limit used up" : "OpenWork picks the model";
+  if (isAutoModel(model)) return exhausted ? t("auto.limit_used_up") : t("auto.ready_title");
   // Gateway models assigned to the member that wait on their own provider sign-in.
-  if (model.gatewayAuthorization) return [model.description?.trim(), "Sign-in required"].filter(Boolean).join(" · ");
-  return [model.description?.trim(), model.organizationPinOrder !== undefined ? "pinned by your org" : null].filter(Boolean).join(" · ");
+  if (model.gatewayAuthorization) return [model.description?.trim(), t("model_picker.sign_in_required")].filter(Boolean).join(" · ");
+  return [model.description?.trim(), model.organizationPinOrder !== undefined ? t("model_picker.pinned_by_org_meta") : null].filter(Boolean).join(" · ");
 }
 
 export function withImportedModelMetadata(options: readonly ModelOption[], imports: Record<string, CloudImportedProvider>) {
@@ -177,8 +186,8 @@ export function modelGroups(options: readonly ModelOption[], personal: readonly 
     });
     if (items.length) groups.push({ value, items });
   };
-  add("Pinned", orderedModelPins(available, personal));
-  add("Recent", recent.flatMap((model) => available.filter((option) => modelRefKey(option) === modelRefKey(model))));
+  add(pinnedGroupLabel(), orderedModelPins(available, personal));
+  add(t("model_picker.recommended"), recent.flatMap((model) => available.filter((option) => modelRefKey(option) === modelRefKey(model))));
   add("OpenWork Models", available.filter((option) => option.providerID === "openwork" || option.providerID === AUTO_PROVIDER_ID));
   const providers = [...new Set(available.map((option) => option.providerID))].sort((a, b) => {
     const name = (id: string) => available.find((option) => option.providerID === id)?.description || id;

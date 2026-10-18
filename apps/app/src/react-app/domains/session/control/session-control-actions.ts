@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { useCallback, useMemo } from "react";
 
+import { currentLocale, t } from "@/i18n";
 import { createClient, unwrap } from "../../../../app/lib/opencode";
 import { normalizeDirectoryPath } from "../../../../app/utils";
 import { setSessionModel } from "../../../../app/lib/opencode-session";
@@ -93,10 +94,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   const pinnedIds = useSessionManagementStore((s) => s.pinnedIds);
   const checkDesktopRestriction = useCheckDesktopRestriction();
   const { isSignedIn } = useDenAuth();
+  // Rebuild the action list when the language changes so labels stay translated.
+  const controlLocale = currentLocale();
 
   const createTaskControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.create_task",
-    label: "Create a new task",
+    label: t("control.create_task"),
     description: "Create a new session in the selected workspace and open it in the person's focused pane. Use session.create to start sessions without changing what is on screen.",
     effects: { data: "write", ui: "navigate", external: false },
     sideEffect: "mutation",
@@ -107,7 +110,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       if (sessionId === null) throw new Error("Task creation did not return a session ID.");
       return sessionId;
     },
-  }), [canCreateTask, createTaskInWorkspace, selectedWorkspaceId]);
+  }), [canCreateTask, createTaskInWorkspace, selectedWorkspaceId, controlLocale]);
   useControlAction(createTaskControlAction);
 
   const workspaceModels = useCallback(async (workspace: SessionControlWorkspace) => {
@@ -123,7 +126,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
   }, [endpointForWorkspace]);
   useControlAction(useMemo<OpenworkControlAction>(() => ({
     id: "models.list",
-    label: "List workspace models",
+    label: t("control.list_workspace_models"),
     description: "Effective available connected picker models with providerId/modelId, displayName, providerName and available:true. Requires an existing renderer host; reads any workspace without focus or navigation. Assigned models not yet engine-connected are omitted.",
     kind: "query",
     effects: { data: "read", ui: "none", external: false },
@@ -141,11 +144,11 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       }).map(({ providerID, ...model }) => ({ ...model, available: true }));
       return { ok: true, workspaceId: workspace.id, models };
     },
-  }), [checkDesktopRestriction, isSignedIn, workspaceModels, workspaces]));
+  }), [checkDesktopRestriction, isSignedIn, workspaceModels, workspaces, controlLocale]));
 
   const listSessionsControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.list_sessions",
-    label: "List available sessions",
+    label: t("control.list_available_sessions"),
     description: "Return every loaded session across workspaces (pinned first, then newest). Entries include `pinned`, `status` (idle, thinking, responding, waiting, compacting, error), `working` (own work or known busy/waiting descendants), `descendantActivity` ({ busy, waiting, unknown } counts), `inventoryComplete` (false when referenced descendant activity is unreadable; unknown alone does not imply working) and `model` ({ providerId, modelId, variant, displayName?, providerName? }: the model and reasoning effort the session is bound to, null before any model is bound). Check `working` before session.archive. Pass `limit` to cap the count or `workspaceId` to narrow to one workspace.",
     kind: "query",
     effects: { data: "read", ui: "none", external: false },
@@ -186,12 +189,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
         },
       });
     },
-  }), [endpointForWorkspace, pinnedIds, sessionsByWorkspaceId, workspaceModels, workspaces]);
+  }), [endpointForWorkspace, pinnedIds, sessionsByWorkspaceId, workspaceModels, workspaces, controlLocale]);
   useControlAction(listSessionsControlAction);
 
   const openSessionControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.open",
-    label: "Open a session by ID",
+    label: t("control.open_session_by_id"),
     description: "Show a session to the person: focus it if visible, else open it in the focused pane. Only for when they should see it; use session.read to inspect and session.send to message a session without opening it.",
     effects: { data: "none", ui: "navigate", external: false },
     sideEffect: "navigation",
@@ -223,12 +226,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
         })) ? "tab" : "new-tab",
       };
     },
-  }), [navigateToSession, sessionsByWorkspaceId, workspaces]);
+  }), [navigateToSession, sessionsByWorkspaceId, workspaces, controlLocale]);
   useControlAction(openSessionControlAction);
 
   const renameSessionControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.rename",
-    label: "Rename a session",
+    label: t("control.rename_session"),
     description: "Rename a session by ID. Use list_sessions first to match the title the user said.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -253,12 +256,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       await refreshRouteState();
       return { ok: true, sessionId, title };
     },
-  }), [opencodeClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces]);
+  }), [opencodeClient, refreshRouteState, selectedWorkspaceRoot, sessionsByWorkspaceId, workspaces, controlLocale]);
   useControlAction(renameSessionControlAction);
 
   const deleteSessionControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.delete",
-    label: "Delete a session",
+    label: t("control.delete_session"),
     description: "Delete a session by ID. Destructive: only run after explicit user confirmation.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -286,23 +289,23 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       await refreshRouteState();
       return { ok: true, sessionId, deleted: true };
     },
-  }), [endpointForWorkspace, navigateToSessionRoot, openworkClient, refreshRouteState, selectedSessionId, sessionsByWorkspaceId, workspaces]);
+  }), [endpointForWorkspace, navigateToSessionRoot, openworkClient, refreshRouteState, selectedSessionId, sessionsByWorkspaceId, workspaces, controlLocale]);
   useControlAction(deleteSessionControlAction);
 
   const modelPickerControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.model_picker.open",
-    label: "Open the model picker",
+    label: t("control.open_model_picker"),
     description: "Open the current session model picker.",
     effects: { data: "none", ui: "dialog", external: false },
     sideEffect: "none",
     disabled: !selectedWorkspaceId,
     execute: openModelPicker,
-  }), [openModelPicker, selectedWorkspaceId]);
+  }), [openModelPicker, selectedWorkspaceId, controlLocale]);
   useControlAction(modelPickerControlAction);
 
   const sessionSetModelControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.set_model",
-    label: "Set a session model",
+    label: t("control.set_session_model"),
     description: "Rebind one existing session to an exact available providerId/modelId without opening it or starting inference. Requires an idle, unarchived session on OpenCode v2; any connected workspace can be targeted. Returns the verified new binding.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -382,7 +385,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
         },
       };
     },
-  }), [checkDesktopRestriction, endpointForWorkspace, isSignedIn, sessionsByWorkspaceId, workspaceModels, workspaces]);
+  }), [checkDesktopRestriction, endpointForWorkspace, isSignedIn, sessionsByWorkspaceId, workspaceModels, workspaces, controlLocale]);
   useControlAction(sessionSetModelControlAction);
 
   // ---------------------------------------------------------------------------
@@ -410,7 +413,7 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
 
   const pinControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.pin",
-    label: "Pin or unpin a session",
+    label: t("control.pin_session"),
     description: "Toggle pin on a session. Pinned sessions appear in a global section at the top of the sidebar.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -422,12 +425,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       const pinned = store.getState().pinnedIds.includes(sessionId);
       return { ok: true, sessionId, pinned };
     },
-  }), []);
+  }), [controlLocale]);
   useControlAction(pinControlAction);
 
   const archiveControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.archive",
-    label: "Archive or unarchive a session",
+    label: t("control.archive_session"),
     description: archiveDisabledReason ?? "Archive an idle session, preserving context. Check `working` in session.list_sessions first. A working session is not archived: the result is code target_working (if the user wants it closed, ask them to stop it in the app, then archive once working is false; otherwise leave it running). A session cannot archive itself or its parent during its own turn (code self_archive_while_working): finish the turn; the reviewer archives. Pass archived=false to restore without restarting work.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -458,12 +461,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       }
       return { ok: false, sessionId, error: "Session archive was cancelled or could not be confirmed" };
     },
-  }), [archiveDisabledReason, archiveSession, opencodeClient]);
+  }), [archiveDisabledReason, archiveSession, opencodeClient, controlLocale]);
   useControlAction(archiveControlAction);
 
   const groupCreateControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.group.create",
-    label: "Create a session group",
+    label: t("control.create_session_group"),
     description: "Create a new group (folder/separator) in the current workspace sidebar. Sessions can then be moved into it.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -482,12 +485,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       const newGroup = created?.groups[created.groups.length - 1];
       return { ok: true, workspaceId: wsId, label, groupId: newGroup?.id ?? null };
     },
-  }), [resolveWorkspaceId]);
+  }), [resolveWorkspaceId, controlLocale]);
   useControlAction(groupCreateControlAction);
 
   const groupMoveControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.group.move",
-    label: "Move a session to a group",
+    label: t("control.move_session_to_group"),
     description: "Assign a session to a group (folder). Pass groupId=null or omit to remove from current group. Use session.group.list to see available groups.",
     sideEffect: "mutation",
     requiresArgs: true,
@@ -506,12 +509,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       store.getState().assignGroup(wsId, sessionId, groupId);
       return { ok: true, sessionId, groupId, workspaceId: wsId };
     },
-  }), [resolveWorkspaceId, sessionsByWorkspaceId, workspaces]);
+  }), [resolveWorkspaceId, sessionsByWorkspaceId, workspaces, controlLocale]);
   useControlAction(groupMoveControlAction);
 
   const groupRemoveControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.group.remove",
-    label: "Remove a session group",
+    label: t("control.remove_session_group"),
     description: "Remove a group from the workspace. Sessions in the group become ungrouped (not deleted).",
     sideEffect: "mutation",
     requiresConfirmation: true,
@@ -532,12 +535,12 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
       store.getState().removeGroup(wsId, groupId);
       return { ok: true, groupId, workspaceId: wsId };
     },
-  }), [resolveWorkspaceId]);
+  }), [resolveWorkspaceId, controlLocale]);
   useControlAction(groupRemoveControlAction);
 
   const groupListControlAction = useMemo<OpenworkControlAction>(() => ({
     id: "session.group.list",
-    label: "List session groups",
+    label: t("control.list_session_groups"),
     description: "List all groups in a workspace with their IDs and labels.",
     kind: "query",
     effects: { data: "read", ui: "none", external: false },
@@ -554,6 +557,6 @@ export function useSessionControlActions(input: UseSessionControlActionsInput) {
         assignments: state?.assignments ?? {},
       };
     },
-  }), [resolveWorkspaceId]);
+  }), [resolveWorkspaceId, controlLocale]);
   useControlAction(groupListControlAction);
 }

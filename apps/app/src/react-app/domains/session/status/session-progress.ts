@@ -2,6 +2,7 @@ import { isToolUIPart, type UIMessage } from "ai";
 
 import { isTaskToolPart, taskChildSessionId, type TaskToolPart } from "../../../../lib/build-in-tools";
 import { isToolPartInFlight } from "../../../../lib/tool-activity";
+import { t } from "../../../../i18n";
 
 export const NO_NEW_ACTIVITY_AFTER_MS = 60_000;
 
@@ -19,18 +20,18 @@ export function activeDelegatedTasks(messages: UIMessage[]): TaskToolPart[] {
 
 /** Fixed tool categories keep context useful without reflecting arguments or payloads. */
 function safeToolActivity(part: UIMessage["parts"][number]): string {
-  if (!isToolUIPart(part)) return "Tool activity received";
+  if (!isToolUIPart(part)) return t("progress.tool_activity");
   const name = part.type === "dynamic-tool" ? part.toolName : part.type.slice(5);
   switch (name) {
-    case "bash": case "shell": return "Running a command";
-    case "read": return "Reading files";
-    case "write": case "edit": case "apply_patch": return "Updating files";
-    case "grep": case "glob": return "Searching files";
-    case "webfetch": case "websearch": return "Researching the web";
-    case "task": case "subagent": return "Running a delegated task";
-    case "todowrite": return "Updating the plan";
-    case "question": return "Asking for input";
-    default: return "Using a tool";
+    case "bash": case "shell": return t("progress.running_command");
+    case "read": return t("progress.reading_files");
+    case "write": case "edit": case "apply_patch": return t("progress.updating_files");
+    case "grep": case "glob": return t("progress.searching_files");
+    case "webfetch": case "websearch": return t("progress.researching_web");
+    case "task": case "subagent": return t("progress.running_delegated_task");
+    case "todowrite": return t("progress.updating_plan");
+    case "question": return t("progress.asking_input");
+    default: return t("progress.using_tool");
   }
 }
 
@@ -91,19 +92,19 @@ export function transcriptProgress(messages: UIMessage[], previousParts: Record<
       let activity: string;
       if ((part.type === "text" || part.type === "reasoning") && part.text.trim()) {
         parts[key] = partFingerprint(part, () => [part.type, part.text, part.state]);
-        activity = part.type === "text" ? "Response updated" : "Reasoning activity received";
+        activity = part.type === "text" ? t("progress.response_updated") : t("progress.reasoning_received");
       } else if (isToolUIPart(part)) {
         parts[key] = partFingerprint(part, () => [part.state, part.input,
           part.state === "output-available" ? part.output : null,
           part.state === "output-error" ? part.errorText : null]);
         if (isToolPartInFlight(part)) active = true;
         // Fixed labels, not raw arguments, outputs, prompts, or tool payloads.
-        activity = part.state === "output-available" ? "Tool result received"
-          : part.state === "output-error" ? "Tool reported an error"
+        activity = part.state === "output-available" ? t("progress.tool_result_received")
+          : part.state === "output-error" ? t("progress.tool_reported_error")
           : safeToolActivity(part);
       } else if (part.type === "file") {
         parts[key] = partFingerprint(part, () => [part.type, part.url]);
-        activity = "File output received";
+        activity = t("progress.file_output_received");
       } else continue;
       if (messageIndex > latestUserIndex) assistantOutput = true;
       if (parts[key] !== previousParts[key]) label = activity;

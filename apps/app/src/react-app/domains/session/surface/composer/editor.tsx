@@ -37,6 +37,7 @@ import {
 } from "lexical";
 import type { InitialConfigType } from "@lexical/react/LexicalComposer.js";
 import { decodeComposerMentionValue, encodeComposerMentionValue, type ComposerMentionKind } from "./mention-encoding";
+import { t } from "@/i18n";
 import { parseConnectSkillToken } from "./connect-skill-token";
 import { encodeConnectorToken, parseConnectorToken } from "./connector-token";
 import { COMPOSER_DRAFT_TOKEN_RE, COMPOSER_TOKEN_CLASS } from "./composer-pills";
@@ -426,12 +427,12 @@ function renderPastedTextChipDom(dom: HTMLElement, label: string, lines: number)
   const expand = document.createElement("button");
   expand.type = "button";
   expand.className = "-mr-1 inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-gray-3 hover:text-foreground";
-  expand.title = "Expand";
-  expand.setAttribute("aria-label", "Expand pasted text in composer");
+  expand.title = t("sidebar.expand");
+  expand.setAttribute("aria-label", t("composer.expand_pasted_text"));
   expand.dataset.pastedExpandLabel = label;
   expand.append(createChipIconDom("chevron", "size-3"));
   renderComposerBadgeDom(dom, pastedTextBadge(lines), expand);
-  dom.title = `Pasted text · ${label}`;
+  dom.title = `${t("composer.pasted_text")} · ${label}`;
 }
 
 function createPastedTextChipDom(label: string, lines: number) {
@@ -572,8 +573,8 @@ function createAttachmentChipDom(attachment: ComposerAttachmentToken) {
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-border bg-background text-xs leading-none text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground";
-  remove.title = "Remove";
-  remove.setAttribute("aria-label", `Remove ${attachment.name}`);
+  remove.title = t("common.remove");
+  remove.setAttribute("aria-label", t("composer.remove_attachment", { name: attachment.name }));
   remove.dataset.attachmentRemoveId = attachment.id;
   remove.textContent = "×";
   dom.append(remove);

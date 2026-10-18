@@ -345,11 +345,12 @@ export function redactTokenLikeText(value: string): string {
 
 export function getWorkspaceTaskLoadErrorDisplay(error?: string | null) {
   const raw = redactTokenLikeText(error?.trim() ?? "");
+  const message = t("app.error_load_tasks");
   return {
     tone: "error" as const,
-    label: "Error",
-    message: "Failed to load tasks",
-    title: raw || "Failed to load tasks",
+    label: t("settings.error"),
+    message,
+    title: raw || message,
   };
 }
 

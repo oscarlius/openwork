@@ -6,6 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { t } from "@/i18n";
 import { isElectronRuntime } from "../../../../app/utils";
 
 type TerminalDockProps = {
@@ -18,18 +19,18 @@ export function TerminalDock({ workspaceRoot, onClose }: TerminalDockProps) {
   const terminalIdRef = useRef<string | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
-  const [status, setStatus] = useState("Starting terminal...");
+  const [status, setStatus] = useState(t("session.terminal_starting"));
 
   useEffect(() => {
     if (!containerRef.current) return;
     if (!isElectronRuntime()) {
-      setStatus("Terminal is available in the desktop app.");
+      setStatus(t("session.terminal_desktop_only"));
       return;
     }
 
     const bridge = window.__OPENWORK_ELECTRON__?.terminal;
     if (!bridge?.create || !bridge.write || !bridge.resize || !bridge.kill || !bridge.onData || !bridge.onExit) {
-      setStatus("Terminal bridge is unavailable.");
+      setStatus(t("session.terminal_bridge_unavailable"));
       return;
     }
     const createTerminal = bridge.create;
@@ -66,7 +67,7 @@ export function TerminalDock({ workspaceRoot, onClose }: TerminalDockProps) {
     });
     const removeExitListener = onTerminalExit(({ terminalId, exitCode }) => {
       if (terminalIdRef.current !== terminalId) return;
-      setStatus(`Terminal exited${exitCode === null ? "" : ` with code ${exitCode}`}.`);
+      setStatus(exitCode === null ? t("session.terminal_exited") : t("session.terminal_exited_with_code", { code: exitCode }));
       terminalIdRef.current = null;
     });
     const inputDisposable = terminal.onData((data) => {
@@ -93,7 +94,7 @@ export function TerminalDock({ workspaceRoot, onClose }: TerminalDockProps) {
       setStatus(workspaceRoot);
       fitAndResize();
     }).catch((error) => {
-      setStatus(error instanceof Error ? error.message : "Could not start terminal.");
+      setStatus(error instanceof Error ? error.message : t("session.terminal_start_failed"));
     });
 
     return () => {
@@ -112,12 +113,12 @@ export function TerminalDock({ workspaceRoot, onClose }: TerminalDockProps) {
   }, [workspaceRoot]);
 
   return (
-    <section className="flex h-full min-h-0 flex-col border-t border-border bg-[#0b0d12] text-white" aria-label="Terminal">
+    <section className="flex h-full min-h-0 flex-col border-t border-border bg-[#0b0d12] text-white" aria-label={t("session.terminal_title")}>
       <header className="flex h-9 shrink-0 items-center justify-between border-b border-white/10 bg-black/35 px-3 text-xs">
-        <div className="min-w-0 truncate text-white/75">Terminal · {status}</div>
+        <div className="min-w-0 truncate text-white/75">{t("session.terminal_title")} · {status}</div>
         <Button variant="ghost" size="icon-sm" className="text-white/70 hover:bg-white/10 hover:text-white" onClick={onClose}>
           <X className="size-4" />
-          <span className="sr-only">Hide terminal</span>
+          <span className="sr-only">{t("session.terminal_hide")}</span>
         </Button>
       </header>
       <div ref={containerRef} className="min-h-0 flex-1 px-2 py-1 [&_.xterm]:h-full" />
