@@ -8,6 +8,7 @@ import { DenInput } from "./ui/input";
 import { DenNotice } from "./ui/notice";
 import { type AuthUser, getErrorMessage, getUser, requestJson, type SocialAuthProvider, WORKSPACE_REAUTH_SECURITY_MESSAGE } from "../_lib/den-flow";
 import { type DenOrgContext, getRequireSsoFromMetadata } from "../_lib/den-org";
+import { randomId } from "../_lib/random-id";
 
 function getSocialLabel(provider: SocialAuthProvider) {
   return provider === "google" ? "Google" : "GitHub";
@@ -145,7 +146,7 @@ export function ReauthDialog({
     }
 
     if (!wasOpenRef.current) {
-      setNonce(crypto.randomUUID());
+      setNonce(randomId());
       wasOpenRef.current = true;
     }
 

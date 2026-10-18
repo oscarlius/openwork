@@ -21,6 +21,7 @@ import { DenSelect } from "../../../_components/ui/select";
 import { DenToggleRow } from "../../../_components/ui/toggle-row";
 import { DenRequestTimeoutError } from "../../../_lib/den-flow";
 import { getMcpConnectionsRoute, getOrgAccessFlags } from "../../../_lib/den-org";
+import { randomId } from "../../../_lib/random-id";
 import { useDenT } from "../../../../_lib/i18n/client";
 import type { DenTranslate } from "../../../../_lib/i18n/messages";
 import { useOrgDashboard } from "../../_providers/org-dashboard-provider";
@@ -338,7 +339,7 @@ export function ToolTesterScreen() {
         errorMessage: null,
       };
       rememberRun({
-        id: crypto.randomUUID(),
+        id: randomId(),
         connectionId: selectedConnection.id,
         toolName: selectedTool.name,
         argumentsText: runArgumentsText,
@@ -349,7 +350,7 @@ export function ToolTesterScreen() {
     } catch (error) {
       if (error instanceof ExternalMcpToolPolicyBlockedError) {
         rememberRun({
-          id: crypto.randomUUID(),
+          id: randomId(),
           connectionId: selectedConnection.id,
           toolName: selectedTool.name,
           argumentsText: runArgumentsText,
@@ -384,7 +385,7 @@ export function ToolTesterScreen() {
         errorMessage: message,
       };
       rememberRun({
-        id: crypto.randomUUID(),
+        id: randomId(),
         connectionId: selectedConnection.id,
         toolName: selectedTool.name,
         argumentsText: runArgumentsText,

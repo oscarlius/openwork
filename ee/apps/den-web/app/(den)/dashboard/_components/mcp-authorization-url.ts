@@ -1,3 +1,5 @@
+import { randomId } from "../../_lib/random-id"
+
 function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "")
   if (normalized === "localhost" || normalized.endsWith(".localhost") || normalized === "::1") return true
@@ -238,7 +240,7 @@ export function openMcpAuthorizationTab(input: {
   connectionId: string
   connectionName: string
 }): Window {
-  const tabName = `openwork-mcp-authorization-${crypto.randomUUID()}`
+  const tabName = `openwork-mcp-authorization-${randomId()}`
   const tab = window.open(mcpAuthorizationTabUrl(input), tabName)
   if (!tab) {
     throw new Error("OpenWork could not open the sign-in tab. Allow popups for OpenWork, then try again.")
