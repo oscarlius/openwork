@@ -18,6 +18,7 @@ import {
   useStartGithubInstall,
 } from "./integration-data";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
+import { useDenT } from "../../../_lib/i18n/client";
 
 export function IntegrationsPanel() {
   const { orgSlug } = useOrgDashboard();
@@ -53,6 +54,7 @@ export function IntegrationsPanel() {
 
   const providers = Object.values(INTEGRATION_PROVIDERS);
 
+  const t = useDenT();
   return (
     <>
       {error || startGithubInstall.error ? (
@@ -62,7 +64,7 @@ export function IntegrationsPanel() {
             ? error.message
             : startGithubInstall.error instanceof Error
               ? startGithubInstall.error.message
-              : "Failed to load integrations."}
+              : t("denDashboard.integrations.loadError")}
         />
       ) : null}
 
@@ -91,7 +93,7 @@ export function IntegrationsPanel() {
                       <h2 className="text-[15px] font-semibold text-gray-900">{meta.name}</h2>
                       {meta.provider === "bitbucket" ? (
                         <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
-                          Coming soon
+                          {t("denDashboard.integrations.comingSoon")}
                         </span>
                       ) : isConnected ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
@@ -118,10 +120,10 @@ export function IntegrationsPanel() {
                       onClick={() => void handleConnect(meta.provider)}
                     >
                       {meta.provider === "bitbucket"
-                        ? "Coming soon"
+                        ? t("denDashboard.integrations.comingSoon")
                         : isConnected
-                          ? "Connect another"
-                          : "Connect"}
+                          ? t("denDashboard.integrations.connectAnother")
+                          : t("denMarketplace.detail.connect")}
                     </DenButton>
                   </div>
                 </div>
@@ -176,6 +178,7 @@ function ConnectionRow({
     : null;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const t = useDenT();
   return (
     <div className="group relative">
       <button
@@ -198,11 +201,11 @@ function ConnectionRow({
           <div className="flex flex-wrap items-center gap-2">
             <p className="truncate text-[14px] font-semibold text-gray-900">@{accountLogin}</p>
             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
-              {connection.account.kind === "user" ? "Personal" : "Organization"}
+              {connection.account.kind === "user" ? t("denDashboard.integrations.personalAccount") : t("denCommon.word.organization")}
             </span>
           </div>
           <p className="mt-0.5 truncate text-[12px] text-gray-500">
-            {connectedBy ? `Added by ${connectedBy}` : "Added recently"}
+            {connectedBy ? t("denDashboard.integrations.addedBy", { name: connectedBy }) : t("denDashboard.integrations.addedRecently")}
             <span className="text-gray-400"> · {formatIntegrationTimestamp(connection.connectedAt)}</span>
           </p>
         </div>
@@ -305,6 +308,8 @@ function DisconnectConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const t = useDenT();
+
   if (!open) {
     return null;
   }
@@ -335,11 +340,11 @@ function DisconnectConfirmDialog({
               </li>
               <li className="flex gap-2">
                 <span className="text-gray-400">•</span>
-                <span>All plugins and collections created from those repos</span>
+                <span>{t("denDashboard.integrations.removeScopePlugins")}</span>
               </li>
               <li className="flex gap-2">
                 <span className="text-gray-400">•</span>
-                <span>All imported config objects, versions and source bindings</span>
+                <span>{t("denDashboard.integrations.removeScopeConfig")}</span>
               </li>
             </ul>
             <p className="mt-3 text-[12px] leading-5 text-gray-500">

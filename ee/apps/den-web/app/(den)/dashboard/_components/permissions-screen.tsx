@@ -24,27 +24,27 @@ import {
   PermissionsPage,
   usePermissionsAccess,
 } from "./permissions-ui";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 
-function plural(count: number, one: string, many = `${one}s`) {
-  return `${count} ${count === 1 ? one : many}`;
-}
 
 /** Who a set applies to, as state (DESIGN.md P1). */
-export function appliesToSummary(set: PermissionSetSummary): string {
+export function appliesToSummary(set: PermissionSetSummary, t: DenTranslate): string {
   const appliesTo = set.appliesTo;
-  if (appliesTo.kind === "everyone") return `Everyone in the organization, ${plural(appliesTo.memberCount, "member")}`;
+  if (appliesTo.kind === "everyone") return t("denPermissions.list.appliesEveryone", { members: t("denMarketplace.detail.memberCount", { count: appliesTo.memberCount }) });
   if (appliesTo.kind === "admins") {
     const teams = appliesTo.adminTeams.length;
-    if (teams === 0 && appliesTo.directAdminCount === 0) return "Admins and Admin teams, none yet";
+    if (teams === 0 && appliesTo.directAdminCount === 0) return t("denPermissions.list.appliesAdminsNone");
     return teams > 0
-      ? `Admins and Admin teams, ${plural(appliesTo.directAdminCount, "admin")} and ${plural(teams, "Admin team")}`
-      : `Admins and Admin teams, ${plural(appliesTo.directAdminCount, "admin")}`;
+      ? t("denPermissions.list.appliesAdminsAndTeams", { admins: t("denCommon.count.admin", { count: appliesTo.directAdminCount }), teams: t("denPermissions.setPage.adminTeamCount", { count: teams }) })
+      : t("denPermissions.list.appliesAdminsOnly", { admins: t("denCommon.count.admin", { count: appliesTo.directAdminCount }) });
   }
-  const teamName = appliesTo.team?.name ?? "A deleted team";
-  return `${teamName} team, ${plural(appliesTo.memberCount, "member")}`;
+  const teamName = appliesTo.team?.name ?? t("denPermissions.list.deletedTeam");
+  return t("denPermissions.list.appliesTeamNote", { team: teamName, members: t("denMarketplace.detail.memberCount", { count: appliesTo.memberCount }) });
 }
 
 function PermissionSetRow({ set, href }: { set: PermissionSetSummary; href: string }) {
+  const t = useDenT();
   return (
     <Link
       href={href}
@@ -54,15 +54,16 @@ function PermissionSetRow({ set, href }: { set: PermissionSetSummary; href: stri
     >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-[13px] font-medium text-gray-900">{set.name}</span>
-        <span className="truncate text-[12px] text-gray-500">{appliesToSummary(set)}</span>
+        <span className="truncate text-[12px] text-gray-500">{appliesToSummary(set, t)}</span>
       </div>
-      <span className="shrink-0 text-[12px] text-gray-700">{set.allowedCount} of {PERMISSION_KEYS.length} allowed</span>
+      <span className="shrink-0 text-[12px] text-gray-700">{t("denPermissions.setPage.allowedOf", { allowed: set.allowedCount, total: PERMISSION_KEYS.length })}</span>
       <ChevronRight className="size-4 shrink-0 text-gray-300 transition-colors group-hover:text-gray-500" aria-hidden="true" strokeWidth={1.5} />
     </Link>
   );
 }
 
 export function PermissionsScreen() {
+  const t = useDenT();
   const { orgContext } = useOrgDashboard();
   const permissions = usePermissionsAccess();
   const ready = permissions.state === "ready" ? permissions : null;
@@ -71,16 +72,16 @@ export function PermissionsScreen() {
   const setsQuery = usePermissionSets(ready?.orgId ?? null, ready !== null && !teamRoles);
 
   if (teamRoles) {
-    if (!ready) return <PermissionsPage title="Roles" testId="permissions-landing"><PermissionsAccessState access={permissions} /></PermissionsPage>;
+    if (!ready) return <PermissionsPage title={t("denShell.pageTitle.roles")} testId="permissions-landing"><PermissionsAccessState access={permissions} /></PermissionsPage>;
     const create = canCreateRole({ permissionsFeature: true, canManageTeams: ready.access.canManageTeams, canManagePermissions: ready.access.canManagePermissions })
-      ? <DenButton icon={Plus} href={getNewRoleRoute(ready.orgSlug)} data-testid="roles-create">Create role</DenButton>
+      ? <DenButton icon={Plus} href={getNewRoleRoute(ready.orgSlug)} data-testid="roles-create">{t("denPermissions.list.createRole")}</DenButton>
       : undefined;
-    return <PermissionsPage title="Roles" testId="permissions-landing"><RolesTab action={create} /></PermissionsPage>;
+    return <PermissionsPage title={t("denShell.pageTitle.roles")} testId="permissions-landing"><RolesTab action={create} /></PermissionsPage>;
   }
-  const byPermission = ready ? <LinkButton href={getPermissionKeysRoute(ready.orgSlug)} variant="secondary" size="sm">By permission</LinkButton> : undefined;
+  const byPermission = ready ? <LinkButton href={getPermissionKeysRoute(ready.orgSlug)} variant="secondary" size="sm">{t("denPermissions.keysPage.title")}</LinkButton> : undefined;
 
   if (!ready) {
-    return <PermissionsPage title="Permissions" testId="permissions-landing"><PermissionsAccessState access={permissions} /></PermissionsPage>;
+    return <PermissionsPage title={t("denShell.pageTitle.permissions")} testId="permissions-landing"><PermissionsAccessState access={permissions} /></PermissionsPage>;
   }
 
   const canManage = ready.access.canManagePermissions;
@@ -90,37 +91,37 @@ export function PermissionsScreen() {
   const newButton = canManage ? (
     <LinkButton href={getNewTeamPermissionsRoute(ready.orgSlug)} variant="secondary" size="sm" data-testid="new-team-permissions">
       <Plus className="size-3.5" aria-hidden="true" />
-      Create team permissions
+      {t("denPermissions.newSetPage.createAction")}
     </LinkButton>
   ) : (
-    <DenButton variant="secondary" size="sm" icon={LockKeyhole} disabled aria-describedby="permissions-read-only">Create team permissions</DenButton>
+    <DenButton variant="secondary" size="sm" icon={LockKeyhole} disabled aria-describedby="permissions-read-only">{t("denPermissions.newSetPage.createAction")}</DenButton>
   );
 
   return (
-    <PermissionsPage title="Permissions" action={byPermission} testId="permissions-landing">
-      {!canManage ? <DenNotice tone="neutral" icon={LockKeyhole} message={<span id="permissions-read-only">Read only. {permissionLockReason("permissions.manage")}</span>} /> : null}
+    <PermissionsPage title={t("denShell.pageTitle.permissions")} action={byPermission} testId="permissions-landing">
+      {!canManage ? <DenNotice tone="neutral" icon={LockKeyhole} message={<span id="permissions-read-only">{t("denOrgSettings.readOnly", { reason: permissionLockReason("permissions.manage") })}</span>} /> : null}
       {setsQuery.isError ? (
         <div className="flex flex-col items-start gap-2">
-          <DenNotice tone="error" message={setsQuery.error instanceof Error ? setsQuery.error.message : "Couldn't load permissions."} className="w-full" />
-          <DenButton variant="secondary" size="sm" disabled={setsQuery.isFetching} onClick={() => void setsQuery.refetch()}>Try again</DenButton>
+          <DenNotice tone="error" message={setsQuery.error instanceof Error ? setsQuery.error.message : t("denPermissions.list.loadError")} className="w-full" />
+          <DenButton variant="secondary" size="sm" disabled={setsQuery.isFetching} onClick={() => void setsQuery.refetch()}>{t("denCommon.action.tryAgain")}</DenButton>
         </div>
       ) : setsQuery.isPending ? (
         <PermissionRowsSkeleton rows={4} />
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <PermissionAreaSection label="Defaults" testId="permissions-defaults">
+            <PermissionAreaSection label={t("denPermissions.list.defaultsLabel")} testId="permissions-defaults">
               {defaults.map((set) => <PermissionSetRow key={set.id} set={set} href={getPermissionSetRoute(ready.orgSlug, set.id)} />)}
             </PermissionAreaSection>
             <p className="inline-flex items-center gap-1.5 text-[12px] text-gray-500">
               <LockKeyhole className="size-3.5" aria-hidden="true" strokeWidth={1.5} />
-              The owner can always do everything.
+              {t("denPermissions.list.ownerNote")}
             </p>
           </div>
-          <PermissionAreaSection label="Team permissions" meta={newButton} testId="permissions-teams">
+          <PermissionAreaSection label={t("denPermissions.list.teamLabel")} meta={newButton} testId="permissions-teams">
             {teamSets.length === 0 ? (
               <div className="flex min-h-12 items-center py-3 text-[13px] text-gray-500" data-testid="permissions-teams-empty">
-                No team permissions yet.
+                {t("denPermissions.list.noTeams")}
               </div>
             ) : teamSets.map((set) => <PermissionSetRow key={set.id} set={set} href={getPermissionSetRoute(ready.orgSlug, set.id)} />)}
           </PermissionAreaSection>

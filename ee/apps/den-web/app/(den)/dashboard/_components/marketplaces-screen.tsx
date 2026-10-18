@@ -9,6 +9,7 @@ import { buttonVariants, DenButton } from "../../_components/ui/button";
 import { DenNotice } from "../../_components/ui/notice";
 import { getMarketplaceRoute, getOrgAccessFlags, getPluginSourcesRoute, permissionLockReason } from "../../_lib/den-org";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useHasAnyIntegration } from "./integration-data";
 import {
   type DenMarketplace,
@@ -49,6 +50,7 @@ export function MarketplacesScreen() {
     );
   }, [marketplaces, normalizedQuery]);
 
+  const t = useDenT();
   return (
     <AdvancedPageTemplate tab="collections">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row">
@@ -76,7 +78,7 @@ export function MarketplacesScreen() {
 
       {error ? (
         <DenNotice
-          message={error instanceof Error ? error.message : "Failed to load collections."}
+          message={error instanceof Error ? error.message : t("denMarketplace.list.loadError")}
           className="mb-6"
         />
       ) : null}
@@ -97,14 +99,14 @@ export function MarketplacesScreen() {
           }
           action={
             marketplaces.length === 0
-              ? { href: getPluginSourcesRoute(orgSlug), label: "Open Sources", icon: Cable }
+              ? { href: getPluginSourcesRoute(orgSlug), label: t("denMarketplace.list.openSources"), icon: Cable }
               : undefined
           }
         />
       ) : (
         <DenCatalogList
           label={`${filtered.length} collection${filtered.length === 1 ? "" : "s"}`}
-          valueLabel="Plugins"
+          valueLabel={t("denMarketplace.detail.tabPlugins")}
         >
           {filtered.map((marketplace) => (
             <DenCatalogRow
@@ -151,6 +153,8 @@ function CreateMarketplaceDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
+  const t = useDenT();
+
   if (!open) return null;
 
   const trimmedName = name.trim();
@@ -182,24 +186,24 @@ function CreateMarketplaceDialog({
           New collection
         </h2>
         <p className="mt-1 text-[13px] leading-6 text-gray-500">
-          Create a catalog for your organization. You can add plugins and choose its audience after creation.
+          {t("denMarketplace.list.createIntro")}
         </p>
 
         <label className="mt-4 block">
-          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">Name</span>
+          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">{t("denMarketplace.detail.nameLabel")}</span>
           <DenInput
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Engineering tools"
+            placeholder={t("denMarketplace.list.namePlaceholder")}
             autoFocus
           />
         </label>
         <label className="mt-3 block">
-          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">Description (optional)</span>
+          <span className="mb-1.5 block text-[12px] font-medium text-gray-700">{t("denMarketplace.detail.descriptionLabel")}</span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="What belongs in this collection?"
+            placeholder={t("denMarketplace.list.descriptionPlaceholder")}
             rows={2}
             className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-[13px] text-gray-900 outline-hidden transition placeholder:text-gray-300 focus:border-gray-400"
           />
@@ -207,7 +211,7 @@ function CreateMarketplaceDialog({
 
         {createMutation.error ? (
           <p className="mt-3 text-[12.5px] text-red-600">
-            {createMutation.error instanceof Error ? createMutation.error.message : "Failed to create collection."}
+            {createMutation.error instanceof Error ? createMutation.error.message : t("denMarketplace.list.createError")}
           </p>
         ) : null}
 
@@ -252,11 +256,12 @@ function EmptyState({
 }
 
 function ConnectIntegrationEmptyState({ integrationsHref }: { integrationsHref: string }) {
+  const t = useDenT();
   return (
     <EmptyState
-      title="Connect a source to discover collections"
-      description="Collections are created when OpenWork finds plugins in a connected repository. Assign them to everyone in your org or specific users and teams."
-      action={{ href: integrationsHref, label: "Open Sources", icon: Cable }}
+      title={t("denMarketplace.list.connectSourceTitle")}
+      description={t("denMarketplace.list.connectSourceDescription")}
+      action={{ href: integrationsHref, label: t("denMarketplace.list.openSources"), icon: Cable }}
     />
   );
 }

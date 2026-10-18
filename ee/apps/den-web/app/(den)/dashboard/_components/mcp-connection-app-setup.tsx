@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DenButton } from "../../_components/ui/button";
 import { isNativeProviderConnectionId, type ExternalMcpConnection } from "./mcp-connections-data";
+import { useDenT } from "../../../_lib/i18n/client";
 
 export function connectionMcpSetupUrl(publicApiUrl: string, connectionId: string): string | null {
   if (!publicApiUrl.trim() || !connectionId.trim()) return null;
@@ -18,13 +19,14 @@ export function connectionMcpSetupUrl(publicApiUrl: string, connectionId: string
   }
 }
 
-export function McpConnectionAppSetup({ connection, publicApiUrl, enabled, className = "", label = "Use in another app" }: {
+export function McpConnectionAppSetup({ connection, publicApiUrl, enabled, className = "", label }: {
   connection: Pick<ExternalMcpConnection, "id" | "exposeDirectly" | "nativeProviderKey">;
   publicApiUrl: string;
   enabled: boolean;
   className?: string;
   label?: string;
 }) {
+  const t = useDenT();
   const [copyResult, setCopyResult] = useState<{ url: string; status: "copying" | "copied" | "error" } | null>(null);
   const url = connectionMcpSetupUrl(publicApiUrl, connection.id);
   const status = copyResult?.url === url ? copyResult?.status : undefined;
@@ -44,26 +46,26 @@ export function McpConnectionAppSetup({ connection, publicApiUrl, enabled, class
 
   return (
     <details className={`rounded-xl border border-gray-100 bg-gray-50 p-3 ${className}`}>
-      <summary className="cursor-pointer text-[12px] font-medium text-gray-700">{label}</summary>
+      <summary className="cursor-pointer text-[12px] font-medium text-gray-700">{label ?? t("denConnector.appSetup.useInAnotherApp")}</summary>
       <div className="mt-3 space-y-2 text-[12px] leading-5 text-gray-600">
         <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2">
           <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-gray-800">
-            {url || "Public MCP URL unavailable. Try reloading this page."}
+            {url || t("denConnector.appSetup.urlUnavailable")}
           </p>
           <DenButton type="button" variant="secondary" size="sm" disabled={!url || status === "copying"} onClick={() => void copyUrl()}>
-            {status === "copied" ? "Copied" : "Copy"}
+            {status === "copied" ? t("denOrgSettings.copied") : t("denOrgSettings.copy")}
           </DenButton>
         </div>
-        {status === "copied" ? <p role="status">MCP URL copied.</p> : null}
-        {status === "error" ? <p role="alert" className="text-red-600">Could not copy the URL. Select and copy it manually.</p> : null}
+        {status === "copied" ? <p role="status">{t("denConnector.appSetup.copiedNotice")}</p> : null}
+        {status === "error" ? <p role="alert" className="text-red-600">{t("denConnector.appSetup.copyFailed")}</p> : null}
         {url ? (
           <>
             <ol className="list-decimal space-y-1 pl-4">
-              <li>Add a remote HTTP MCP server in your app.</li>
-              <li>Paste this MCP URL.</li>
-              <li>Choose OAuth and sign in to your OpenWork organization.</li>
+              <li>{t("denConnector.appSetup.stepAddServer")}</li>
+              <li>{t("denConnector.appSetup.stepPasteUrl")}</li>
+              <li>{t("denConnector.appSetup.stepSignIn")}</li>
             </ol>
-            <p>You may still need to connect your provider account in OpenWork. Existing access grants and tool policies still apply.</p>
+            <p>{t("denConnector.appSetup.accountNote")}</p>
           </>
         ) : null}
       </div>

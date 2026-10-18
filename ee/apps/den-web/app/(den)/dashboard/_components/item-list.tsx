@@ -7,6 +7,7 @@ import Link from "next/link";
 import { type ComponentProps, type ReactNode, useRef, useState } from "react";
 import { type ButtonSize, type ButtonVariant, buttonVariants, DenButton } from "../../_components/ui/button";
 import { DenNotice } from "../../_components/ui/notice";
+import { useDenT } from "../../../_lib/i18n/client";
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 
 /** A button-styled client-side link, so moving between steps keeps the page state. */
@@ -207,6 +208,7 @@ export function ConfirmDialog({ confirm, destructive = false, onConfirm, onClose
     }
   }
 
+  const t = useDenT();
   return (
     // Step aside while the identity check is open: it renders below this portal
     // and would be unclickable. The pending action resumes once it resolves.
@@ -218,7 +220,7 @@ export function ConfirmDialog({ confirm, destructive = false, onConfirm, onClose
           <AlertDialog.Description className="mt-2 text-[13px] leading-5 text-gray-600">{shown.confirm?.description}</AlertDialog.Description>
           {error ? <DenNotice className="mt-4" tone="error" message={error} /> : null}
           <div className="mt-5 flex justify-end gap-2">
-            <AlertDialog.Close ref={cancelRef} disabled={busy} data-testid="confirm-dialog-cancel" className={buttonVariants({ variant: "secondary" })}>Cancel</AlertDialog.Close>
+            <AlertDialog.Close ref={cancelRef} disabled={busy} data-testid="confirm-dialog-cancel" className={buttonVariants({ variant: "secondary" })}>{t("denCommon.action.cancel")}</AlertDialog.Close>
             <DenButton variant={shown.destructive ? "destructive" : "primary"} loading={busy} onClick={() => void run()}>{shown.confirm?.action}</DenButton>
           </div>
         </AlertDialog.Popup>
@@ -289,7 +291,7 @@ export function DetailRows({ rows }: { rows: { label: string; value: ReactNode; 
   );
 }
 
-export function FilterInput({ value, onChange, size = "sm", className = "", placeholder = "Filter by name", onEnter }: {
+export function FilterInput({ value, onChange, size = "sm", className = "", placeholder, onEnter }: {
   value: string;
   onChange: (value: string) => void;
   size?: "sm" | "md";
@@ -298,6 +300,8 @@ export function FilterInput({ value, onChange, size = "sm", className = "", plac
   /** Enter runs the one action the current value offers. */
   onEnter?: () => void;
 }) {
+  const t = useDenT();
+  const filterPlaceholder = placeholder ?? t("denConnector.picker.filterPlaceholder");
   return (
     <label className={`flex ${size === "md" ? "h-9" : "h-8"} items-center gap-2 rounded-lg border border-gray-200 bg-white px-2.5 focus-within:border-gray-400 ${className}`}>
       <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" aria-hidden />
@@ -309,8 +313,8 @@ export function FilterInput({ value, onChange, size = "sm", className = "", plac
           event.preventDefault();
           onEnter();
         } : undefined}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        placeholder={filterPlaceholder}
+        aria-label={filterPlaceholder}
         className="min-w-0 flex-1 bg-transparent text-[12px] text-gray-900 outline-none placeholder:text-gray-400"
       />
     </label>

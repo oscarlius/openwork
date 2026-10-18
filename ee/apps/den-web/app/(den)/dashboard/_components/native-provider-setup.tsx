@@ -8,6 +8,8 @@ import { getAddConnectorRoute, getMcpConnectionRoute, getMcpConnectionsRoute } f
 import { useOrgDashboard } from "../_providers/org-dashboard-provider";
 import { GOOGLE_WORKSPACE_QUICK_ADD_ID, MICROSOFT_365_QUICK_ADD_ID, type NativeProviderKey } from "./connector-catalog";
 import { useDenToast } from "./den-toast";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import {
   GOOGLE_WORKSPACE_DEFAULT_FEATURES,
   GOOGLE_WORKSPACE_PERMISSION_GROUPS,
@@ -32,30 +34,32 @@ type ProviderCopy = {
   secretPlaceholder: string;
 };
 
-const PROVIDERS: Record<NativeProviderKey, ProviderCopy> = {
+function getProviders(t: DenTranslate): Record<NativeProviderKey, ProviderCopy> {
+  return {
   [GOOGLE_WORKSPACE_QUICK_ADD_ID]: {
     name: "Google Workspace",
     url: "https://workspace.google.com",
-    consoleLabel: "Open Google Cloud Console",
+    consoleLabel: t("denConnector.nativeProvider.googleConsoleLabel"),
     consoleUrl: "https://console.cloud.google.com/apis/credentials",
     defaultFeatures: GOOGLE_WORKSPACE_DEFAULT_FEATURES,
     groups: GOOGLE_WORKSPACE_PERMISSION_GROUPS,
     tenant: false,
     clientIdPlaceholder: "1234567890-abc.apps.googleusercontent.com",
-    secretPlaceholder: "Client secret",
+    secretPlaceholder: t("denConnector.setupFields.clientSecretLabel"),
   },
   [MICROSOFT_365_QUICK_ADD_ID]: {
     name: "Microsoft 365",
     url: "https://www.microsoft.com/microsoft-365",
-    consoleLabel: "Open Entra app registrations",
+    consoleLabel: t("denConnector.nativeProvider.entraConsoleLabel"),
     consoleUrl: "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
     defaultFeatures: MICROSOFT_365_DEFAULT_FEATURES,
     groups: MICROSOFT_365_PERMISSION_GROUPS,
     tenant: true,
     clientIdPlaceholder: "Application (client) ID",
-    secretPlaceholder: "Client secret value, not its ID",
+    secretPlaceholder: t("denConnector.nativeProvider.entraSecretPlaceholder"),
   },
-};
+  };
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -78,7 +82,8 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
   onSaved: (connectionId: string, name: string) => void;
   footer: (input: { save: () => void; saving: boolean; disabled: boolean; label: string }) => ReactNode;
 }) {
-  const provider = PROVIDERS[providerKey];
+  const t = useDenT();
+  const provider = getProviders(t)[providerKey];
   const clientConfig = useNativeProviderClient(clientProviderId, true);
   const createNative = useCreateNativeProviderConnection();
   const saveClient = useSaveNativeProviderClient();
@@ -106,7 +111,7 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
   const saving = createNative.isPending || saveClient.isPending;
   const credentialsIncomplete = showCredentials && (!clientId.trim() || !clientSecret.trim() || (provider.tenant && !tenantId.trim()));
   const disabled = clientConfig.isLoading || saving || credentialsIncomplete || (creatingGoogle && !name.trim());
-  const label = configured && !replacing ? "Save permissions" : configured ? "Save new credentials" : `Add ${provider.name}`;
+  const label = configured && !replacing ? t("denConnector.nativeProvider.savePermissionsLabel") : configured ? t("denConnector.nativeProvider.saveCredentialsLabel") : t("denConnector.setup.addTitle", { name: provider.name });
 
   function toggle(feature: string) {
     setFeatures((current) => current.includes(feature) ? current.filter((entry) => entry !== feature) : [...current, feature]);
@@ -118,7 +123,7 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
       await navigator.clipboard.writeText(redirectUri);
       setCopied(true);
     } catch {
-      setError("Could not copy it. Select the address and copy it yourself.");
+      setError(t("denConnector.nativeProvider.copyFailed"));
     }
   }
 
@@ -142,7 +147,7 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
       setClientSecret("");
       onSaved(clientProviderId, provider.name);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That did not save.");
+      setError(cause instanceof Error ? cause.message : t("denConnector.form.notSaved"));
     }
   }
 
@@ -150,57 +155,57 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
     <div className="flex flex-col gap-6" data-testid={`native-provider-${providerKey}`}>
       {creatingGoogle ? (
         <section className="flex flex-col gap-2.5">
-          <SectionTitle title="Name" />
-          <DenInput value={name} onChange={(event) => setName(event.target.value)} aria-label="Name" placeholder={provider.name} />
+          <SectionTitle title={t("denMarketplace.detail.nameLabel")} />
+          <DenInput value={name} onChange={(event) => setName(event.target.value)} aria-label={t("denMarketplace.detail.nameLabel")} placeholder={provider.name} />
         </section>
       ) : null}
 
       <section className="flex flex-col gap-2.5">
         <SectionTitle
-          title="Redirect URI"
+          title={t("denInference.editor.redirectUriLabel")}
           meta={<a href={provider.consoleUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline">{provider.consoleLabel}</a>}
         />
         <div className="flex items-center gap-2">
           <p className="min-w-0 flex-1 truncate rounded-lg border border-gray-200 bg-white px-3 py-2.5 font-mono text-[12px] text-gray-900" data-testid="native-provider-redirect-uri">
-            {redirectUri || (clientConfig.error ? "The address did not load. Reload the page." : "Loading...")}
+            {redirectUri || (clientConfig.error ? t("denConnector.nativeProvider.addressLoadFailed") : t("denShell.workspace.loading"))}
           </p>
-          <DenButton variant="secondary" size="sm" disabled={!redirectUri} onClick={() => void copy()}>{copied ? "Copied" : "Copy"}</DenButton>
+          <DenButton variant="secondary" size="sm" disabled={!redirectUri} onClick={() => void copy()}>{copied ? t("denOrgSettings.copied") : t("denOrgSettings.copy")}</DenButton>
         </div>
       </section>
 
       <section className="flex flex-col gap-2.5">
         <SectionTitle
-          title="OAuth app"
+          title={t("denConnector.nativeProvider.oAuthAppTitle")}
           meta={configured && !replacing ? (
             <button type="button" className="font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline" onClick={() => {
               setClientId(clientConfig.data?.clientId ?? "");
               setTenantId(clientConfig.data?.tenantId ?? "");
               setClientSecret("");
               setReplacing(true);
-            }}>Replace credentials</button>
+            }}>{t("denConnector.nativeProvider.replaceCredentialsAction")}</button>
           ) : replacing ? (
-            <button type="button" className="font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline" onClick={() => setReplacing(false)}>Keep saved credentials</button>
+            <button type="button" className="font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline" onClick={() => setReplacing(false)}>{t("denConnector.nativeProvider.keepSavedAction")}</button>
           ) : undefined}
         />
-        {clientConfig.isLoading ? <ItemPanel><p className="px-5 py-3 text-[13px] text-gray-500">Checking saved credentials...</p></ItemPanel> : null}
+        {clientConfig.isLoading ? <ItemPanel><p className="px-5 py-3 text-[13px] text-gray-500">{t("denConnector.nativeProvider.checkingSaved")}</p></ItemPanel> : null}
         {configured && !replacing ? (
           <DetailRows rows={[
-            ...(provider.tenant ? [{ label: "Tenant ID", value: <span className="font-mono">{clientConfig.data?.tenantId ?? "Saved"}</span> }] : []),
-            { label: "Client ID", value: <span className="font-mono">{clientConfig.data?.clientId ?? "Saved"}</span> },
-            { label: "Client secret", value: "Saved" },
+            ...(provider.tenant ? [{ label: t("denConnector.nativeProvider.tenantIdLabel"), value: <span className="font-mono">{clientConfig.data?.tenantId ?? t("denConnector.nativeProvider.savedValue")}</span> }] : []),
+            { label: t("denMarketplace.setup.clientIdLabel"), value: <span className="font-mono">{clientConfig.data?.clientId ?? t("denConnector.nativeProvider.savedValue")}</span> },
+            { label: t("denConnector.setupFields.clientSecretLabel"), value: t("denConnector.nativeProvider.savedValue") },
           ]} />
         ) : null}
         {showCredentials ? (
           <div className="flex flex-col gap-3">
             {provider.tenant ? (
-              <Field label="Directory (tenant) ID">
+              <Field label={t("denInference.editor.tenantIdLabel")}>
                 <McpCredentialInput kind="identifier" name={`${providerKey}-tenant-id`} data-testid="native-provider-tenant-id" value={tenantId} onChange={(event) => setTenantId(event.target.value)} placeholder="00000000-0000-0000-0000-000000000000" />
               </Field>
             ) : null}
-            <Field label="Client ID">
+            <Field label={t("denMarketplace.setup.clientIdLabel")}>
               <McpCredentialInput kind="identifier" name={`${providerKey}-oauth-client-id`} data-testid="native-provider-client-id" value={clientId} onChange={(event) => setClientId(event.target.value)} placeholder={provider.clientIdPlaceholder} />
             </Field>
-            <Field label="Client secret">
+            <Field label={t("denConnector.setupFields.clientSecretLabel")}>
               <McpCredentialInput kind="secret" name={`${providerKey}-oauth-client-secret`} data-testid="native-provider-client-secret" value={clientSecret} onChange={(event) => setClientSecret(event.target.value)} placeholder={provider.secretPlaceholder} />
             </Field>
           </div>
@@ -208,7 +213,7 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
       </section>
 
       <section className="flex flex-col gap-2.5">
-        <SectionTitle title="What your AI can do" meta={`${features.length} on`} />
+        <SectionTitle title={t("denConnector.capabilities.title")} meta={t("denConnector.nativeProvider.enabledCount", { count: features.length })} />
         <ItemPanel>
           {provider.groups.map((group) => (
             <fieldset key={group.name} className="flex flex-col gap-2 px-5 py-3.5">
@@ -243,28 +248,29 @@ export function NativeProviderSettings({ providerKey, clientProviderId, create, 
 
 /** Add Google Workspace or Microsoft 365 as a full page: one OAuth app, then each person signs in. */
 export function NativeProviderSetupScreen({ providerKey }: { providerKey: NativeProviderKey }) {
+  const t = useDenT();
   const router = useRouter();
   const toast = useDenToast();
   const { orgSlug } = useOrgDashboard();
-  const provider = PROVIDERS[providerKey];
+  const provider = getProviders(t)[providerKey];
   return (
     <ItemPage testId="connector-setup">
       <ItemHeader
-        back={{ href: getAddConnectorRoute(orgSlug), label: "Add a connector" }}
+        back={{ href: getAddConnectorRoute(orgSlug), label: t("denConnector.action.addConnector") }}
         logo={<ConnectorLogo name={provider.name} url={provider.url} size="md" />}
-        title={`Add ${provider.name}`}
+        title={t("denConnector.setup.addTitle", { name: provider.name })}
       />
       <NativeProviderSettings
         providerKey={providerKey}
         clientProviderId={providerKey}
         create
         onSaved={(connectionId, name) => {
-          toast({ title: `${name} is ready`, description: "Each person signs in with their own account." });
+          toast({ title: t("denConnector.setup.isReady", { name }), description: t("denConnector.nativeProvider.perMemberDescription") });
           router.push(getMcpConnectionRoute(orgSlug, connectionId));
         }}
         footer={({ save, saving, disabled, label }) => (
-          <StepFooter note="Each person signs in with their own account">
-            <DenButton variant="secondary" disabled={saving} onClick={() => router.push(getMcpConnectionsRoute(orgSlug))}>Cancel</DenButton>
+          <StepFooter note={t("denConnector.nativeProvider.perMemberNote")}>
+            <DenButton variant="secondary" disabled={saving} onClick={() => router.push(getMcpConnectionsRoute(orgSlug))}>{t("denCommon.action.cancel")}</DenButton>
             <DenButton loading={saving} disabled={disabled} onClick={save} data-testid="native-provider-save">{label}</DenButton>
           </StepFooter>
         )}

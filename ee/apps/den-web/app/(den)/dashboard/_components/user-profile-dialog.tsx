@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import type { AuthUser } from "../../_lib/den-flow";
+import { useDenT } from "../../../_lib/i18n/client";
 
 type UserProfileDialogProps = {
   user: AuthUser;
@@ -21,11 +22,12 @@ function getProfileNameParts(name: string | null) {
 
 export function UserProfileDialog({
   user,
-  title = "User Profile",
+  title,
   descriptor,
   onCancel,
   onSave,
 }: UserProfileDialogProps) {
+  const t = useDenT();
   const initialName = useMemo(() => getProfileNameParts(user.name), [user.name]);
   const [firstName, setFirstName] = useState(initialName.firstName);
   const [lastName, setLastName] = useState(initialName.lastName);
@@ -49,7 +51,7 @@ export function UserProfileDialog({
     try {
       await onSave({ firstName, lastName });
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not update your profile.");
+      setError(saveError instanceof Error ? saveError.message : t("denShell.profilePrompt.updateFailed"));
     } finally {
       setBusy(false);
     }
@@ -67,7 +69,7 @@ export function UserProfileDialog({
         <div className="mb-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">OpenWork</p>
           <h2 id="user-profile-title" className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-gray-950">
-            {title}
+            {title ?? t("denShell.pageTitle.userProfile")}
           </h2>
           {descriptor ? (
             <p id="user-profile-description" className="mt-2 text-sm leading-6 text-gray-500">
@@ -79,7 +81,7 @@ export function UserProfileDialog({
         <form onSubmit={handleSubmit} className="grid gap-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2">
-              <span className="text-sm font-medium text-gray-700">First name</span>
+              <span className="text-sm font-medium text-gray-700">{t("denCommon.field.firstName")}</span>
               <input
                 type="text"
                 value={firstName}
@@ -91,7 +93,7 @@ export function UserProfileDialog({
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-medium text-gray-700">Last name</span>
+              <span className="text-sm font-medium text-gray-700">{t("denCommon.field.lastName")}</span>
               <input
                 type="text"
                 value={lastName}
@@ -110,14 +112,14 @@ export function UserProfileDialog({
               onClick={onCancel}
               className="rounded-2xl border border-gray-200 px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
             >
-              Cancel
+              {t("denCommon.action.cancel")}
             </button>
             <button
               type="submit"
               disabled={!canSave}
               className="rounded-2xl bg-gray-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {busy ? "Saving..." : "Save"}
+              {busy ? t("denCommon.action.saving") : t("denCommon.action.save")}
             </button>
           </div>
         </form>

@@ -2,6 +2,7 @@
 
 import type { TelemetryDimensionListItem } from "@openwork-ee/telemetry-contracts";
 import { DenSelect } from "../../../_components/ui/select";
+import { useDenT } from "../../../../_lib/i18n/client";
 
 const FILTER_INPUT_ID = "analytics-project-filter";
 
@@ -15,21 +16,22 @@ export function ProjectFilter({ options, value, onValueChange }: {
   value: string;
   onValueChange: (value: string) => void;
 }) {
+  const t = useDenT();
   const activeOption = value ? options.find((option) => option.value === value) ?? null : null;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       <label className="text-xs font-medium text-[#637291]" htmlFor={FILTER_INPUT_ID}>
-        Project
+        {t("denDashboard.projectFilter.label")}
       </label>
       <DenSelect
         id={FILTER_INPUT_ID}
-        aria-label="Project analytics filter"
+        aria-label={t("denDashboard.projectFilter.selectAria")}
         className="h-9 w-56 max-w-full"
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
       >
-        <option value="">All projects</option>
+        <option value="">{t("denDashboard.projectFilter.allProjects")}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -38,7 +40,7 @@ export function ProjectFilter({ options, value, onValueChange }: {
       </DenSelect>
       {activeOption ? (
         <span className="text-[12px] text-[#637291]">
-          {activeOption.sessionCount} {activeOption.sessionCount === 1 ? "session" : "sessions"}
+          {t("denDashboard.projectFilter.sessionCount", { count: activeOption.sessionCount })}
         </span>
       ) : null}
     </div>

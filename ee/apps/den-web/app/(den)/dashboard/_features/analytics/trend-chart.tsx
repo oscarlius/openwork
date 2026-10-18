@@ -1,11 +1,13 @@
 "use client";
 
+import { useDenLocale, useDenT } from "../../../../_lib/i18n/client";
+import { formatDenLocaleDate } from "../../../../_lib/i18n/den-format";
 import { analyticsSurfaceClass } from "./analytics-layout";
 
-export function formatWeekLabel(weekStart: string): string {
+export function formatWeekLabel(weekStart: string, locale: ReturnType<typeof useDenLocale> = "en"): string {
   const date = new Date(`${weekStart}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return weekStart;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  return formatDenLocaleDate(locale, date, { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 export type BarSeries = {
@@ -13,7 +15,7 @@ export type BarSeries = {
   values: number[];
 };
 
-export function TrendChart({ title, subtitle, weeks, series, intervalLabel = "Week of", isLoading = false }: {
+export function TrendChart({ title, subtitle, weeks, series, intervalLabel, isLoading = false }: {
   title: string;
   subtitle: string;
   weeks: { weekStart: string }[];
@@ -21,6 +23,9 @@ export function TrendChart({ title, subtitle, weeks, series, intervalLabel = "We
   intervalLabel?: string;
   isLoading?: boolean;
 }) {
+  const t = useDenT();
+  const locale = useDenLocale();
+  const weekOfLabel = intervalLabel ?? t("denDashboard.chart.weekOf");
   const colorFor = (item: BarSeries) => item.label === "Failed" && item.values.some((value) => value > 0) ? "var(--ow-danger)" : "var(--dls-accent)";
   const max = Math.max(1, ...series.flatMap((s) => s.values));
   const hasData = series.some((s) => s.values.some((v) => v > 0));
@@ -57,7 +62,7 @@ export function TrendChart({ title, subtitle, weeks, series, intervalLabel = "We
                 return (
                   <div
                     key={s.label}
-                    title={`${intervalLabel} ${formatWeekLabel(week.weekStart)} — ${s.label}: ${value}`}
+                    title={t("denDashboard.chart.barTooltip", { interval: weekOfLabel, week: formatWeekLabel(week.weekStart, locale), series: s.label, value })}
                     className="w-full max-w-[24px] rounded-t-[4px] transition-[height]"
                     style={{
                       height: `${height}%`,
@@ -71,17 +76,17 @@ export function TrendChart({ title, subtitle, weeks, series, intervalLabel = "We
         </div>
         {!hasData ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <span role="status" className="rounded-full bg-white/90 px-3 py-1 text-[12px] text-[#637291]">{isLoading ? "Loading activity…" : "No usage events yet"}</span>
+            <span role="status" className="rounded-full bg-white/90 px-3 py-1 text-[12px] text-[#637291]">{isLoading ? t("denDashboard.chart.loading") : t("denDashboard.chart.empty")}</span>
           </div>
         ) : null}
       </div>
 
       <div className="mt-3 flex justify-between text-[11px] text-[#637291]">
-        <span>{weeks.length > 0 ? formatWeekLabel(weeks[0].weekStart) : ""}</span>
-        <span>{weeks.length > 0 ? formatWeekLabel(weeks[weeks.length - 1].weekStart) : ""}</span>
+        <span>{weeks.length > 0 ? formatWeekLabel(weeks[0].weekStart, locale) : ""}</span>
+        <span>{weeks.length > 0 ? formatWeekLabel(weeks[weeks.length - 1].weekStart, locale) : ""}</span>
       </div>
-      <table className="sr-only"><caption>{title}</caption><thead><tr><th>Date</th>{series.map((s) => <th key={s.label}>{s.label}</th>)}</tr></thead>
-        <tbody>{weeks.map((week, i) => <tr key={week.weekStart}><th>{formatWeekLabel(week.weekStart)}</th>{series.map((s) => <td key={s.label}>{s.values[i] ?? 0}</td>)}</tr>)}</tbody>
+      <table className="sr-only"><caption>{title}</caption><thead><tr><th>{t("denDashboard.chart.dateColumn")}</th>{series.map((s) => <th key={s.label}>{s.label}</th>)}</tr></thead>
+        <tbody>{weeks.map((week, i) => <tr key={week.weekStart}><th>{formatWeekLabel(week.weekStart, locale)}</th>{series.map((s) => <td key={s.label}>{s.values[i] ?? 0}</td>)}</tr>)}</tbody>
       </table>
     </figure>
   );

@@ -1,21 +1,23 @@
 "use client";
 
 import type { TelemetryAnalyticsModels } from "@openwork-ee/telemetry-contracts";
+import { useDenT } from "../../../../_lib/i18n/client";
 import { analyticsSurfaceClass, AnalyticsEmptyState } from "./analytics-layout";
 
 export function ModelUsageList({ models, isLoading }: {
   models: TelemetryAnalyticsModels["usage30d"];
   isLoading: boolean;
 }) {
+  const t = useDenT();
   const max = Math.max(1, ...models.map((model) => model.sessions));
 
   return (
     <div className={`${analyticsSurfaceClass} p-5`}>
-      <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-[#07192C]">Sessions by model</h3>
-      <p className="mt-0.5 text-[12px] text-[#637291]">Distinct sessions, last 30 days</p>
+      <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-[#07192C]">{t("denDashboard.models.sessionsByModelTitle")}</h3>
+      <p className="mt-0.5 text-[12px] text-[#637291]">{t("denDashboard.models.sessionsByModelSubtitle")}</p>
       <div className="mt-4 space-y-3">
-        {isLoading ? <p className="text-[12px] text-[#637291]">Loading model usage…</p> : null}
-        {!isLoading && models.length === 0 ? <AnalyticsEmptyState title="No model usage yet">Model sessions from your team will appear here as they use OpenWork.</AnalyticsEmptyState> : null}
+        {isLoading ? <p className="text-[12px] text-[#637291]">{t("denDashboard.models.loadingModelUsage")}</p> : null}
+        {!isLoading && models.length === 0 ? <AnalyticsEmptyState title={t("denDashboard.models.emptyTitle")}>{t("denDashboard.models.emptyDescription")}</AnalyticsEmptyState> : null}
         {models.map((model) => (
           <div key={model.id}>
             <div className="flex items-center justify-between gap-3 text-[12px]">

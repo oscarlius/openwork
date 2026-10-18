@@ -4,8 +4,9 @@ import { Globe, Users } from "lucide-react";
 import { useMemo } from "react";
 import { DenSwitch } from "../../_components/ui/switch";
 import { permissionLockReason, type DenOrgMember, type DenOrgTeam } from "../../_lib/den-org";
+import { useDenT } from "../../../_lib/i18n/client";
 import { AccessRow as Row, AddPicker, Avatar, IconTile, RemoveButton } from "./access-rows";
-import { type AccessDraft, peopleLabel } from "./access-summary";
+import { type AccessDraft } from "./access-summary";
 
 /**
  * The one Who can use it block. It edits a draft; each surface decides when
@@ -19,7 +20,7 @@ export function WhoCanUseIt({
   teams,
   owner,
   canShareWithEveryone,
-  everyoneOffDescription = "Off. Only you and the people below can use it.",
+  everyoneOffDescription,
   disabled = false,
 }: {
   value: AccessDraft;
@@ -31,6 +32,7 @@ export function WhoCanUseIt({
   everyoneOffDescription?: string;
   disabled?: boolean;
 }) {
+  const t = useDenT();
   const people = useMemo(
     () => value.memberIds
       .filter((id) => id !== owner?.id)
@@ -52,24 +54,24 @@ export function WhoCanUseIt({
     .map((member) => ({ id: member.id, name: member.user.name || member.user.email, detail: member.user.email }));
   const teamOptions = teams
     .filter((team) => !value.teamIds.includes(team.id))
-    .map((team) => ({ id: team.id, name: team.name, detail: peopleLabel(team.memberIds.length) }));
+    .map((team) => ({ id: team.id, name: team.name, detail: t("denCommon.count.people", { count: team.memberIds.length }) }));
 
   const everyoneDescription = value.orgWide
-    ? "On. Everyone in the organization can use it."
-    : canShareWithEveryone ? everyoneOffDescription : permissionLockReason("sharing.share_org_wide");
+    ? t("denPluginAccess.block.onDescription")
+    : canShareWithEveryone ? (everyoneOffDescription ?? t("denPluginAccess.block.offDescription")) : permissionLockReason("sharing.share_org_wide");
 
   return (
     <div className="flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white" data-testid="who-can-use-it">
       <Row
         lead={<IconTile icon={Globe} />}
-        title="Everyone in the organization"
+        title={t("denInference.editor.everyoneInOrg")}
         description={everyoneDescription}
         trailing={(
           <DenSwitch
             checked={value.orgWide}
             disabled={disabled || (!canShareWithEveryone && !value.orgWide)}
             onChange={(orgWide) => onChange({ ...value, orgWide })}
-            aria-label="Everyone in the organization"
+            aria-label={t("denInference.editor.everyoneInOrg")}
             testId="access-everyone"
           />
         )}
@@ -77,9 +79,9 @@ export function WhoCanUseIt({
       {owner ? (
         <Row
           lead={<Avatar name={owner.name} owner />}
-          title={owner.isYou ? `${owner.name} (you)` : owner.name}
-          description="Can change and remove it"
-          trailing={<span className="shrink-0 text-[12px] text-gray-500">Owner</span>}
+          title={owner.isYou ? t("denPluginAccess.block.ownerIsYou", { name: owner.name }) : owner.name}
+          description={t("denPluginAccess.block.ownerCanChange")}
+          trailing={<span className="shrink-0 text-[12px] text-gray-500">{t("denSetup.claim.factOwner")}</span>}
           testId="access-owner"
         />
       ) : null}
@@ -91,7 +93,7 @@ export function WhoCanUseIt({
               lead={<Avatar name={member.user.name || member.user.email} />}
               title={member.user.name || member.user.email}
               description={member.user.email}
-              trailing={<RemoveButton label={`Remove ${member.user.name || member.user.email}`} disabled={disabled} onClick={() => onChange({ ...value, memberIds: value.memberIds.filter((id) => id !== member.id) })} />}
+              trailing={<RemoveButton label={t("denPluginAccess.block.removeGrant", { name: member.user.name || member.user.email })} disabled={disabled} onClick={() => onChange({ ...value, memberIds: value.memberIds.filter((id) => id !== member.id) })} />}
               testId="access-person"
             />
           ))}
@@ -100,8 +102,8 @@ export function WhoCanUseIt({
               key={team.id}
               lead={<IconTile icon={Users} />}
               title={team.name}
-              description={`${peopleLabel(team.memberIds.length)}, and anyone who joins later`}
-              trailing={<RemoveButton label={`Remove ${team.name}`} disabled={disabled} onClick={() => onChange({ ...value, teamIds: value.teamIds.filter((id) => id !== team.id) })} />}
+              description={t("denPluginAccess.block.teamMembersLater", { people: t("denCommon.count.people", { count: team.memberIds.length }) })}
+              trailing={<RemoveButton label={t("denPluginAccess.block.removeGrant", { name: team.name })} disabled={disabled} onClick={() => onChange({ ...value, teamIds: value.teamIds.filter((id) => id !== team.id) })} />}
               testId="access-team"
             />
           ))}

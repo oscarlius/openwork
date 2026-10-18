@@ -12,6 +12,8 @@ import {
 import { DenButton, buttonVariants } from "../../_components/ui/button";
 import { DenInput } from "../../_components/ui/input";
 import { DenSelectableRow } from "../../_components/ui/selectable-row";
+import { useDenT } from "../../../_lib/i18n/client";
+import type { DenTranslate } from "../../../_lib/i18n/messages";
 import {
   type IntegrationAccount,
   type IntegrationProvider,
@@ -40,13 +42,15 @@ import {
 type Step = "authorize" | "select_account" | "select_repos" | "connecting" | "connected";
 
 const STEP_ORDER: Step[] = ["authorize", "select_account", "select_repos", "connecting", "connected"];
-const STEP_LABELS: Record<Step, string> = {
-  authorize: "Authorize",
-  select_account: "Select account",
-  select_repos: "Select repositories",
-  connecting: "Connecting",
-  connected: "Connected",
-};
+function stepLabels(t: DenTranslate): Record<Step, string> {
+  return {
+  authorize: t("denDashboard.connectDialog.stepAuthorize"),
+  select_account: t("denDashboard.connectDialog.stepSelectAccount"),
+  select_repos: t("denDashboard.connectDialog.stepSelectRepos"),
+  connecting: t("denDashboard.connectDialog.stepConnecting"),
+  connected: t("denDashboard.connectDialog.stepConnected"),
+  };
+}
 
 export function IntegrationConnectDialog({
   open,
@@ -57,6 +61,7 @@ export function IntegrationConnectDialog({
   provider: IntegrationProvider | null;
   onClose: () => void;
 }) {
+  const t = useDenT();
   const [step, setStep] = useState<Step>("authorize");
   const [selectedAccount, setSelectedAccount] = useState<IntegrationAccount | null>(null);
   const [selectedRepoIds, setSelectedRepoIds] = useState<Set<string>>(new Set());
@@ -100,7 +105,7 @@ export function IntegrationConnectDialog({
   const progressLabel =
     step === "connected"
       ? "Done"
-      : `Step ${Math.min(stepIndex + 1, 4)} of 4 · ${STEP_LABELS[step]}`;
+      : `Step ${Math.min(stepIndex + 1, 4)} of 4 · ${stepLabels(t)[step]}`;
 
   function handleToggleRepo(repo: IntegrationRepo) {
     setSelectedRepoIds((prev) => {
@@ -118,7 +123,7 @@ export function IntegrationConnectDialog({
     if (!selectedAccount || !provider) return;
     const repos = (reposQuery.data ?? []).filter((repo) => selectedRepoIds.has(repo.id));
     if (repos.length === 0) {
-      setLocalError("Select at least one repository to connect.");
+      setLocalError(t("denDashboard.connectDialog.needRepo"));
       return;
     }
 
@@ -132,7 +137,7 @@ export function IntegrationConnectDialog({
       });
       setStep("connected");
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Failed to connect integration.");
+      setLocalError(error instanceof Error ? error.message : t("denDashboard.connectDialog.connectFailed"));
       setStep("select_repos");
     }
   }
@@ -150,7 +155,7 @@ export function IntegrationConnectDialog({
           type="button"
           onClick={onClose}
           className="absolute right-5 top-5 inline-flex h-8 w-8 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-          aria-label="Close"
+          aria-label={t("denMarketplace.setup.close")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -247,14 +252,14 @@ export function IntegrationConnectDialog({
                 loading={connectMutation.isPending}
               >
                 {selectedRepoIds.size === 0
-                  ? "Select a repository"
+                  ? t("denDashboard.connectDialog.pickRepo")
                   : `Connect ${selectedRepoIds.size} ${selectedRepoIds.size === 1 ? "repo" : "repos"}`}
               </DenButton>
             </>
           ) : step === "connecting" ? (
-            <span className={buttonVariants({ variant: "secondary" })}>Working…</span>
+            <span className={buttonVariants({ variant: "secondary" })}>{t("denDashboard.connectDialog.working")}</span>
           ) : (
-            <DenButton onClick={onClose}>Done</DenButton>
+            <DenButton onClick={onClose}>{t("denCommon.action.done")}</DenButton>
           )}
         </div>
       </div>
@@ -367,6 +372,7 @@ function SelectReposStep({
   query: string;
   onQueryChange: (value: string) => void;
 }) {
+  const t = useDenT();
   return (
     <div className="grid gap-3">
       <DenInput
@@ -411,7 +417,7 @@ function SelectReposStep({
 
       <p className="text-[12px] text-gray-400">
         {selectedIds.size === 0
-          ? "Select one or more repos to expose their plugins and skills."
+          ? t("denDashboard.connectDialog.reposHint")
           : `${selectedIds.size} of ${totalCount} selected.`}
       </p>
     </div>
@@ -419,6 +425,7 @@ function SelectReposStep({
 }
 
 function ConnectingStep({ providerName }: { providerName: string }) {
+  const t = useDenT();
   return (
     <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-5 py-10 text-center">
       <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center">
@@ -427,8 +434,8 @@ function ConnectingStep({ providerName }: { providerName: string }) {
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       </div>
-      <p className="text-[14px] font-medium text-gray-900">Installing {providerName} integration…</p>
-      <p className="mt-1 text-[12px] text-gray-500">Registering webhooks and indexing repository manifests.</p>
+      <p className="text-[14px] font-medium text-gray-900">{t("denDashboard.connectDialog.installing", { name: providerName })}</p>
+      <p className="mt-1 text-[12px] text-gray-500">{t("denDashboard.connectDialog.installingSubtitle")}</p>
     </div>
   );
 }

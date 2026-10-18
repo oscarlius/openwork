@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronRight, Lock } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useDenT } from "../../../_lib/i18n/client";
 import { IconTile } from "./access-rows";
 
 /**
@@ -22,12 +23,13 @@ const ROW = "grid grid-cols-[minmax(0,1fr)_28px] items-center gap-4 px-5";
 
 /** Column titles over the list, aligned with the row lanes. */
 export function TeamsListHeader({ columns, role, agentPermissions }: { columns: string; role: boolean; agentPermissions: boolean }) {
+  const t = useDenT();
   return (
     <div className={`${ROW} border-b border-gray-100 py-2.5 text-[12px] font-medium leading-4 text-gray-500 ${columns}`}>
-      <span>Team</span>
-      {role ? <span className="hidden lg:block">Role</span> : null}
-      {agentPermissions ? <span className="hidden lg:block">Agent permissions</span> : null}
-      <span className="hidden lg:block">Members</span>
+      <span>{t("denShell.nav.sectionTeam")}</span>
+      {role ? <span className="hidden lg:block">{t("denTeam.column.role")}</span> : null}
+      {agentPermissions ? <span className="hidden lg:block">{t("denTeam.column.agentPermissions")}</span> : null}
+      <span className="hidden lg:block">{t("denShell.nav.members")}</span>
       <span aria-hidden />
     </div>
   );
@@ -93,8 +95,9 @@ const ICON_ACTION = "flex h-7 w-7 items-center justify-center rounded-lg text-gr
 
 /** Everyone's action lane: opens its page, the same size as a team's menu. */
 export function TeamsListOpenLink({ href, name }: { href: string; name: string }) {
+  const t = useDenT();
   return (
-    <Link href={href} aria-label={`Open ${name}`} title="Open" className={ICON_ACTION}>
+    <Link href={href} aria-label={t("denTeam.row.openNamed", { name })} title={t("denConnector.action.open")} className={ICON_ACTION}>
       <ChevronRight className="h-4 w-4" aria-hidden />
     </Link>
   );
